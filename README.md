@@ -113,6 +113,39 @@ go build -o mcp-file-tools ./cmd/mcp-file-tools
 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o mcp-file-tools-windows-amd64.exe ./cmd/mcp-file-tools
 ```
 
+### Debugging with MCP Inspector
+
+[MCP Inspector](https://github.com/modelcontextprotocol/inspector) provides a web UI for testing MCP servers.
+
+**Prerequisites:** [Node.js](https://nodejs.org/) v18+
+
+```bash
+# Run directly (no install needed)
+npx @modelcontextprotocol/inspector go run ./cmd/mcp-file-tools
+
+# Or with built binary
+npx @modelcontextprotocol/inspector ./mcp-file-tools.exe
+```
+
+Opens a browser where you can view tools, call them with custom arguments, and inspect responses.
+
+### Manual Debugging
+
+Run the server and send JSON-RPC commands via stdin:
+
+```bash
+go run ./cmd/mcp-file-tools
+```
+
+Example commands (paste into terminal). Both absolute and relative paths are supported:
+
+```json
+{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}
+{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"list_directory","arguments":{"path":".","pattern":"*.go"}}}
+{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"read_file","arguments":{"path":"D:\\Projects\\main.pas","encoding":"cp1251"}}}
+{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"write_file","arguments":{"path":"./test.txt","content":"Тест","encoding":"cp1251"}}}
+```
+
 ## License
 
 GPL-3.0 - see [LICENSE](LICENSE)

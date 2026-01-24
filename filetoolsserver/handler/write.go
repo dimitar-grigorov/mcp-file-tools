@@ -39,16 +39,6 @@ func (h *Handler) HandleWriteFile(ctx context.Context, ss *mcp.ServerSession, pa
 		}, nil
 	}
 
-	// Check if existing file is UTF-8 but we're writing non-UTF-8
-	var warning string
-	if !encoding.IsUTF8(encodingName) {
-		if existingData, err := os.ReadFile(input.Path); err == nil {
-			if encoding.IsValidUTF8(existingData) {
-				warning = fmt.Sprintf("\n\nWarning: Existing file was UTF-8, but writing with %s encoding. This may cause encoding issues.", encodingName)
-			}
-		}
-	}
-
 	var contentToWrite []byte
 
 	// UTF-8: write content as-is (no conversion needed)
@@ -75,7 +65,7 @@ func (h *Handler) HandleWriteFile(ctx context.Context, ss *mcp.ServerSession, pa
 		}, nil
 	}
 
-	message := fmt.Sprintf("Successfully wrote %d bytes to %s (encoding: %s)%s", len(contentToWrite), input.Path, encodingName, warning)
+	message := fmt.Sprintf("Successfully wrote %d bytes to %s (encoding: %s)", len(contentToWrite), input.Path, encodingName)
 	return &mcp.CallToolResultFor[WriteFileOutput]{
 		Content: []mcp.Content{&mcp.TextContent{Text: message}},
 	}, nil

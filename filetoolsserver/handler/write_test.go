@@ -81,40 +81,6 @@ func TestHandleWriteFile_CP1251(t *testing.T) {
 	}
 }
 
-func TestHandleWriteFile_WarningUTF8ToCP1251(t *testing.T) {
-	h := NewHandler()
-	dir := t.TempDir()
-	testFile := filepath.Join(dir, "output.txt")
-
-	// First write UTF-8 file
-	if err := os.WriteFile(testFile, []byte("UTF-8 content"), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	// Now write with CP1251 - should warn
-	params := &mcp.CallToolParamsFor[WriteFileInput]{
-		Arguments: WriteFileInput{
-			Path:     testFile,
-			Content:  "New content",
-			Encoding: "cp1251",
-		},
-	}
-
-	result, err := h.HandleWriteFile(context.Background(), nil, params)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if result.IsError {
-		t.Errorf("expected success, got error")
-	}
-
-	text := extractText(result.Content)
-	if !strings.Contains(text, "Warning") {
-		t.Errorf("expected warning about UTF-8 to CP1251, got %q", text)
-	}
-}
-
 func TestHandleWriteFile_InvalidEncoding(t *testing.T) {
 	h := NewHandler()
 	dir := t.TempDir()
