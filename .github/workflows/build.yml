@@ -1,0 +1,39 @@
+name: Build
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Verify dependencies
+        run: go mod tidy && git diff --exit-code go.mod go.sum
+
+      - name: Build
+        run: go build -v ./cmd/mcp-file-tools
+
+      - name: Build cross-platform
+        run: |
+          mkdir -p dist
+          GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o dist/mcp-file-tools-windows-amd64.exe ./cmd/mcp-file-tools
+          GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/mcp-file-tools-linux-amd64 ./cmd/mcp-file-tools
+          GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o dist/mcp-file-tools-darwin-amd64 ./cmd/mcp-file-tools
+          GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o dist/mcp-file-tools-darwin-arm64 ./cmd/mcp-file-tools
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries
+          path: dist/

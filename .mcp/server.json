@@ -1,0 +1,21 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
+  "name": "io.github.dimitar-grigorov/mcp-file-tools",
+  "version": "1.0.0",
+  "title": "MCP File Tools",
+  "description": "File operations with legacy encoding support (CP1251, CP1250).",
+  "repository": {
+    "url": "https://github.com/dimitar-grigorov/mcp-file-tools",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "mcpb",
+      "identifier": "https://github.com/dimitar-grigorov/mcp-file-tools/releases/download/v1.0.0/mcp-file-tools_windows_amd64.exe",
+      "fileSha256": "TO_BE_FILLED_AFTER_RELEASE",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}

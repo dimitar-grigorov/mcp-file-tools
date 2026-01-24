@@ -1,0 +1,14 @@
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      defaultEncoding:
+        type: string
+        default: "cp1251"
+        description: Default encoding for file operations (cp1251, windows-1251)
+  commandFunction:
+    |-
+    (config) => ({ command: './server', args: [] })
+  exampleConfig:
+    defaultEncoding: cp1251
