@@ -41,3 +41,15 @@ type ListEncodingsInput struct{}
 type ListEncodingsOutput struct {
 	Encodings []string `json:"encodings"`
 }
+
+// DetectEncodingInput defines input parameters for detect_encoding tool
+type DetectEncodingInput struct {
+	Path string `json:"path" jsonschema:"required,description=Path to the file to detect encoding for"`
+}
+
+// DetectEncodingOutput defines output for detect_encoding tool
+type DetectEncodingOutput struct {
+	Encoding   string `json:"encoding"`
+	Confidence int    `json:"confidence"`
+	HasBOM     bool   `json:"has_bom"`
+}

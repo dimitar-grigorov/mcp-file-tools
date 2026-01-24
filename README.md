@@ -102,6 +102,10 @@ The original encoding is preserved.
 
 ## Development
 
+**Prerequisites:**
+- Go 1.21+
+- [Delve](https://github.com/go-delve/delve) (for debugging): `go install github.com/go-delve/delve/cmd/dlv@latest`
+
 ```bash
 # Run tests
 go test ./...

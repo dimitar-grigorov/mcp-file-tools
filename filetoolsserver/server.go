@@ -36,6 +36,11 @@ func NewServer() *mcp.Server {
 			"Returns a list of all supported encodings.",
 			h.HandleListEncodings,
 		),
+		mcp.NewServerTool(
+			"detect_encoding",
+			"Detects the encoding of a file. Returns encoding name, confidence percentage, and BOM presence.",
+			h.HandleDetectEncoding,
+		),
 	)
 
 	return server
