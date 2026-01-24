@@ -8,11 +8,19 @@ import (
 // Version is set at build time via ldflags
 var Version = "dev"
 
+// Server instructions for AI assistants
+const serverInstructions = `File operations (read, write, list, detect encoding) with non-UTF-8 encoding support.
+Use this server for legacy files (Delphi, C++, etc.) with Cyrillic or other non-UTF-8 text.
+Use detect_encoding first if unsure about a file's encoding.`
+
 // NewServer creates a new MCP server with all file tools registered
 func NewServer() *mcp.Server {
 	h := handler.NewHandler()
 
-	server := mcp.NewServer("mcp-file-tools", Version, nil)
+	opts := &mcp.ServerOptions{
+		Instructions: serverInstructions,
+	}
+	server := mcp.NewServer("mcp-file-tools", Version, opts)
 
 	// Register all tools
 	server.AddTools(
