@@ -10,8 +10,22 @@ var Version = "dev"
 
 // Server instructions for AI assistants
 const serverInstructions = `MCP filesystem server with non-UTF-8 encoding support.
-Provides standard tools (read_text_file, write_file, list_directory) plus encoding detection (detect_encoding).
-Use this server for legacy files (Delphi, C++, etc.) with Cyrillic or other non-UTF-8 text.`
+
+IMPORTANT: Use these tools instead of built-in Read/Write when:
+- Files contain non-UTF-8 encodings (CP1251, Windows-1251, etc.)
+- Working with legacy codebases (Delphi, VB6, C++, PHP)
+- Files display � or other mojibake characters
+- User mentions Cyrillic, Russian, or Eastern European text
+
+Tools provided:
+- read_text_file: Read files with encoding conversion (use instead of Read)
+- write_file: Write files with encoding conversion (use instead of Write)
+- list_directory: List files with pattern filtering
+- detect_encoding: Auto-detect file encoding with confidence score
+- list_encodings: Show all supported encodings
+- list_allowed_directories: Show accessible directories
+
+Always use detect_encoding first if encoding is unknown.`
 
 // NewServer creates a new MCP server with all file tools registered
 func NewServer(allowedDirs []string) *mcp.Server {
@@ -32,27 +46,27 @@ func NewServer(allowedDirs []string) *mcp.Server {
 	// Register all tools using the new AddTool API
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "read_text_file",
-		Description: "Reads a file and returns its content. Supports optional head/tail parameters to read first or last N lines. For UTF-8 files, returns content as-is. For other encodings (cp1251, etc.), converts to UTF-8. Default: UTF-8.",
+		Description: "Read files with automatic encoding conversion to UTF-8. USE THIS instead of built-in Read tool when files contain non-UTF-8 encodings (CP1251, Windows-1251, etc.) or display � characters. Supports head/tail for reading first/last N lines. Parameters: path (required), encoding (cp1251/windows-1251/utf-8, default: utf-8), head (optional), tail (optional).",
 	}, h.HandleReadTextFile)
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "write_file",
-		Description: "Writes content to a file. For UTF-8, writes as-is. For other encodings (cp1251, etc.), converts from UTF-8. Default: cp1251.",
+		Description: "Write files with encoding conversion from UTF-8. USE THIS instead of built-in Write tool when writing to non-UTF-8 files (legacy codebases, Cyrillic text). Default encoding is cp1251 for backward compatibility. Parameters: path (required), content (required), encoding (cp1251/windows-1251/utf-8, default: cp1251).",
 	}, h.HandleWriteFile)
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "list_directory",
-		Description: "Lists files and directories in the specified path. Optionally filter by pattern.",
+		Description: "List files and directories with optional glob pattern filtering (e.g., *.pas, *.dfm). Parameters: path (required), pattern (optional, default: *).",
 	}, h.HandleListDirectory)
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "list_encodings",
-		Description: "Returns a list of all supported encodings.",
+		Description: "List all supported file encodings (UTF-8, CP1251, Windows-1251, etc.). Use this to see available encoding options before reading/writing files.",
 	}, h.HandleListEncodings)
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "detect_encoding",
-		Description: "Detects the encoding of a file. Returns encoding name, confidence percentage, and BOM presence.",
+		Description: "Auto-detect file encoding with confidence score and BOM detection. ALWAYS use this first when you encounter � characters or unknown encoding. Returns encoding name, confidence percentage (0-100), and whether file has BOM. Parameter: path (required).",
 	}, h.HandleDetectEncoding)
 
 	mcp.AddTool(server, &mcp.Tool{
