@@ -19,6 +19,7 @@ builds:
       - arm64
     ldflags:
       - -s -w
+      - -X github.com/dimitar-grigorov/mcp-file-tools/filetoolsserver.Version={{.Version}}
 
 archives:
   - id: default
@@ -27,6 +28,13 @@ archives:
       - goos: windows
         format: zip
     name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+
+# Also publish raw binaries with consistent naming
+  - id: binaries
+    format: binary
+    name_template: >-
+      {{ .ProjectName }}-{{ .Os }}-{{ .Arch }}
+      {{- if eq .Os "windows" }}.exe{{ end }}
 
 checksum:
   name_template: 'checksums.txt'
