@@ -10,7 +10,28 @@ permissions:
   packages: write
 
 jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.21'
+
+      - name: Run tests
+        run: go test -race ./...
+
+      - name: Run go vet
+        run: go vet ./...
+
   release:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
