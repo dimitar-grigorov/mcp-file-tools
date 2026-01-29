@@ -136,22 +136,31 @@ func TestUpdateAllowedDirectoriesFromRoots_ReplacesExisting(t *testing.T) {
 		t.Errorf("expected 1 directory after update (replacement), got %d", len(dirs))
 	}
 
-	// Verify it's the new directory by checking it contains tempDir2 path
-	// (normalized path may differ from original due to symlink resolution)
+	// Verify it's the new directory
 	found := false
-	for _, dir := range dirs {
-		// Normalize both paths for comparison
-		absDir, _ := filepath.Abs(dir)
-		absTempDir2, _ := filepath.Abs(tempDir2)
-		evalDir, _ := filepath.EvalSymlinks(absDir)
-		evalTempDir2, _ := filepath.EvalSymlinks(absTempDir2)
 
-		if evalDir == evalTempDir2 {
+	// Resolve the expected temp directory
+	expectedReal, err := filepath.EvalSymlinks(tempDir2)
+	if err != nil {
+		expectedReal = tempDir2
+	}
+	expectedAbs, _ := filepath.Abs(expectedReal)
+
+	for _, dir := range dirs {
+		// Resolve the actual directory from allowed list
+		actualReal, err := filepath.EvalSymlinks(dir)
+		if err != nil {
+			actualReal = dir
+		}
+		actualAbs, _ := filepath.Abs(actualReal)
+
+		if actualAbs == expectedAbs {
 			found = true
 			break
 		}
 	}
+
 	if !found {
-		t.Errorf("expected new directory (resolved: %s) in allowed list, got %v", tempDir2, dirs)
+		t.Errorf("expected directory %s (resolved: %s) in allowed list %v", tempDir2, expectedAbs, dirs)
 	}
 }
