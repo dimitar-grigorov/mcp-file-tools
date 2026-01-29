@@ -1,6 +1,6 @@
 module github.com/dimitar-grigorov/mcp-file-tools
 
-go 1.21
+go 1.23
 
 require (
 	github.com/modelcontextprotocol/go-sdk v1.2.0
