@@ -11,9 +11,9 @@ import (
 )
 
 func TestHandleDetectEncoding_UTF8(t *testing.T) {
-	h := NewHandler()
-	dir := t.TempDir()
-	testFile := filepath.Join(dir, "test.txt")
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+	testFile := filepath.Join(tempDir, "test.txt")
 	content := "Hello, World! This is UTF-8 text."
 
 	if err := os.WriteFile(testFile, []byte(content), 0644); err != nil {
@@ -42,9 +42,9 @@ func TestHandleDetectEncoding_UTF8(t *testing.T) {
 }
 
 func TestHandleDetectEncoding_UTF8WithBOM(t *testing.T) {
-	h := NewHandler()
-	dir := t.TempDir()
-	testFile := filepath.Join(dir, "test.txt")
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+	testFile := filepath.Join(tempDir, "test.txt")
 
 	// UTF-8 BOM + content
 	bom := []byte{0xEF, 0xBB, 0xBF}
@@ -80,9 +80,9 @@ func TestHandleDetectEncoding_UTF8WithBOM(t *testing.T) {
 }
 
 func TestHandleDetectEncoding_CP1251(t *testing.T) {
-	h := NewHandler()
-	dir := t.TempDir()
-	testFile := filepath.Join(dir, "test.txt")
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+	testFile := filepath.Join(tempDir, "test.txt")
 
 	// CP1251 bytes for "Привет" (Russian "Hello")
 	cp1251Bytes := []byte{0xCF, 0xF0, 0xE8, 0xE2, 0xE5, 0xF2}
@@ -116,11 +116,13 @@ func TestHandleDetectEncoding_CP1251(t *testing.T) {
 }
 
 func TestHandleDetectEncoding_FileNotFound(t *testing.T) {
-	h := NewHandler()
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
 
+	// Try to access a file outside allowed directories
 	params := &mcp.CallToolParamsFor[DetectEncodingInput]{
 		Arguments: DetectEncodingInput{
-			Path: "/nonexistent/file.txt",
+			Path: filepath.Join(tempDir, "..", "..", "nonexistent", "file.txt"),
 		},
 	}
 
@@ -130,17 +132,19 @@ func TestHandleDetectEncoding_FileNotFound(t *testing.T) {
 	}
 
 	if !result.IsError {
-		t.Errorf("expected error for nonexistent file")
+		t.Errorf("expected error for file outside allowed directories")
 	}
 
 	text := extractText(result.Content)
-	if !strings.Contains(text, "failed to read file") {
-		t.Errorf("expected 'failed to read file' message, got %q", text)
+	// Path validation happens first, so we get "access denied" not "failed to read file"
+	if !strings.Contains(text, "access denied") {
+		t.Errorf("expected 'access denied' message, got %q", text)
 	}
 }
 
 func TestHandleDetectEncoding_EmptyPath(t *testing.T) {
-	h := NewHandler()
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
 
 	params := &mcp.CallToolParamsFor[DetectEncodingInput]{
 		Arguments: DetectEncodingInput{

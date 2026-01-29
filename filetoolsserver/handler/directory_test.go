@@ -11,20 +11,20 @@ import (
 )
 
 func TestHandleListDirectory_AllFiles(t *testing.T) {
-	h := NewHandler()
-	dir := t.TempDir()
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
 
 	// Create test files
 	files := []string{"file1.txt", "file2.pas", "file3.dfm"}
 	for _, f := range files {
-		if err := os.WriteFile(filepath.Join(dir, f), []byte("test"), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(tempDir, f), []byte("test"), 0644); err != nil {
 			t.Fatal(err)
 		}
 	}
 
 	params := &mcp.CallToolParamsFor[ListDirectoryInput]{
 		Arguments: ListDirectoryInput{
-			Path: dir,
+			Path: tempDir,
 		},
 	}
 
@@ -46,23 +46,23 @@ func TestHandleListDirectory_AllFiles(t *testing.T) {
 }
 
 func TestHandleListDirectory_WithPattern(t *testing.T) {
-	h := NewHandler()
-	dir := t.TempDir()
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
 
 	// Create test files
-	if err := os.WriteFile(filepath.Join(dir, "file1.pas"), []byte("test"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tempDir, "file1.pas"), []byte("test"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "file2.pas"), []byte("test"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tempDir, "file2.pas"), []byte("test"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "file3.dfm"), []byte("test"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tempDir, "file3.dfm"), []byte("test"), 0644); err != nil {
 		t.Fatal(err)
 	}
 
 	params := &mcp.CallToolParamsFor[ListDirectoryInput]{
 		Arguments: ListDirectoryInput{
-			Path:    dir,
+			Path:    tempDir,
 			Pattern: "*.pas",
 		},
 	}
@@ -86,23 +86,23 @@ func TestHandleListDirectory_WithPattern(t *testing.T) {
 }
 
 func TestHandleListDirectory_WithSubdirectory(t *testing.T) {
-	h := NewHandler()
-	dir := t.TempDir()
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
 
 	// Create a subdirectory
-	subdir := filepath.Join(dir, "subdir")
+	subdir := filepath.Join(tempDir, "subdir")
 	if err := os.Mkdir(subdir, 0755); err != nil {
 		t.Fatal(err)
 	}
 
 	// Create a file
-	if err := os.WriteFile(filepath.Join(dir, "file.txt"), []byte("test"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tempDir, "file.txt"), []byte("test"), 0644); err != nil {
 		t.Fatal(err)
 	}
 
 	params := &mcp.CallToolParamsFor[ListDirectoryInput]{
 		Arguments: ListDirectoryInput{
-			Path: dir,
+			Path: tempDir,
 		},
 	}
 
@@ -125,12 +125,12 @@ func TestHandleListDirectory_WithSubdirectory(t *testing.T) {
 }
 
 func TestHandleListDirectory_EmptyDirectory(t *testing.T) {
-	h := NewHandler()
-	dir := t.TempDir()
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
 
 	params := &mcp.CallToolParamsFor[ListDirectoryInput]{
 		Arguments: ListDirectoryInput{
-			Path: dir,
+			Path: tempDir,
 		},
 	}
 
@@ -150,11 +150,13 @@ func TestHandleListDirectory_EmptyDirectory(t *testing.T) {
 }
 
 func TestHandleListDirectory_NotFound(t *testing.T) {
-	h := NewHandler()
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
 
+	// Try to access a directory outside allowed directories
 	params := &mcp.CallToolParamsFor[ListDirectoryInput]{
 		Arguments: ListDirectoryInput{
-			Path: "/nonexistent/directory",
+			Path: filepath.Join(tempDir, "..", "..", "nonexistent", "directory"),
 		},
 	}
 
@@ -164,17 +166,19 @@ func TestHandleListDirectory_NotFound(t *testing.T) {
 	}
 
 	if !result.IsError {
-		t.Errorf("expected error for nonexistent directory")
+		t.Errorf("expected error for directory outside allowed directories")
 	}
 
 	text := extractText(result.Content)
-	if !strings.Contains(text, "failed to read directory") {
-		t.Errorf("expected 'failed to read directory' message, got %q", text)
+	// Path validation happens first, so we get "access denied" not "failed to read directory"
+	if !strings.Contains(text, "access denied") {
+		t.Errorf("expected 'access denied' message, got %q", text)
 	}
 }
 
 func TestHandleListDirectory_EmptyPath(t *testing.T) {
-	h := NewHandler()
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
 
 	params := &mcp.CallToolParamsFor[ListDirectoryInput]{
 		Arguments: ListDirectoryInput{
@@ -198,17 +202,17 @@ func TestHandleListDirectory_EmptyPath(t *testing.T) {
 }
 
 func TestHandleListDirectory_InvalidPattern(t *testing.T) {
-	h := NewHandler()
-	dir := t.TempDir()
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
 
 	// Create a file
-	if err := os.WriteFile(filepath.Join(dir, "file.txt"), []byte("test"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tempDir, "file.txt"), []byte("test"), 0644); err != nil {
 		t.Fatal(err)
 	}
 
 	params := &mcp.CallToolParamsFor[ListDirectoryInput]{
 		Arguments: ListDirectoryInput{
-			Path:    dir,
+			Path:    tempDir,
 			Pattern: "[invalid",
 		},
 	}

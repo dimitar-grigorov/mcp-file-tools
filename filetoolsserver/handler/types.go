@@ -1,13 +1,15 @@
 package handler
 
-// ReadFileInput defines input parameters for read_file tool
-type ReadFileInput struct {
-	Path     string `json:"path" jsonschema:"required,description=Absolute path to the file to read"`
-	Encoding string `json:"encoding,omitempty" jsonschema:"description=File encoding: utf-8 (no conversion) or cp1251/windows-1251 (converts to UTF-8). Default: cp1251,default=cp1251"`
+// ReadTextFileInput defines input parameters for read_text_file tool
+type ReadTextFileInput struct {
+	Path     string `json:"path" jsonschema:"required,description=Path to the file to read"`
+	Encoding string `json:"encoding,omitempty" jsonschema:"description=File encoding: utf-8 (default) or cp1251/windows-1251 (converts to UTF-8). Omit for UTF-8."`
+	Head     *int   `json:"head,omitempty" jsonschema:"description=Read only the first N lines"`
+	Tail     *int   `json:"tail,omitempty" jsonschema:"description=Read only the last N lines"`
 }
 
-// ReadFileOutput defines output for read_file tool
-type ReadFileOutput struct {
+// ReadTextFileOutput defines output for read_text_file tool
+type ReadTextFileOutput struct {
 	Content string `json:"content"`
 }
 
@@ -52,4 +54,14 @@ type DetectEncodingOutput struct {
 	Encoding   string `json:"encoding"`
 	Confidence int    `json:"confidence"`
 	HasBOM     bool   `json:"has_bom"`
+}
+
+// ListAllowedDirectoriesInput defines input parameters for list_allowed_directories tool
+type ListAllowedDirectoriesInput struct {
+	// No parameters
+}
+
+// ListAllowedDirectoriesOutput defines output for list_allowed_directories tool
+type ListAllowedDirectoriesOutput struct {
+	Directories []string `json:"directories"`
 }

@@ -9,7 +9,8 @@ import (
 )
 
 func TestHandleListEncodings(t *testing.T) {
-	h := NewHandler()
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
 
 	params := &mcp.CallToolParamsFor[ListEncodingsInput]{
 		Arguments: ListEncodingsInput{},

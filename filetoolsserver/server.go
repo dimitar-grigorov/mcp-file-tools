@@ -9,13 +9,13 @@ import (
 var Version = "dev"
 
 // Server instructions for AI assistants
-const serverInstructions = `File operations (read, write, list, detect encoding) with non-UTF-8 encoding support.
-Use this server for legacy files (Delphi, C++, etc.) with Cyrillic or other non-UTF-8 text.
-Use detect_encoding first if unsure about a file's encoding.`
+const serverInstructions = `MCP filesystem server with non-UTF-8 encoding support.
+Provides standard tools (read_text_file, write_file, list_directory) plus encoding detection (detect_encoding).
+Use this server for legacy files (Delphi, C++, etc.) with Cyrillic or other non-UTF-8 text.`
 
 // NewServer creates a new MCP server with all file tools registered
-func NewServer() *mcp.Server {
-	h := handler.NewHandler()
+func NewServer(allowedDirs []string) *mcp.Server {
+	h := handler.NewHandler(allowedDirs)
 
 	opts := &mcp.ServerOptions{
 		Instructions: serverInstructions,
@@ -25,9 +25,9 @@ func NewServer() *mcp.Server {
 	// Register all tools
 	server.AddTools(
 		mcp.NewServerTool(
-			"read_file",
-			"Reads a file and returns its content. For UTF-8 files, returns content as-is. For other encodings (cp1251, etc.), converts to UTF-8. Default: cp1251.",
-			h.HandleReadFile,
+			"read_text_file",
+			"Reads a file and returns its content. Supports optional head/tail parameters to read first or last N lines. For UTF-8 files, returns content as-is. For other encodings (cp1251, etc.), converts to UTF-8. Default: UTF-8.",
+			h.HandleReadTextFile,
 		),
 		mcp.NewServerTool(
 			"write_file",
@@ -48,6 +48,11 @@ func NewServer() *mcp.Server {
 			"detect_encoding",
 			"Detects the encoding of a file. Returns encoding name, confidence percentage, and BOM presence.",
 			h.HandleDetectEncoding,
+		),
+		mcp.NewServerTool(
+			"list_allowed_directories",
+			"Lists all directories accessible to this server.",
+			h.HandleListAllowedDirectories,
 		),
 	)
 

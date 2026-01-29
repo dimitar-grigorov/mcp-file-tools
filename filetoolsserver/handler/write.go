@@ -22,6 +22,15 @@ func (h *Handler) HandleWriteFile(ctx context.Context, ss *mcp.ServerSession, pa
 		}, nil
 	}
 
+	// Validate path against allowed directories
+	validatedPath, err := h.validatePath(input.Path)
+	if err != nil {
+		return &mcp.CallToolResultFor[WriteFileOutput]{
+			Content: []mcp.Content{&mcp.TextContent{Text: err.Error()}},
+			IsError: true,
+		}, nil
+	}
+
 	// Default encoding
 	encodingName := h.defaultEncoding
 	if input.Encoding != "" {
@@ -58,7 +67,7 @@ func (h *Handler) HandleWriteFile(ctx context.Context, ss *mcp.ServerSession, pa
 	}
 
 	// Write file
-	if err := os.WriteFile(input.Path, contentToWrite, 0644); err != nil {
+	if err := os.WriteFile(validatedPath, contentToWrite, 0644); err != nil {
 		return &mcp.CallToolResultFor[WriteFileOutput]{
 			Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("failed to write file: %v", err)}},
 			IsError: true,

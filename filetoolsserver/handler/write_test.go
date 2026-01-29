@@ -12,9 +12,9 @@ import (
 )
 
 func TestHandleWriteFile_UTF8(t *testing.T) {
-	h := NewHandler()
-	dir := t.TempDir()
-	testFile := filepath.Join(dir, "output.txt")
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+	testFile := filepath.Join(tempDir, "output.txt")
 	content := "Hello, World!"
 
 	params := &mcp.CallToolParamsFor[WriteFileInput]{
@@ -46,9 +46,9 @@ func TestHandleWriteFile_UTF8(t *testing.T) {
 }
 
 func TestHandleWriteFile_CP1251(t *testing.T) {
-	h := NewHandler()
-	dir := t.TempDir()
-	testFile := filepath.Join(dir, "output.txt")
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+	testFile := filepath.Join(tempDir, "output.txt")
 	content := "Привет" // Russian "Hello"
 
 	params := &mcp.CallToolParamsFor[WriteFileInput]{
@@ -82,9 +82,9 @@ func TestHandleWriteFile_CP1251(t *testing.T) {
 }
 
 func TestHandleWriteFile_InvalidEncoding(t *testing.T) {
-	h := NewHandler()
-	dir := t.TempDir()
-	testFile := filepath.Join(dir, "output.txt")
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+	testFile := filepath.Join(tempDir, "output.txt")
 
 	params := &mcp.CallToolParamsFor[WriteFileInput]{
 		Arguments: WriteFileInput{
@@ -110,7 +110,8 @@ func TestHandleWriteFile_InvalidEncoding(t *testing.T) {
 }
 
 func TestHandleWriteFile_EmptyPath(t *testing.T) {
-	h := NewHandler()
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
 
 	params := &mcp.CallToolParamsFor[WriteFileInput]{
 		Arguments: WriteFileInput{
@@ -135,9 +136,9 @@ func TestHandleWriteFile_EmptyPath(t *testing.T) {
 }
 
 func TestHandleWriteFile_DefaultEncoding(t *testing.T) {
-	h := NewHandler()
-	dir := t.TempDir()
-	testFile := filepath.Join(dir, "output.txt")
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+	testFile := filepath.Join(tempDir, "output.txt")
 	content := "Тест" // Russian "Test"
 
 	// No encoding specified - should use default (cp1251)

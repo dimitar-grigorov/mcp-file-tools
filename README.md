@@ -2,25 +2,46 @@
 
 MCP server for file operations with legacy encoding support. Handles reading and writing files in non-UTF-8 encodings (Windows-1251, etc.) that AI assistants can't process natively.
 
+**Security**: All file operations are restricted to explicitly allowed directories for safe operation.
+
 ## Tools
 
 ### File Operations
 
-- **read_file**
-  - Read file contents. UTF-8 files pass through unchanged; other encodings convert to UTF-8
-  - Parameters: `path` (required), `encoding` (optional): utf-8, cp1251, windows-1251 (default: cp1251)
+- **read_text_file**
+  - Read file contents with optional partial reading (head/tail)
+  - UTF-8 files pass through unchanged; other encodings convert to UTF-8
+  - Parameters:
+    - `path` (required): Path to the file
+    - `encoding` (optional): utf-8 (default), cp1251, windows-1251
+    - `head` (optional): Read only the first N lines
+    - `tail` (optional): Read only the last N lines
 
 - **write_file**
   - Write content to file. UTF-8 writes as-is; other encodings convert from UTF-8
-  - Parameters: `path` (required), `content` (required), `encoding` (optional): utf-8, cp1251, windows-1251 (default: cp1251)
+  - Parameters:
+    - `path` (required): Path to the file
+    - `content` (required): Content to write
+    - `encoding` (optional): utf-8, cp1251, windows-1251 (default: cp1251)
 
 ### Directory Operations
 
 - **list_directory**
   - List files and directories with optional pattern filtering
-  - Parameters: `path` (required): Absolute path to directory, `pattern` (optional): Glob pattern like `*.pas` or `*.dfm` (default: `*`)
+  - Parameters:
+    - `path` (required): Path to directory
+    - `pattern` (optional): Glob pattern like `*.pas` or `*.dfm` (default: `*`)
 
-### Utility
+- **list_allowed_directories**
+  - Show which directories are accessible to the server
+  - Parameters: None
+
+### Encoding Tools
+
+- **detect_encoding**
+  - Detect the encoding of a file with confidence percentage
+  - Returns encoding name, confidence, and BOM presence
+  - Parameters: `path` (required)
 
 - **list_encodings**
   - Returns all supported encodings
@@ -62,21 +83,46 @@ go build -o mcp-file-tools ./cmd/mcp-file-tools
 
 ## Usage
 
+**Important**: The server requires at least one allowed directory for security. All file operations are restricted to these directories.
+
 ### Claude Code
 
 ```bash
-claude mcp add file-tools -- "/path/to/mcp-file-tools"
+# Single directory
+claude mcp add file-tools -- "/path/to/mcp-file-tools" "/path/to/project"
+
+# Multiple directories
+claude mcp add file-tools -- "/path/to/mcp-file-tools" "/path/to/project1" "/path/to/project2"
 ```
 
 ### Claude Desktop / Cursor / VSCode
 
-Add to your MCP configuration:
+Add to your MCP configuration with allowed directories:
 
 ```json
 {
   "mcpServers": {
     "file-tools": {
-      "command": "/path/to/mcp-file-tools"
+      "command": "/path/to/mcp-file-tools",
+      "args": [
+        "C:\\Projects\\MyProject",
+        "C:\\Users\\YourName\\Documents"
+      ]
+    }
+  }
+}
+```
+
+**macOS/Linux example**:
+```json
+{
+  "mcpServers": {
+    "file-tools": {
+      "command": "/usr/local/bin/mcp-file-tools",
+      "args": [
+        "/home/user/projects",
+        "/home/user/documents"
+      ]
     }
   }
 }
@@ -124,30 +170,31 @@ GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o mcp-file-tools-windows-am
 **Prerequisites:** [Node.js](https://nodejs.org/) v18+
 
 ```bash
-# Run directly (no install needed)
-npx @modelcontextprotocol/inspector go run ./cmd/mcp-file-tools
+# Run with allowed directory (required)
+npx @modelcontextprotocol/inspector go run ./cmd/mcp-file-tools -- /path/to/allowed/dir
 
 # Or with built binary
-npx @modelcontextprotocol/inspector ./mcp-file-tools.exe
+npx @modelcontextprotocol/inspector ./mcp-file-tools.exe C:\Projects
 ```
 
 Opens a browser where you can view tools, call them with custom arguments, and inspect responses.
 
 ### Manual Debugging
 
-Run the server and send JSON-RPC commands via stdin:
+Run the server with an allowed directory and send JSON-RPC commands via stdin:
 
 ```bash
-go run ./cmd/mcp-file-tools
+# Specify allowed directory
+go run ./cmd/mcp-file-tools /path/to/project
 ```
 
-Example commands (paste into terminal). Both absolute and relative paths are supported:
+Example commands (paste into terminal):
 
 ```json
 {"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}
-{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"list_directory","arguments":{"path":".","pattern":"*.go"}}}
-{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"read_file","arguments":{"path":"D:\\Projects\\main.pas","encoding":"cp1251"}}}
-{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"write_file","arguments":{"path":"./test.txt","content":"Тест","encoding":"cp1251"}}}
+{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"list_directory","arguments":{"path":"/path/to/project","pattern":"*.go"}}}
+{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"read_text_file","arguments":{"path":"/path/to/project/main.pas","encoding":"cp1251"}}}
+{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"detect_encoding","arguments":{"path":"/path/to/project/file.txt"}}}
 ```
 
 ## License

@@ -21,8 +21,17 @@ func (h *Handler) HandleDetectEncoding(ctx context.Context, ss *mcp.ServerSessio
 		}, nil
 	}
 
+	// Validate path against allowed directories
+	validatedPath, err := h.validatePath(input.Path)
+	if err != nil {
+		return &mcp.CallToolResultFor[DetectEncodingOutput]{
+			Content: []mcp.Content{&mcp.TextContent{Text: err.Error()}},
+			IsError: true,
+		}, nil
+	}
+
 	// Read file
-	data, err := os.ReadFile(input.Path)
+	data, err := os.ReadFile(validatedPath)
 	if err != nil {
 		return &mcp.CallToolResultFor[DetectEncodingOutput]{
 			Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("failed to read file: %v", err)}},

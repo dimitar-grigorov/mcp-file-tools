@@ -22,6 +22,15 @@ func (h *Handler) HandleListDirectory(ctx context.Context, ss *mcp.ServerSession
 		}, nil
 	}
 
+	// Validate path against allowed directories
+	validatedPath, err := h.validatePath(input.Path)
+	if err != nil {
+		return &mcp.CallToolResultFor[ListDirectoryOutput]{
+			Content: []mcp.Content{&mcp.TextContent{Text: err.Error()}},
+			IsError: true,
+		}, nil
+	}
+
 	// Default pattern
 	pattern := "*"
 	if input.Pattern != "" {
@@ -29,7 +38,7 @@ func (h *Handler) HandleListDirectory(ctx context.Context, ss *mcp.ServerSession
 	}
 
 	// Read directory
-	entries, err := os.ReadDir(input.Path)
+	entries, err := os.ReadDir(validatedPath)
 	if err != nil {
 		return &mcp.CallToolResultFor[ListDirectoryOutput]{
 			Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("failed to read directory: %v", err)}},
