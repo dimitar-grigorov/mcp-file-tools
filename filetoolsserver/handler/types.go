@@ -57,11 +57,10 @@ type DetectEncodingOutput struct {
 }
 
 // ListAllowedDirectoriesInput defines input parameters for list_allowed_directories tool
-type ListAllowedDirectoriesInput struct {
-	// No parameters
-}
+type ListAllowedDirectoriesInput struct{}
 
 // ListAllowedDirectoriesOutput defines output for list_allowed_directories tool
 type ListAllowedDirectoriesOutput struct {
 	Directories []string `json:"directories"`
 }
+

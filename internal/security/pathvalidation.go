@@ -47,7 +47,7 @@ func IsPathWithinAllowedDirectories(absolutePath string, allowedDirs []string) b
 // Returns the validated absolute path or an error if access is denied.
 func ValidatePath(requestedPath string, allowedDirs []string) (string, error) {
 	if len(allowedDirs) == 0 {
-		return "", fmt.Errorf("no allowed directories configured")
+		return "", fmt.Errorf("no allowed directories configured - please provide directories via CLI arguments or MCP roots protocol")
 	}
 
 	expanded := ExpandHome(requestedPath)

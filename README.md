@@ -32,10 +32,6 @@ MCP server for file operations with legacy encoding support. Handles reading and
     - `path` (required): Path to directory
     - `pattern` (optional): Glob pattern like `*.pas` or `*.dfm` (default: `*`)
 
-- **list_allowed_directories**
-  - Show which directories are accessible to the server
-  - Parameters: None
-
 ### Encoding Tools
 
 - **detect_encoding**
@@ -83,22 +79,29 @@ go build -o mcp-file-tools ./cmd/mcp-file-tools
 
 ## Usage
 
-**Important**: The server requires at least one allowed directory for security. All file operations are restricted to these directories.
+### Security Model
 
-### Claude Code
-
-```bash
-# Single directory
-claude mcp add file-tools -- "/path/to/mcp-file-tools" "/path/to/project"
-
-# Multiple directories
-claude mcp add file-tools -- "/path/to/mcp-file-tools" "/path/to/project1" "/path/to/project2"
-```
+The server uses an **allowed directories** system for security:
+- File operations are restricted to allowed directories only
+- **Automatic via MCP Roots Protocol**: Clients like Claude Desktop automatically provide workspace directories
+- **Manual via CLI args**: Optionally specify directories at startup for clients that don't support roots
+- If no directories are configured, all file operations will fail with a clear error message
 
 ### Claude Desktop / Cursor / VSCode
 
-Add to your MCP configuration with allowed directories:
+Add to your MCP configuration. The client will automatically provide workspace roots:
 
+```json
+{
+  "mcpServers": {
+    "file-tools": {
+      "command": "/path/to/mcp-file-tools"
+    }
+  }
+}
+```
+
+**Optional: Pre-configure directories via CLI args**
 ```json
 {
   "mcpServers": {

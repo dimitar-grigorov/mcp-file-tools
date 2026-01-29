@@ -18,7 +18,9 @@ func NewServer(allowedDirs []string) *mcp.Server {
 	h := handler.NewHandler(allowedDirs)
 
 	opts := &mcp.ServerOptions{
-		Instructions: serverInstructions,
+		Instructions:            serverInstructions,
+		InitializedHandler:      createInitializedHandler(h),
+		RootsListChangedHandler: createRootsListChangedHandler(h),
 	}
 	server := mcp.NewServer("mcp-file-tools", Version, opts)
 
@@ -51,7 +53,7 @@ func NewServer(allowedDirs []string) *mcp.Server {
 		),
 		mcp.NewServerTool(
 			"list_allowed_directories",
-			"Lists all directories accessible to this server.",
+			"Returns the list of directories that this server is allowed to access. Subdirectories within these allowed directories are also accessible.",
 			h.HandleListAllowedDirectories,
 		),
 	)

@@ -17,27 +17,21 @@ func main() {
 	// Set version from build
 	filetoolsserver.Version = version
 
-	// Parse allowed directories from CLI arguments
+	// Parse allowed directories from CLI arguments (optional)
 	allowedDirs := os.Args[1:]
 
-	// Require at least one allowed directory
-	if len(allowedDirs) == 0 {
-		fmt.Fprintf(os.Stderr, "Error: At least one allowed directory required\n")
-		fmt.Fprintf(os.Stderr, "Usage: mcp-file-tools <directory1> [directory2] ...\n")
-		fmt.Fprintf(os.Stderr, "\nExample:\n")
-		fmt.Fprintf(os.Stderr, "  mcp-file-tools /home/user/project\n")
-		fmt.Fprintf(os.Stderr, "  mcp-file-tools D:\\Projects C:\\Users\\user\\Documents\n")
-		os.Exit(1)
+	// Normalize and validate allowed directories if provided
+	var normalized []string
+	var err error
+	if len(allowedDirs) > 0 {
+		normalized, err = security.NormalizeAllowedDirs(allowedDirs)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
 	}
 
-	// Normalize and validate allowed directories
-	normalized, err := security.NormalizeAllowedDirs(allowedDirs)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
-
-	// Create MCP server with allowed directories
+	// Create MCP server with allowed directories (can be empty, directories can be added dynamically)
 	server := filetoolsserver.NewServer(normalized)
 
 	// Create stdio transport
