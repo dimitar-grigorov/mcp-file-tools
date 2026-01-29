@@ -1,96 +1,76 @@
 # MCP File Tools
 
-MCP server for file operations with legacy encoding support. Handles reading and writing files in non-UTF-8 encodings (Windows-1251, etc.) that AI assistants can't process natively.
+MCP server that lets AI assistants work with legacy-encoded files. Reads and writes files in Windows-1251, CP1251, and other non-UTF-8 encodings that would otherwise corrupt data.
 
-**Security**: All file operations are restricted to explicitly allowed directories for safe operation.
+**Perfect for:** Delphi/Pascal projects, legacy VB6 apps, old PHP/HTML sites, config files with non-UTF-8 text.
 
-## Tools
+## What It Does
 
-### File Operations
+Provides 5 tools for file operations with automatic encoding conversion:
+- `read_text_file` - Read files with encoding detection/conversion
+- `write_file` - Write files in specific encodings
+- `list_directory` - Browse directories with pattern filtering
+- `detect_encoding` - Auto-detect file encoding with confidence score
+- `list_encodings` - Show all supported encodings
 
-- **read_text_file**
-  - Read file contents with optional partial reading (head/tail)
-  - UTF-8 files pass through unchanged; other encodings convert to UTF-8
-  - Parameters:
-    - `path` (required): Path to the file
-    - `encoding` (optional): utf-8 (default), cp1251, windows-1251
-    - `head` (optional): Read only the first N lines
-    - `tail` (optional): Read only the last N lines
+**Supported encodings:** UTF-8, CP1251/Windows-1251 (Cyrillic)
 
-- **write_file**
-  - Write content to file. UTF-8 writes as-is; other encodings convert from UTF-8
-  - Parameters:
-    - `path` (required): Path to the file
-    - `content` (required): Content to write
-    - `encoding` (optional): utf-8, cp1251, windows-1251 (default: cp1251)
+See [TOOLS.md](TOOLS.md) for detailed parameters and examples.
 
-### Directory Operations
-
-- **list_directory**
-  - List files and directories with optional pattern filtering
-  - Parameters:
-    - `path` (required): Path to directory
-    - `pattern` (optional): Glob pattern like `*.pas` or `*.dfm` (default: `*`)
-
-### Encoding Tools
-
-- **detect_encoding**
-  - Detect the encoding of a file with confidence percentage
-  - Returns encoding name, confidence, and BOM presence
-  - Parameters: `path` (required)
-
-- **list_encodings**
-  - Returns all supported encodings
-  - Parameters: None
-
-## Supported Encodings
-
-| Encoding | Aliases | Description |
-|----------|---------|-------------|
-| UTF-8 | utf8 | No conversion (passthrough) |
-| CP1251 | windows-1251 | Cyrillic (Bulgarian, Russian, Serbian, Ukrainian) |
-
-Planned: CP1250 (Central European), CP1252 (Western European), CP866 (DOS Cyrillic)
+**Security:** All operations restricted to allowed directories only.
 
 ## Installation
 
-### Pre-built Binaries
+### Windows x64
 
-Download from [Releases](https://github.com/dimitar-grigorov/mcp-file-tools/releases):
+```powershell
+# Download to user bin directory
+mkdir -Force "$env:LOCALAPPDATA\Programs\mcp-file-tools"
+iwr "https://github.com/dimitar-grigorov/mcp-file-tools/releases/latest/download/mcp-file-tools_windows_amd64.exe" -OutFile "$env:LOCALAPPDATA\Programs\mcp-file-tools\mcp-file-tools.exe"
 
-- `mcp-file-tools-windows-amd64.exe`
-- `mcp-file-tools-darwin-arm64` (Apple Silicon)
-- `mcp-file-tools-darwin-amd64` (Intel Mac)
-- `mcp-file-tools-linux-amd64`
+# Install with Claude Code
+claude mcp add file-tools "$env:LOCALAPPDATA\Programs\mcp-file-tools\mcp-file-tools.exe"
+```
 
-### Build from Source
+### Linux x64
 
 ```bash
+# Download to local bin directory
+mkdir -p ~/.local/bin
+curl -L "https://github.com/dimitar-grigorov/mcp-file-tools/releases/latest/download/mcp-file-tools_linux_amd64" -o ~/.local/bin/mcp-file-tools
+chmod +x ~/.local/bin/mcp-file-tools
+
+# Install with Claude Code
+claude mcp add file-tools ~/.local/bin/mcp-file-tools
+```
+
+### macOS ARM64
+
+```bash
+# Download to local bin directory
+mkdir -p ~/.local/bin
+curl -L "https://github.com/dimitar-grigorov/mcp-file-tools/releases/latest/download/mcp-file-tools_darwin_arm64" -o ~/.local/bin/mcp-file-tools
+chmod +x ~/.local/bin/mcp-file-tools
+
+# Install with Claude Code
+claude mcp add file-tools ~/.local/bin/mcp-file-tools
+```
+
+### Go Install (All Platforms)
+
+```bash
+# Install with Go (requires Go 1.23+)
 go install github.com/dimitar-grigorov/mcp-file-tools/cmd/mcp-file-tools@latest
+
+# Add to Claude Code (uses $GOPATH/bin or ~/go/bin)
+claude mcp add file-tools $(go env GOPATH)/bin/mcp-file-tools
 ```
 
-Or clone and build:
+### Other Clients
 
-```bash
-git clone https://github.com/dimitar-grigorov/mcp-file-tools.git
-cd mcp-file-tools
-go build -o mcp-file-tools ./cmd/mcp-file-tools
-```
+For Claude Desktop, VSCode, or Cursor, use the downloaded binary path in your config:
 
-## Usage
-
-### Security Model
-
-The server uses an **allowed directories** system for security:
-- File operations are restricted to allowed directories only
-- **Automatic via MCP Roots Protocol**: Clients like Claude Desktop automatically provide workspace directories
-- **Manual via CLI args**: Optionally specify directories at startup for clients that don't support roots
-- If no directories are configured, all file operations will fail with a clear error message
-
-### Claude Desktop / Cursor / VSCode
-
-Add to your MCP configuration. The client will automatically provide workspace roots:
-
+**Claude Desktop** (`%APPDATA%\Claude\claude_desktop_config.json` on Windows, `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
 ```json
 {
   "mcpServers": {
@@ -101,59 +81,51 @@ Add to your MCP configuration. The client will automatically provide workspace r
 }
 ```
 
-**Optional: Pre-configure directories via CLI args**
+**VSCode / Cursor** (`.vscode/mcp.json`):
 ```json
 {
   "mcpServers": {
     "file-tools": {
-      "command": "/path/to/mcp-file-tools",
-      "args": [
-        "C:\\Projects\\MyProject",
-        "C:\\Users\\YourName\\Documents"
-      ]
+      "command": "/path/to/mcp-file-tools"
     }
   }
 }
 ```
 
-**macOS/Linux example**:
-```json
-{
-  "mcpServers": {
-    "file-tools": {
-      "command": "/usr/local/bin/mcp-file-tools",
-      "args": [
-        "/home/user/projects",
-        "/home/user/documents"
-      ]
-    }
-  }
-}
+## How to Use
+
+Once installed, just ask Claude:
+- "List all .pas files in this directory"
+- "Read config.ini and detect its encoding"
+- "Show all supported encodings"
+- "Read MainForm.dfm using CP1251 encoding"
+
+**Security:** The server only accesses directories you explicitly allow:
+- **Automatic:** Claude Desktop/Code provide workspace directories automatically
+- **Manual:** Specify directories in config `args: ["/path/to/project"]`
+
+## Use Cases
+
+### Legacy Codebases
+
+Many legacy projects use non-UTF-8 encodings that AI assistants can't handle natively:
+
+- **Delphi/Pascal** (Windows-1251): Source files with Cyrillic UI text
+- **Visual Basic 6** (Windows-1252): Forms and config files with Western European characters
+- **Legacy PHP/HTML** (CP1251, ISO-8859-1): Web apps with localized content
+- **Old config files** (Various): INI, properties, registry files with legacy encodings
+
+**How it works:**
+```
+User: Read config.ini and change the title to "Настройки"
+Assistant: [read_text_file with cp1251] → [modify UTF-8] → [write_file with cp1251]
 ```
 
-Configuration file locations:
-- **Claude Desktop (Windows)**: `%APPDATA%\Claude\claude_desktop_config.json`
-- **Claude Desktop (macOS)**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-- **VSCode/Cursor**: `.vscode/mcp.json` in your project
-
-## Use Case: Delphi Legacy Projects
-
-Delphi 7/2007 projects store source files (`.pas`, `.dfm`) in Windows-1251 encoding for Cyrillic text. Standard file tools corrupt these files because they assume UTF-8.
-
-This server lets AI assistants read and modify these files correctly:
-
-```
-User: Read MainForm.dfm and change the button caption to "Запази"
-Assistant: [uses read_file with cp1251] → [modifies UTF-8 content] → [uses write_file with cp1251]
-```
-
-The original encoding is preserved.
+The original encoding is preserved - files remain compatible with legacy tools.
 
 ## Development
 
-**Prerequisites:**
-- Go 1.21+
-- [Delve](https://github.com/go-delve/delve) (for debugging): `go install github.com/go-delve/delve/cmd/dlv@latest`
+**Prerequisites:** Go 1.23+
 
 ```bash
 # Run tests
@@ -161,16 +133,13 @@ go test ./...
 
 # Build
 go build -o mcp-file-tools ./cmd/mcp-file-tools
-
-# Cross-compile
-GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o mcp-file-tools-windows-amd64.exe ./cmd/mcp-file-tools
 ```
 
 ### Debugging with MCP Inspector
 
 [MCP Inspector](https://github.com/modelcontextprotocol/inspector) provides a web UI for testing MCP servers.
 
-**Prerequisites:** [Node.js](https://nodejs.org/) v18+
+**Prerequisites:** Node.js v18+
 
 ```bash
 # Run with allowed directory (required)
