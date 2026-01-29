@@ -10,6 +10,16 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+// Helper to extract text from MCP content
+func extractTextFromResult(content []mcp.Content) string {
+	for _, c := range content {
+		if tc, ok := c.(*mcp.TextContent); ok {
+			return tc.Text
+		}
+	}
+	return ""
+}
+
 func TestHandleDetectEncoding_UTF8(t *testing.T) {
 	tempDir := t.TempDir()
 	h := NewHandler([]string{tempDir})
@@ -20,13 +30,11 @@ func TestHandleDetectEncoding_UTF8(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	params := &mcp.CallToolParamsFor[DetectEncodingInput]{
-		Arguments: DetectEncodingInput{
-			Path: testFile,
-		},
+	input := DetectEncodingInput{
+		Path: testFile,
 	}
 
-	result, err := h.HandleDetectEncoding(context.Background(), nil, params)
+	result, output, err := h.HandleDetectEncoding(context.Background(), nil, input)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -35,9 +43,8 @@ func TestHandleDetectEncoding_UTF8(t *testing.T) {
 		t.Errorf("expected success, got error: %v", result.Content)
 	}
 
-	text := extractText(result.Content)
-	if !strings.Contains(text, "utf-8") && !strings.Contains(text, "ascii") {
-		t.Errorf("expected UTF-8 or ASCII detection, got %q", text)
+	if !strings.Contains(strings.ToLower(output.Encoding), "utf-8") && !strings.Contains(strings.ToLower(output.Encoding), "ascii") {
+		t.Errorf("expected UTF-8 or ASCII detection, got %q", output.Encoding)
 	}
 }
 
@@ -55,13 +62,11 @@ func TestHandleDetectEncoding_UTF8WithBOM(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	params := &mcp.CallToolParamsFor[DetectEncodingInput]{
-		Arguments: DetectEncodingInput{
-			Path: testFile,
-		},
+	input := DetectEncodingInput{
+		Path: testFile,
 	}
 
-	result, err := h.HandleDetectEncoding(context.Background(), nil, params)
+	result, output, err := h.HandleDetectEncoding(context.Background(), nil, input)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,12 +75,11 @@ func TestHandleDetectEncoding_UTF8WithBOM(t *testing.T) {
 		t.Errorf("expected success, got error")
 	}
 
-	text := extractText(result.Content)
-	if !strings.Contains(text, "utf-8") {
-		t.Errorf("expected UTF-8 detection, got %q", text)
+	if !strings.Contains(strings.ToLower(output.Encoding), "utf-8") {
+		t.Errorf("expected UTF-8 detection, got %q", output.Encoding)
 	}
-	if !strings.Contains(text, "BOM") {
-		t.Errorf("expected BOM indicator, got %q", text)
+	if !output.HasBOM {
+		t.Errorf("expected BOM indicator to be true, got false")
 	}
 }
 
@@ -91,13 +95,11 @@ func TestHandleDetectEncoding_CP1251(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	params := &mcp.CallToolParamsFor[DetectEncodingInput]{
-		Arguments: DetectEncodingInput{
-			Path: testFile,
-		},
+	input := DetectEncodingInput{
+		Path: testFile,
 	}
 
-	result, err := h.HandleDetectEncoding(context.Background(), nil, params)
+	result, output, err := h.HandleDetectEncoding(context.Background(), nil, input)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,12 +108,12 @@ func TestHandleDetectEncoding_CP1251(t *testing.T) {
 		t.Errorf("expected success, got error: %v", result.Content)
 	}
 
-	text := extractText(result.Content)
+	encoding := strings.ToLower(output.Encoding)
 	// Chardet may detect as windows-1251, koi8-r, or iso-8859-5 for Cyrillic
-	if !strings.Contains(strings.ToLower(text), "1251") &&
-		!strings.Contains(strings.ToLower(text), "koi8") &&
-		!strings.Contains(strings.ToLower(text), "iso-8859") {
-		t.Errorf("expected Cyrillic encoding detection, got %q", text)
+	if !strings.Contains(encoding, "1251") &&
+		!strings.Contains(encoding, "koi8") &&
+		!strings.Contains(encoding, "iso-8859") {
+		t.Errorf("expected Cyrillic encoding detection, got %q", output.Encoding)
 	}
 }
 
@@ -120,13 +122,11 @@ func TestHandleDetectEncoding_FileNotFound(t *testing.T) {
 	h := NewHandler([]string{tempDir})
 
 	// Try to access a file outside allowed directories
-	params := &mcp.CallToolParamsFor[DetectEncodingInput]{
-		Arguments: DetectEncodingInput{
-			Path: filepath.Join(tempDir, "..", "..", "nonexistent", "file.txt"),
-		},
+	input := DetectEncodingInput{
+		Path: filepath.Join(tempDir, "..", "..", "nonexistent", "file.txt"),
 	}
 
-	result, err := h.HandleDetectEncoding(context.Background(), nil, params)
+	result, _, err := h.HandleDetectEncoding(context.Background(), nil, input)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,7 +135,7 @@ func TestHandleDetectEncoding_FileNotFound(t *testing.T) {
 		t.Errorf("expected error for file outside allowed directories")
 	}
 
-	text := extractText(result.Content)
+	text := extractTextFromResult(result.Content)
 	// Path validation happens first, so we get "access denied" not "failed to read file"
 	if !strings.Contains(text, "access denied") {
 		t.Errorf("expected 'access denied' message, got %q", text)
@@ -146,13 +146,11 @@ func TestHandleDetectEncoding_EmptyPath(t *testing.T) {
 	tempDir := t.TempDir()
 	h := NewHandler([]string{tempDir})
 
-	params := &mcp.CallToolParamsFor[DetectEncodingInput]{
-		Arguments: DetectEncodingInput{
-			Path: "",
-		},
+	input := DetectEncodingInput{
+		Path: "",
 	}
 
-	result, err := h.HandleDetectEncoding(context.Background(), nil, params)
+	result, _, err := h.HandleDetectEncoding(context.Background(), nil, input)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -161,7 +159,7 @@ func TestHandleDetectEncoding_EmptyPath(t *testing.T) {
 		t.Errorf("expected error for empty path")
 	}
 
-	text := extractText(result.Content)
+	text := extractTextFromResult(result.Content)
 	if !strings.Contains(text, "path is required") {
 		t.Errorf("expected 'path is required' message, got %q", text)
 	}

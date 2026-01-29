@@ -34,12 +34,9 @@ func main() {
 	// Create MCP server with allowed directories (can be empty, directories can be added dynamically)
 	server := filetoolsserver.NewServer(normalized)
 
-	// Create stdio transport
-	transport := mcp.NewStdioTransport()
-
-	// Run server
+	// Run server on stdio transport
 	ctx := context.Background()
-	if err := server.Run(ctx, transport); err != nil {
+	if err := server.Run(ctx, &mcp.StdioTransport{}); err != nil {
 		fmt.Fprintf(os.Stderr, "Server error: %v\n", err)
 		os.Exit(1)
 	}

@@ -4,19 +4,15 @@ import (
 	"context"
 	"strings"
 	"testing"
-
-	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func TestHandleListEncodings(t *testing.T) {
 	tempDir := t.TempDir()
 	h := NewHandler([]string{tempDir})
 
-	params := &mcp.CallToolParamsFor[ListEncodingsInput]{
-		Arguments: ListEncodingsInput{},
-	}
+	input := ListEncodingsInput{}
 
-	result, err := h.HandleListEncodings(context.Background(), nil, params)
+	result, output, err := h.HandleListEncodings(context.Background(), nil, input)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -25,7 +21,12 @@ func TestHandleListEncodings(t *testing.T) {
 		t.Errorf("expected success, got error: %v", result.Content)
 	}
 
-	text := extractText(result.Content)
+	// Check encodings list
+	if len(output.Encodings) == 0 {
+		t.Fatal("expected encodings list, got empty")
+	}
+
+	text := strings.Join(output.Encodings, " ")
 
 	// Check for UTF-8
 	if !strings.Contains(text, "utf-8") {

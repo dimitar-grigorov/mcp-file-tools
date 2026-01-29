@@ -10,33 +10,31 @@ import (
 )
 
 // HandleDetectEncoding detects the encoding of a file
-func (h *Handler) HandleDetectEncoding(ctx context.Context, ss *mcp.ServerSession, params *mcp.CallToolParamsFor[DetectEncodingInput]) (*mcp.CallToolResultFor[DetectEncodingOutput], error) {
-	input := params.Arguments
-
+func (h *Handler) HandleDetectEncoding(ctx context.Context, req *mcp.CallToolRequest, input DetectEncodingInput) (*mcp.CallToolResult, DetectEncodingOutput, error) {
 	// Validate path
 	if input.Path == "" {
-		return &mcp.CallToolResultFor[DetectEncodingOutput]{
+		return &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: "path is required and must be a non-empty string"}},
 			IsError: true,
-		}, nil
+		}, DetectEncodingOutput{}, nil
 	}
 
 	// Validate path against allowed directories
 	validatedPath, err := h.validatePath(input.Path)
 	if err != nil {
-		return &mcp.CallToolResultFor[DetectEncodingOutput]{
+		return &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: err.Error()}},
 			IsError: true,
-		}, nil
+		}, DetectEncodingOutput{}, nil
 	}
 
 	// Read file
 	data, err := os.ReadFile(validatedPath)
 	if err != nil {
-		return &mcp.CallToolResultFor[DetectEncodingOutput]{
+		return &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("failed to read file: %v", err)}},
 			IsError: true,
-		}, nil
+		}, DetectEncodingOutput{}, nil
 	}
 
 	// Detect encoding
@@ -44,19 +42,15 @@ func (h *Handler) HandleDetectEncoding(ctx context.Context, ss *mcp.ServerSessio
 
 	// Handle unknown encoding
 	if result.Charset == "" {
-		return &mcp.CallToolResultFor[DetectEncodingOutput]{
+		return &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: "Could not detect encoding"}},
 			IsError: true,
-		}, nil
+		}, DetectEncodingOutput{}, nil
 	}
 
-	// Build response message
-	message := fmt.Sprintf("Detected encoding: %s (confidence: %d%%)", result.Charset, result.Confidence)
-	if result.HasBOM {
-		message += " [has BOM]"
-	}
-
-	return &mcp.CallToolResultFor[DetectEncodingOutput]{
-		Content: []mcp.Content{&mcp.TextContent{Text: message}},
+	return &mcp.CallToolResult{}, DetectEncodingOutput{
+		Encoding:   result.Charset,
+		Confidence: result.Confidence,
+		HasBOM:     result.HasBOM,
 	}, nil
 }

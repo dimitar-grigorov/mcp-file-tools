@@ -11,41 +11,39 @@ import (
 )
 
 // HandleReadTextFile reads a file in the specified encoding and returns UTF-8 content
-func (h *Handler) HandleReadTextFile(ctx context.Context, ss *mcp.ServerSession, params *mcp.CallToolParamsFor[ReadTextFileInput]) (*mcp.CallToolResultFor[ReadTextFileOutput], error) {
-	input := params.Arguments
-
+func (h *Handler) HandleReadTextFile(ctx context.Context, req *mcp.CallToolRequest, input ReadTextFileInput) (*mcp.CallToolResult, ReadTextFileOutput, error) {
 	// Validate path
 	if input.Path == "" {
-		return &mcp.CallToolResultFor[ReadTextFileOutput]{
+		return &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: "path is required and must be a non-empty string"}},
 			IsError: true,
-		}, nil
+		}, ReadTextFileOutput{}, nil
 	}
 
 	// Validate head/tail - cannot specify both
 	if input.Head != nil && input.Tail != nil {
-		return &mcp.CallToolResultFor[ReadTextFileOutput]{
+		return &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: "cannot specify both head and tail"}},
 			IsError: true,
-		}, nil
+		}, ReadTextFileOutput{}, nil
 	}
 
 	// Validate path against allowed directories
 	validatedPath, err := h.validatePath(input.Path)
 	if err != nil {
-		return &mcp.CallToolResultFor[ReadTextFileOutput]{
+		return &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: err.Error()}},
 			IsError: true,
-		}, nil
+		}, ReadTextFileOutput{}, nil
 	}
 
 	// Read file
 	data, err := os.ReadFile(validatedPath)
 	if err != nil {
-		return &mcp.CallToolResultFor[ReadTextFileOutput]{
+		return &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("failed to read file: %v", err)}},
 			IsError: true,
-		}, nil
+		}, ReadTextFileOutput{}, nil
 	}
 
 	// Determine encoding - default to UTF-8
@@ -57,12 +55,12 @@ func (h *Handler) HandleReadTextFile(ctx context.Context, ss *mcp.ServerSession,
 	// Validate encoding
 	enc, ok := encoding.Get(encodingName)
 	if !ok {
-		return &mcp.CallToolResultFor[ReadTextFileOutput]{
+		return &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{
 				Text: fmt.Sprintf("unsupported encoding: %s. Use list_encodings to see available encodings.", encodingName),
 			}},
 			IsError: true,
-		}, nil
+		}, ReadTextFileOutput{}, nil
 	}
 
 	var content string
@@ -75,10 +73,10 @@ func (h *Handler) HandleReadTextFile(ctx context.Context, ss *mcp.ServerSession,
 		decoder := enc.NewDecoder()
 		utf8Content, err := decoder.Bytes(data)
 		if err != nil {
-			return &mcp.CallToolResultFor[ReadTextFileOutput]{
+			return &mcp.CallToolResult{
 				Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("failed to decode file content: %v", err)}},
 				IsError: true,
-			}, nil
+			}, ReadTextFileOutput{}, nil
 		}
 		content = string(utf8Content)
 	}
@@ -102,7 +100,5 @@ func (h *Handler) HandleReadTextFile(ctx context.Context, ss *mcp.ServerSession,
 		content = strings.Join(lines, "\n")
 	}
 
-	return &mcp.CallToolResultFor[ReadTextFileOutput]{
-		Content: []mcp.Content{&mcp.TextContent{Text: content}},
-	}, nil
+	return &mcp.CallToolResult{}, ReadTextFileOutput{Content: content}, nil
 }

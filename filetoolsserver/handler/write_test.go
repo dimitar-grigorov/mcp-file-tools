@@ -11,27 +11,39 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+// Helper to extract text from MCP content
+func extractTextFromResultWrite(content []mcp.Content) string {
+	for _, c := range content {
+		if tc, ok := c.(*mcp.TextContent); ok {
+			return tc.Text
+		}
+	}
+	return ""
+}
+
 func TestHandleWriteFile_UTF8(t *testing.T) {
 	tempDir := t.TempDir()
 	h := NewHandler([]string{tempDir})
 	testFile := filepath.Join(tempDir, "output.txt")
 	content := "Hello, World!"
 
-	params := &mcp.CallToolParamsFor[WriteFileInput]{
-		Arguments: WriteFileInput{
-			Path:     testFile,
-			Content:  content,
-			Encoding: "utf-8",
-		},
+	input := WriteFileInput{
+		Path:     testFile,
+		Content:  content,
+		Encoding: "utf-8",
 	}
 
-	result, err := h.HandleWriteFile(context.Background(), nil, params)
+	result, output, err := h.HandleWriteFile(context.Background(), nil, input)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if result.IsError {
 		t.Errorf("expected success, got error: %v", result.Content)
+	}
+
+	if !strings.Contains(strings.ToLower(output.Message), "success") && !strings.Contains(strings.ToLower(output.Message), "wrote") {
+		t.Errorf("expected success message, got %q", output.Message)
 	}
 
 	// Verify file content
@@ -51,21 +63,23 @@ func TestHandleWriteFile_CP1251(t *testing.T) {
 	testFile := filepath.Join(tempDir, "output.txt")
 	content := "Привет" // Russian "Hello"
 
-	params := &mcp.CallToolParamsFor[WriteFileInput]{
-		Arguments: WriteFileInput{
-			Path:     testFile,
-			Content:  content,
-			Encoding: "cp1251",
-		},
+	input := WriteFileInput{
+		Path:     testFile,
+		Content:  content,
+		Encoding: "cp1251",
 	}
 
-	result, err := h.HandleWriteFile(context.Background(), nil, params)
+	result, output, err := h.HandleWriteFile(context.Background(), nil, input)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if result.IsError {
 		t.Errorf("expected success, got error: %v", result.Content)
+	}
+
+	if !strings.Contains(strings.ToLower(output.Message), "success") && !strings.Contains(strings.ToLower(output.Message), "wrote") {
+		t.Errorf("expected success message, got %q", output.Message)
 	}
 
 	// Verify CP1251 bytes were written
@@ -86,15 +100,13 @@ func TestHandleWriteFile_InvalidEncoding(t *testing.T) {
 	h := NewHandler([]string{tempDir})
 	testFile := filepath.Join(tempDir, "output.txt")
 
-	params := &mcp.CallToolParamsFor[WriteFileInput]{
-		Arguments: WriteFileInput{
-			Path:     testFile,
-			Content:  "test",
-			Encoding: "invalid-encoding",
-		},
+	input := WriteFileInput{
+		Path:     testFile,
+		Content:  "test",
+		Encoding: "invalid-encoding",
 	}
 
-	result, err := h.HandleWriteFile(context.Background(), nil, params)
+	result, _, err := h.HandleWriteFile(context.Background(), nil, input)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,7 +115,7 @@ func TestHandleWriteFile_InvalidEncoding(t *testing.T) {
 		t.Errorf("expected error for invalid encoding")
 	}
 
-	text := extractText(result.Content)
+	text := extractTextFromResultWrite(result.Content)
 	if !strings.Contains(text, "unsupported encoding") {
 		t.Errorf("expected 'unsupported encoding' message, got %q", text)
 	}
@@ -113,14 +125,12 @@ func TestHandleWriteFile_EmptyPath(t *testing.T) {
 	tempDir := t.TempDir()
 	h := NewHandler([]string{tempDir})
 
-	params := &mcp.CallToolParamsFor[WriteFileInput]{
-		Arguments: WriteFileInput{
-			Path:    "",
-			Content: "test",
-		},
+	input := WriteFileInput{
+		Path:    "",
+		Content: "test",
 	}
 
-	result, err := h.HandleWriteFile(context.Background(), nil, params)
+	result, _, err := h.HandleWriteFile(context.Background(), nil, input)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,7 +139,7 @@ func TestHandleWriteFile_EmptyPath(t *testing.T) {
 		t.Errorf("expected error for empty path")
 	}
 
-	text := extractText(result.Content)
+	text := extractTextFromResultWrite(result.Content)
 	if !strings.Contains(text, "path is required") {
 		t.Errorf("expected 'path is required' message, got %q", text)
 	}
@@ -142,14 +152,12 @@ func TestHandleWriteFile_DefaultEncoding(t *testing.T) {
 	content := "Тест" // Russian "Test"
 
 	// No encoding specified - should use default (cp1251)
-	params := &mcp.CallToolParamsFor[WriteFileInput]{
-		Arguments: WriteFileInput{
-			Path:    testFile,
-			Content: content,
-		},
+	input := WriteFileInput{
+		Path:    testFile,
+		Content: content,
 	}
 
-	result, err := h.HandleWriteFile(context.Background(), nil, params)
+	result, output, err := h.HandleWriteFile(context.Background(), nil, input)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -158,8 +166,7 @@ func TestHandleWriteFile_DefaultEncoding(t *testing.T) {
 		t.Errorf("expected success, got error")
 	}
 
-	text := extractText(result.Content)
-	if !strings.Contains(text, "cp1251") {
-		t.Errorf("expected default encoding cp1251 in message, got %q", text)
+	if !strings.Contains(output.Message, "cp1251") {
+		t.Errorf("expected default encoding cp1251 in message, got %q", output.Message)
 	}
 }

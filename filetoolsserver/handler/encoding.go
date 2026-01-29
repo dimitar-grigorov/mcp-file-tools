@@ -8,8 +8,7 @@ import (
 )
 
 // HandleListEncodings returns a list of supported encodings
-func (h *Handler) HandleListEncodings(ctx context.Context, ss *mcp.ServerSession, params *mcp.CallToolParamsFor[ListEncodingsInput]) (*mcp.CallToolResultFor[ListEncodingsOutput], error) {
-	return &mcp.CallToolResultFor[ListEncodingsOutput]{
-		Content: []mcp.Content{&mcp.TextContent{Text: encoding.List()}},
-	}, nil
+func (h *Handler) HandleListEncodings(ctx context.Context, req *mcp.CallToolRequest, input ListEncodingsInput) (*mcp.CallToolResult, ListEncodingsOutput, error) {
+	encodings := encoding.List()
+	return &mcp.CallToolResult{}, ListEncodingsOutput{Encodings: []string{encodings}}, nil
 }

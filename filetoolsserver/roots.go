@@ -11,9 +11,9 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-func createInitializedHandler(h *handler.Handler) func(context.Context, *mcp.ServerSession, *mcp.InitializedParams) {
-	return func(ctx context.Context, ss *mcp.ServerSession, params *mcp.InitializedParams) {
-		result, err := ss.ListRoots(ctx, &mcp.ListRootsParams{})
+func createInitializedHandler(h *handler.Handler) func(context.Context, *mcp.InitializedRequest) {
+	return func(ctx context.Context, req *mcp.InitializedRequest) {
+		result, err := req.Session.ListRoots(ctx, &mcp.ListRootsParams{})
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to request roots from client: %v\n", err)
 			return
@@ -31,9 +31,9 @@ func createInitializedHandler(h *handler.Handler) func(context.Context, *mcp.Ser
 	}
 }
 
-func createRootsListChangedHandler(h *handler.Handler) func(context.Context, *mcp.ServerSession, *mcp.RootsListChangedParams) {
-	return func(ctx context.Context, ss *mcp.ServerSession, params *mcp.RootsListChangedParams) {
-		result, err := ss.ListRoots(ctx, &mcp.ListRootsParams{})
+func createRootsListChangedHandler(h *handler.Handler) func(context.Context, *mcp.RootsListChangedRequest) {
+	return func(ctx context.Context, req *mcp.RootsListChangedRequest) {
+		result, err := req.Session.ListRoots(ctx, &mcp.ListRootsParams{})
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to request updated roots from client: %v\n", err)
 			return
