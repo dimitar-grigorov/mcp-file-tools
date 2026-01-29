@@ -29,12 +29,10 @@ archives:
         format: zip
     name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
 
-# Also publish raw binaries with consistent naming
+# Also publish raw binaries for MCP registry (GoReleaser adds .exe automatically for Windows)
   - id: binaries
     format: binary
-    name_template: >-
-      {{ .ProjectName }}-{{ .Os }}-{{ .Arch }}
-      {{- if eq .Os "windows" }}.exe{{ end }}
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
 
 checksum:
   name_template: 'checksums.txt'
