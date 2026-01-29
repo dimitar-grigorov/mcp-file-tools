@@ -11,24 +11,22 @@ import (
 )
 
 // HandleWriteFile writes UTF-8 content to a file with the specified encoding
-func (h *Handler) HandleWriteFile(ctx context.Context, ss *mcp.ServerSession, params *mcp.CallToolParamsFor[WriteFileInput]) (*mcp.CallToolResultFor[WriteFileOutput], error) {
-	input := params.Arguments
-
+func (h *Handler) HandleWriteFile(ctx context.Context, req *mcp.CallToolRequest, input WriteFileInput) (*mcp.CallToolResult, WriteFileOutput, error) {
 	// Validate inputs
 	if input.Path == "" {
-		return &mcp.CallToolResultFor[WriteFileOutput]{
+		return &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: "path is required and must be a non-empty string"}},
 			IsError: true,
-		}, nil
+		}, WriteFileOutput{}, nil
 	}
 
 	// Validate path against allowed directories
 	validatedPath, err := h.validatePath(input.Path)
 	if err != nil {
-		return &mcp.CallToolResultFor[WriteFileOutput]{
+		return &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: err.Error()}},
 			IsError: true,
-		}, nil
+		}, WriteFileOutput{}, nil
 	}
 
 	// Default encoding
@@ -40,12 +38,12 @@ func (h *Handler) HandleWriteFile(ctx context.Context, ss *mcp.ServerSession, pa
 	// Validate encoding
 	enc, ok := encoding.Get(encodingName)
 	if !ok {
-		return &mcp.CallToolResultFor[WriteFileOutput]{
+		return &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{
 				Text: fmt.Sprintf("unsupported encoding: %s. Use list_encodings to see available encodings.", encodingName),
 			}},
 			IsError: true,
-		}, nil
+		}, WriteFileOutput{}, nil
 	}
 
 	var contentToWrite []byte
@@ -58,24 +56,22 @@ func (h *Handler) HandleWriteFile(ctx context.Context, ss *mcp.ServerSession, pa
 		encoder := enc.NewEncoder()
 		encoded, err := encoder.Bytes([]byte(input.Content))
 		if err != nil {
-			return &mcp.CallToolResultFor[WriteFileOutput]{
+			return &mcp.CallToolResult{
 				Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("failed to encode content: %v", err)}},
 				IsError: true,
-			}, nil
+			}, WriteFileOutput{}, nil
 		}
 		contentToWrite = encoded
 	}
 
 	// Write file
 	if err := os.WriteFile(validatedPath, contentToWrite, 0644); err != nil {
-		return &mcp.CallToolResultFor[WriteFileOutput]{
+		return &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("failed to write file: %v", err)}},
 			IsError: true,
-		}, nil
+		}, WriteFileOutput{}, nil
 	}
 
 	message := fmt.Sprintf("Successfully wrote %d bytes to %s (encoding: %s)", len(contentToWrite), input.Path, encodingName)
-	return &mcp.CallToolResultFor[WriteFileOutput]{
-		Content: []mcp.Content{&mcp.TextContent{Text: message}},
-	}, nil
+	return &mcp.CallToolResult{}, WriteFileOutput{Message: message}, nil
 }

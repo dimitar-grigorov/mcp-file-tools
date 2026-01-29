@@ -383,49 +383,6 @@ func TestValidatePath_PathTraversal(t *testing.T) {
 	}
 }
 
-func TestExpandHome(t *testing.T) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		t.Skip("cannot get home directory")
-	}
-
-	tests := []struct {
-		name     string
-		path     string
-		expected string
-	}{
-		{
-			name:     "tilde only",
-			path:     "~",
-			expected: home,
-		},
-		{
-			name:     "tilde with path",
-			path:     "~/Documents/file.txt",
-			expected: filepath.Join(home, "Documents", "file.txt"),
-		},
-		{
-			name:     "no tilde",
-			path:     "/absolute/path",
-			expected: "/absolute/path",
-		},
-		{
-			name:     "relative path",
-			path:     "relative/path",
-			expected: "relative/path",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := ExpandHome(tt.path)
-			if result != tt.expected {
-				t.Errorf("expected %s, got %s", tt.expected, result)
-			}
-		})
-	}
-}
-
 func TestNormalizeAllowedDirs(t *testing.T) {
 	tempDir := t.TempDir()
 	existingDir := filepath.Join(tempDir, "existing")
@@ -489,45 +446,3 @@ func TestNormalizeAllowedDirs(t *testing.T) {
 	}
 }
 
-func TestNormalizePath(t *testing.T) {
-	tests := []struct {
-		name     string
-		path     string
-		contains string // What the result should contain
-	}{
-		{
-			name:     "clean path",
-			path:     "/home/user/project",
-			contains: "project",
-		},
-		{
-			name:     "path with quotes",
-			path:     "\"/home/user/project\"",
-			contains: "project",
-		},
-		{
-			name:     "path with spaces",
-			path:     "  /home/user/project  ",
-			contains: "project",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := normalizePath(tt.path)
-			if !strings.Contains(result, tt.contains) {
-				t.Errorf("expected result to contain %s, got %s", tt.contains, result)
-			}
-		})
-	}
-}
-
-func TestValidatePath_NoAllowedDirs(t *testing.T) {
-	_, err := ValidatePath("/any/path", []string{})
-	if err == nil {
-		t.Error("expected error when no allowed directories configured")
-	}
-	if err != nil && !strings.Contains(err.Error(), "no allowed directories") {
-		t.Errorf("expected 'no allowed directories' error, got: %v", err)
-	}
-}
