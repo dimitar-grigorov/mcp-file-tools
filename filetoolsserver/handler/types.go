@@ -50,9 +50,17 @@ type ListDirectoryOutput struct {
 // ListEncodingsInput defines input parameters for list_encodings tool
 type ListEncodingsInput struct{}
 
+// EncodingItem represents a single encoding in the list
+type EncodingItem struct {
+	Name        string   `json:"name"`
+	DisplayName string   `json:"displayName"`
+	Aliases     []string `json:"aliases"`
+	Description string   `json:"description"`
+}
+
 // ListEncodingsOutput defines output for list_encodings tool
 type ListEncodingsOutput struct {
-	Encodings []string `json:"encodings"`
+	Encodings []EncodingItem `json:"encodings"`
 }
 
 // DetectEncodingInput defines input parameters for detect_encoding tool.

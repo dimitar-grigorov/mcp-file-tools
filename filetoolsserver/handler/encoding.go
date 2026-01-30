@@ -9,6 +9,18 @@ import (
 
 // HandleListEncodings returns a list of supported encodings
 func (h *Handler) HandleListEncodings(ctx context.Context, req *mcp.CallToolRequest, input ListEncodingsInput) (*mcp.CallToolResult, ListEncodingsOutput, error) {
-	encodings := encoding.List()
-	return &mcp.CallToolResult{}, ListEncodingsOutput{Encodings: []string{encodings}}, nil
+	items := encoding.ListEncodings()
+
+	// Convert to handler types
+	encodings := make([]EncodingItem, len(items))
+	for i, item := range items {
+		encodings[i] = EncodingItem{
+			Name:        item.Name,
+			DisplayName: item.DisplayName,
+			Aliases:     item.Aliases,
+			Description: item.Description,
+		}
+	}
+
+	return &mcp.CallToolResult{}, ListEncodingsOutput{Encodings: encodings}, nil
 }
