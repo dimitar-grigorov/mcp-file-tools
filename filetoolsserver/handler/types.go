@@ -74,3 +74,20 @@ type ListAllowedDirectoriesOutput struct {
 	Directories []string `json:"directories"`
 }
 
+// GetFileInfoInput defines input parameters for get_file_info tool.
+// Path: Path to the file or directory to get info for (required)
+type GetFileInfoInput struct {
+	Path string `json:"path"`
+}
+
+// GetFileInfoOutput defines output for get_file_info tool
+type GetFileInfoOutput struct {
+	Size        int64  `json:"size"`
+	Created     string `json:"created"`
+	Modified    string `json:"modified"`
+	Accessed    string `json:"accessed"`
+	IsDirectory bool   `json:"isDirectory"`
+	IsFile      bool   `json:"isFile"`
+	Permissions string `json:"permissions"`
+}
+

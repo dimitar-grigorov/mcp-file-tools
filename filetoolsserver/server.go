@@ -24,6 +24,7 @@ Tools provided:
 - detect_encoding: Auto-detect file encoding with confidence score
 - list_encodings: Show all supported encodings
 - list_allowed_directories: Show accessible directories
+- get_file_info: Get file/directory metadata (size, times, permissions)
 
 Always use detect_encoding first if encoding is unknown.`
 
@@ -95,6 +96,15 @@ func NewServer(allowedDirs []string) *mcp.Server {
 			OpenWorldHint: boolPtr(false),
 		},
 	}, h.HandleListAllowedDirectories)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "get_file_info",
+		Description: "Retrieve detailed metadata about a file or directory. Returns size, creation time, last modified time, last accessed time, permissions, and type (file/directory). Only works within allowed directories. Parameter: path (required).",
+		Annotations: &mcp.ToolAnnotations{
+			ReadOnlyHint:  true,
+			OpenWorldHint: boolPtr(false),
+		},
+	}, h.HandleGetFileInfo)
 
 	// Write tools
 	mcp.AddTool(server, &mcp.Tool{
