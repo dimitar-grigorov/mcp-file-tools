@@ -1,14 +1,32 @@
+# Smithery configuration file: https://smithery.ai/docs/config#smitheryyaml
+# This MCP server provides tools for reading/writing legacy-encoded files
+
+runtime: container
+
 startCommand:
   type: stdio
   configSchema:
     type: object
+    required:
+      - allowedDirectory
     properties:
-      defaultEncoding:
+      allowedDirectory:
         type: string
-        default: "cp1251"
-        description: Default encoding for file operations (cp1251, windows-1251)
+        description: The primary directory the server is allowed to access. Use '/app/data' for the default mount point in the container.
+      additionalDirectories:
+        type: array
+        items:
+          type: string
+        description: Optional additional directories the server can access.
   commandFunction:
     |-
-    (config) => ({ command: './server', args: [] })
+    (config) => {
+      const args = [config.allowedDirectory];
+      if (config.additionalDirectories && Array.isArray(config.additionalDirectories)) {
+        args.push(...config.additionalDirectories);
+      }
+      return { command: './server', args: args };
+    }
   exampleConfig:
-    defaultEncoding: cp1251
+    allowedDirectory: /app/data
+    additionalDirectories: []
