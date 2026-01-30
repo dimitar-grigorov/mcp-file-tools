@@ -21,13 +21,25 @@ See [TOOLS.md](TOOLS.md) for detailed parameters and examples.
 
 ## Installation
 
+### From MCP Registry (Recommended)
+
+This server is published to the [Official MCP Registry](https://registry.modelcontextprotocol.io).  MCP clients that support the registry can install it directly:
+
+```bash
+# Claude Code
+claude mcp add io.github.dimitar-grigorov/mcp-file-tools
+# Or search for it
+claude mcp search file-tools
+```
+
+For clients without registry support, use the manual installation methods below.
+
 ### Windows x64
 
 ```powershell
-# Download to user bin directory
+# Download
 mkdir -Force "$env:LOCALAPPDATA\Programs\mcp-file-tools"
 iwr "https://github.com/dimitar-grigorov/mcp-file-tools/releases/latest/download/mcp-file-tools_windows_amd64.exe" -OutFile "$env:LOCALAPPDATA\Programs\mcp-file-tools\mcp-file-tools.exe"
-
 # Install with Claude Code
 claude mcp add file-tools "$env:LOCALAPPDATA\Programs\mcp-file-tools\mcp-file-tools.exe"
 ```
@@ -35,11 +47,10 @@ claude mcp add file-tools "$env:LOCALAPPDATA\Programs\mcp-file-tools\mcp-file-to
 ### Linux x64
 
 ```bash
-# Download to local bin directory
+# Download
 mkdir -p ~/.local/bin
 curl -L "https://github.com/dimitar-grigorov/mcp-file-tools/releases/latest/download/mcp-file-tools_linux_amd64" -o ~/.local/bin/mcp-file-tools
 chmod +x ~/.local/bin/mcp-file-tools
-
 # Install with Claude Code
 claude mcp add file-tools ~/.local/bin/mcp-file-tools
 ```
@@ -47,11 +58,10 @@ claude mcp add file-tools ~/.local/bin/mcp-file-tools
 ### macOS ARM64
 
 ```bash
-# Download to local bin directory
+# Download
 mkdir -p ~/.local/bin
 curl -L "https://github.com/dimitar-grigorov/mcp-file-tools/releases/latest/download/mcp-file-tools_darwin_arm64" -o ~/.local/bin/mcp-file-tools
 chmod +x ~/.local/bin/mcp-file-tools
-
 # Install with Claude Code
 claude mcp add file-tools ~/.local/bin/mcp-file-tools
 ```
@@ -61,8 +71,7 @@ claude mcp add file-tools ~/.local/bin/mcp-file-tools
 ```bash
 # Install with Go (requires Go 1.23+)
 go install github.com/dimitar-grigorov/mcp-file-tools/cmd/mcp-file-tools@latest
-
-# Add to Claude Code (uses $GOPATH/bin or ~/go/bin)
+# Add to Claude Code
 claude mcp add file-tools $(go env GOPATH)/bin/mcp-file-tools
 ```
 

@@ -43,3 +43,12 @@ Thumbs.db
 
 # Local settings
 .claude/
+
+# MCP Registry credentials
+.mcpregistry_*
+
+# MCP Publisher tool (built locally)
+mcp-publisher.exe
+
+# MCP server.json
+server.json
