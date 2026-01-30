@@ -23,15 +23,15 @@ builds:
 
 archives:
   - id: default
-    format: tar.gz
-    format_overrides:
-      - goos: windows
-        format: zip
+    formats: ['tar.gz', 'zip']
+    files:
+      - README.md
+      - LICENSE
     name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
 
 # Also publish raw binaries for MCP registry (GoReleaser adds .exe automatically for Windows)
   - id: binaries
-    format: binary
+    formats: ['binary']
     name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
 
 checksum:
