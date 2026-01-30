@@ -21,18 +21,9 @@ See [TOOLS.md](TOOLS.md) for detailed parameters and examples.
 
 ## Installation
 
-### From MCP Registry (Recommended)
+### MCP Registry
 
-This server is published to the [Official MCP Registry](https://registry.modelcontextprotocol.io).  MCP clients that support the registry can install it directly:
-
-```bash
-# Claude Code
-claude mcp add io.github.dimitar-grigorov/mcp-file-tools
-# Or search for it
-claude mcp search file-tools
-```
-
-For clients without registry support, use the manual installation methods below.
+This server is listed in the [Official MCP Registry](https://registry.modelcontextprotocol.io/?search=mcp-file-tools) for discovery.
 
 ### Windows x64
 
