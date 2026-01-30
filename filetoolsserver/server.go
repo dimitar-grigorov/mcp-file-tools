@@ -18,7 +18,7 @@ IMPORTANT: Use these tools instead of built-in Read/Write when:
 - User mentions Cyrillic, Russian, or Eastern European text
 
 Tools provided:
-- read_text_file: Read files with encoding conversion (use instead of Read)
+- read_text_file: Read files with auto-detection and encoding conversion (use instead of Read)
 - write_file: Write files with encoding conversion (use instead of Write)
 - list_directory: List files with pattern filtering
 - detect_encoding: Auto-detect file encoding with confidence score
@@ -26,7 +26,7 @@ Tools provided:
 - list_allowed_directories: Show accessible directories
 - get_file_info: Get file/directory metadata (size, times, permissions)
 
-Always use detect_encoding first if encoding is unknown.`
+read_text_file auto-detects encoding if not specified. Use detect_encoding separately only if you need encoding info without reading the file.`
 
 // Helper for bool pointers (DestructiveHint defaults to true, so we need explicit false)
 func boolPtr(b bool) *bool {
@@ -54,7 +54,7 @@ func NewServer(allowedDirs []string) *mcp.Server {
 	// Read-only tools
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "read_text_file",
-		Description: "Read files with automatic encoding conversion to UTF-8. USE THIS instead of built-in Read tool when files contain non-UTF-8 encodings (CP1251, Windows-1251, etc.) or display � characters. Supports head/tail for reading first/last N lines. Parameters: path (required), encoding (cp1251/windows-1251/utf-8, default: utf-8), head (optional), tail (optional).",
+		Description: "Read files with automatic encoding detection and conversion to UTF-8. If encoding is not specified, auto-detects using chunked sampling (efficient for large files). Returns detected encoding and confidence in response. USE THIS instead of built-in Read tool when files may contain non-UTF-8 encodings. Parameters: path (required), encoding (optional - auto-detects if omitted; cp1251/windows-1251/utf-8), head (optional), tail (optional).",
 		Annotations: &mcp.ToolAnnotations{
 			ReadOnlyHint:  true,
 			OpenWorldHint: boolPtr(false),

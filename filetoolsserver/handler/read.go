@@ -8,97 +8,160 @@ import (
 
 	"github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	textEncoding "golang.org/x/text/encoding"
 )
 
-// HandleReadTextFile reads a file in the specified encoding and returns UTF-8 content
-func (h *Handler) HandleReadTextFile(ctx context.Context, req *mcp.CallToolRequest, input ReadTextFileInput) (*mcp.CallToolResult, ReadTextFileOutput, error) {
-	// Validate path
-	if input.Path == "" {
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{&mcp.TextContent{Text: "path is required and must be a non-empty string"}},
-			IsError: true,
-		}, ReadTextFileOutput{}, nil
-	}
+// encodingResult holds the result of encoding resolution
+type encodingResult struct {
+	encoder            textEncoding.Encoding
+	name               string
+	detectedEncoding   string
+	encodingConfidence int
+	autoDetected       bool
+}
 
-	// Validate head/tail - cannot specify both
-	if input.Head != nil && input.Tail != nil {
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{&mcp.TextContent{Text: "cannot specify both head and tail"}},
-			IsError: true,
-		}, ReadTextFileOutput{}, nil
+// HandleReadTextFile reads a file in the specified encoding and returns UTF-8 content.
+// If encoding is not specified, it auto-detects the encoding using chunked sampling.
+func (h *Handler) HandleReadTextFile(ctx context.Context, req *mcp.CallToolRequest, input ReadTextFileInput) (*mcp.CallToolResult, ReadTextFileOutput, error) {
+	// Validate input
+	if err := validateReadInput(input); err != nil {
+		return errorResult(err.Error()), ReadTextFileOutput{}, nil
 	}
 
 	// Validate path against allowed directories
 	validatedPath, err := h.validatePath(input.Path)
 	if err != nil {
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{&mcp.TextContent{Text: err.Error()}},
-			IsError: true,
-		}, ReadTextFileOutput{}, nil
+		return errorResult(err.Error()), ReadTextFileOutput{}, nil
 	}
 
 	// Read file
 	data, err := os.ReadFile(validatedPath)
 	if err != nil {
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("failed to read file: %v", err)}},
-			IsError: true,
-		}, ReadTextFileOutput{}, nil
+		return errorResult(fmt.Sprintf("failed to read file: %v", err)), ReadTextFileOutput{}, nil
 	}
 
-	// Determine encoding - default to UTF-8
-	encodingName := strings.ToLower(input.Encoding)
-	if encodingName == "" {
-		encodingName = "utf-8"
+	// Resolve encoding (explicit or auto-detect)
+	encResult, err := resolveEncoding(input.Encoding, data)
+	if err != nil {
+		return errorResult(err.Error()), ReadTextFileOutput{}, nil
 	}
 
-	// Validate encoding
-	enc, ok := encoding.Get(encodingName)
-	if !ok {
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{&mcp.TextContent{
-				Text: fmt.Sprintf("unsupported encoding: %s. Use list_encodings to see available encodings.", encodingName),
-			}},
-			IsError: true,
-		}, ReadTextFileOutput{}, nil
-	}
-
-	var content string
-
-	// UTF-8: return content as-is (no conversion needed)
-	if encoding.IsUTF8(encodingName) {
-		content = string(data)
-	} else {
-		// Decode from specified encoding to UTF-8
-		decoder := enc.NewDecoder()
-		utf8Content, err := decoder.Bytes(data)
-		if err != nil {
-			return &mcp.CallToolResult{
-				Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("failed to decode file content: %v", err)}},
-				IsError: true,
-			}, ReadTextFileOutput{}, nil
-		}
-		content = string(utf8Content)
+	// Decode content to UTF-8
+	content, err := decodeContent(data, encResult)
+	if err != nil {
+		return errorResult(fmt.Sprintf("failed to decode file content: %v", err)), ReadTextFileOutput{}, nil
 	}
 
 	// Apply head/tail if specified
-	if input.Head != nil || input.Tail != nil {
-		lines := strings.Split(content, "\n")
+	content = applyHeadTail(content, input.Head, input.Tail)
 
-		if input.Head != nil {
-			n := *input.Head
-			if n >= 0 && n < len(lines) {
-				lines = lines[:n]
-			}
-		} else if input.Tail != nil {
-			n := *input.Tail
-			if n >= 0 && n < len(lines) {
-				lines = lines[len(lines)-n:]
-			}
-		}
-
-		content = strings.Join(lines, "\n")
+	// Build output
+	output := ReadTextFileOutput{Content: content}
+	if encResult.autoDetected {
+		output.DetectedEncoding = encResult.detectedEncoding
+		output.EncodingConfidence = encResult.encodingConfidence
 	}
 
-	return &mcp.CallToolResult{}, ReadTextFileOutput{Content: content}, nil
+	return &mcp.CallToolResult{}, output, nil
+}
+
+// errorResult creates an error CallToolResult with the given message
+func errorResult(message string) *mcp.CallToolResult {
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{&mcp.TextContent{Text: message}},
+		IsError: true,
+	}
+}
+
+// validateReadInput validates the input parameters for reading a file
+func validateReadInput(input ReadTextFileInput) error {
+	if input.Path == "" {
+		return fmt.Errorf("path is required and must be a non-empty string")
+	}
+	if input.Head != nil && input.Tail != nil {
+		return fmt.Errorf("cannot specify both head and tail")
+	}
+	return nil
+}
+
+// resolveEncoding determines the encoding to use, either from explicit input or auto-detection
+func resolveEncoding(inputEncoding string, data []byte) (encodingResult, error) {
+	result := encodingResult{}
+
+	if inputEncoding != "" {
+		// Use explicitly specified encoding
+		result.name = strings.ToLower(inputEncoding)
+		enc, ok := encoding.Get(result.name)
+		if !ok {
+			return result, fmt.Errorf("unsupported encoding: %s. Use list_encodings to see available encodings", result.name)
+		}
+		result.encoder = enc
+		return result, nil
+	}
+
+	// Auto-detect encoding
+	result.autoDetected = true
+	detection, trusted := encoding.DetectFromChunks(data)
+	result.detectedEncoding = detection.Charset
+	result.encodingConfidence = detection.Confidence
+
+	if trusted && detection.Charset != "" {
+		result.name = detection.Charset
+	} else {
+		// Fall back to UTF-8 if detection is not confident enough
+		result.name = "utf-8"
+		if detection.Charset != "" {
+			result.detectedEncoding = detection.Charset + " (low confidence, using utf-8)"
+		}
+	}
+
+	// Validate the detected/fallback encoding
+	enc, ok := encoding.Get(result.name)
+	if !ok {
+		// Unsupported detected encoding, fall back to UTF-8
+		result.encoder = nil
+		result.name = "utf-8"
+		result.detectedEncoding = result.detectedEncoding + " (unsupported, using utf-8)"
+	} else {
+		result.encoder = enc
+	}
+
+	return result, nil
+}
+
+// decodeContent decodes the file data to UTF-8 using the resolved encoding
+func decodeContent(data []byte, encResult encodingResult) (string, error) {
+	if encoding.IsUTF8(encResult.name) {
+		return string(data), nil
+	}
+
+	decoder := encResult.encoder.NewDecoder()
+	utf8Content, err := decoder.Bytes(data)
+	if err != nil {
+		return "", err
+	}
+	return string(utf8Content), nil
+}
+
+// applyHeadTail applies head or tail line limiting to the content
+func applyHeadTail(content string, head, tail *int) string {
+	if head == nil && tail == nil {
+		return content
+	}
+
+	lines := strings.Split(content, "\n")
+
+	if head != nil {
+		n := *head
+		if n >= 0 && n < len(lines) {
+			lines = lines[:n]
+		}
+	} else if tail != nil {
+		n := *tail
+		if n >= 0 && n < len(lines) {
+			lines = lines[len(lines)-n:]
+		}
+	}
+
+	return strings.Join(lines, "\n")
 }
