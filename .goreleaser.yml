@@ -53,25 +53,41 @@ release:
 
 # MCP Registry publishing
 mcp:
-  - name: io.github.dimitar-grigorov/mcp-file-tools
-    title: MCP File Tools
-    description: "MCP server for reading/writing legacy-encoded files (CP1251, Windows-1251, etc.)"
-    homepage: https://github.com/dimitar-grigorov/mcp-file-tools
-    repository:
-      url: https://github.com/dimitar-grigorov/mcp-file-tools
-      source: github
-    license: GPL-3.0
-    auth:
-      type: github-oidc
-    disable: auto  # Skip publishing for prereleases (v1.0.0-rc1, etc.)
-    packages:
-      - registry_type: mcpb
-        identifier: "https://github.com/dimitar-grigorov/mcp-file-tools/releases/download/v{{ .Version }}/{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ .ExeExt }}"
-        transport: stdio
-        goos:
-          - windows
-          - linux
-          - darwin
-        goarch:
-          - amd64
-          - arm64
+  name: io.github.dimitar-grigorov/mcp-file-tools
+  title: MCP File Tools
+  description: "MCP server for reading/writing legacy-encoded files (CP1251, Windows-1251, etc.)"
+  homepage: https://github.com/dimitar-grigorov/mcp-file-tools
+  repository:
+    url: https://github.com/dimitar-grigorov/mcp-file-tools
+    source: github
+  auth:
+    type: github-oidc
+  disable: auto
+  packages:
+    # Windows
+    - registry_type: mcpb
+      identifier: "https://github.com/dimitar-grigorov/mcp-file-tools/releases/download/v{{ .Version }}/mcp-file-tools_windows_amd64.exe"
+      transport:
+        type: stdio
+    - registry_type: mcpb
+      identifier: "https://github.com/dimitar-grigorov/mcp-file-tools/releases/download/v{{ .Version }}/mcp-file-tools_windows_arm64.exe"
+      transport:
+        type: stdio
+    # macOS
+    - registry_type: mcpb
+      identifier: "https://github.com/dimitar-grigorov/mcp-file-tools/releases/download/v{{ .Version }}/mcp-file-tools_darwin_amd64"
+      transport:
+        type: stdio
+    - registry_type: mcpb
+      identifier: "https://github.com/dimitar-grigorov/mcp-file-tools/releases/download/v{{ .Version }}/mcp-file-tools_darwin_arm64"
+      transport:
+        type: stdio
+    # Linux
+    - registry_type: mcpb
+      identifier: "https://github.com/dimitar-grigorov/mcp-file-tools/releases/download/v{{ .Version }}/mcp-file-tools_linux_amd64"
+      transport:
+        type: stdio
+    - registry_type: mcpb
+      identifier: "https://github.com/dimitar-grigorov/mcp-file-tools/releases/download/v{{ .Version }}/mcp-file-tools_linux_arm64"
+      transport:
+        type: stdio
