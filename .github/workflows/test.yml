@@ -33,6 +33,5 @@ jobs:
       - name: Run go vet
         run: go vet ./...
 
-      - name: Test server startup (Windows)
-        if: runner.os == 'Windows'
-        run: pwsh -ExecutionPolicy Bypass -File test-windows.ps1
+      - name: Test all server operations
+        run: go run test_server.go
