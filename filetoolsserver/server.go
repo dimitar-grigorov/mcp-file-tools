@@ -9,25 +9,14 @@ import (
 var Version = "dev"
 
 // Server instructions for AI assistants
-const serverInstructions = `MCP filesystem server with non-UTF-8 encoding support.
+const serverInstructions = `MCP filesystem server with non-UTF-8 encoding support (CP1251, CP1252, KOI8-R, etc.).
 
-IMPORTANT: Use these tools instead of built-in Read/Write when:
-- Files contain non-UTF-8 encodings (CP1251, Windows-1251, etc.)
-- Working with legacy codebases (Delphi, VB6, C++, PHP)
-- Files display � or other mojibake characters
-- User mentions Cyrillic, Russian, or Eastern European text
+Workflow for editing files:
+1. Use detect_encoding first to check the file encoding
+2. Reading: Built-in Read tool is fine for any encoding
+3. Writing: If encoding is NOT UTF-8, MUST use write_file with the detected encoding, otherwise file will be corrupted
 
-Tools provided:
-- read_text_file: Read files with auto-detection and encoding conversion (use instead of Read)
-- write_file: Write files with encoding conversion (use instead of Write)
-- list_directory: List files with pattern filtering
-- directory_tree: Get recursive tree view of files and directories as JSON
-- detect_encoding: Auto-detect file encoding with confidence score
-- list_encodings: Show all supported encodings
-- list_allowed_directories: Show accessible directories
-- get_file_info: Get file/directory metadata (size, times, permissions)
-
-read_text_file auto-detects encoding if not specified. Use detect_encoding separately only if you need encoding info without reading the file.`
+Supports 20 encodings. Use list_encodings to see all.`
 
 // Helper for bool pointers (DestructiveHint defaults to true, so we need explicit false)
 func boolPtr(b bool) *bool {
@@ -55,7 +44,7 @@ func NewServer(allowedDirs []string) *mcp.Server {
 	// Read-only tools
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "read_text_file",
-		Description: "Read files with automatic encoding detection and conversion to UTF-8. If encoding is not specified, auto-detects using chunked sampling (efficient for large files). Returns detected encoding and confidence in response. USE THIS instead of built-in Read tool when files may contain non-UTF-8 encodings. Parameters: path (required), encoding (optional - auto-detects if omitted; cp1251/windows-1251/utf-8), head (optional), tail (optional).",
+		Description: "Read files with automatic encoding detection and conversion to UTF-8. USE THIS instead of built-in Read tool when files may contain non-UTF-8 encodings. Auto-detects encoding if not specified. Parameters: path (required), encoding (optional), head (optional), tail (optional).",
 		Annotations: &mcp.ToolAnnotations{
 			ReadOnlyHint:  true,
 			OpenWorldHint: boolPtr(false),
@@ -73,7 +62,7 @@ func NewServer(allowedDirs []string) *mcp.Server {
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "list_encodings",
-		Description: "List all supported file encodings (UTF-8, CP1251, Windows-1251, etc.). Use this to see available encoding options before reading/writing files.",
+		Description: "List all supported file encodings (UTF-8, CP1251, CP1252, KOI8-R, ISO-8859-x, and others). Returns name, aliases, and description for each.",
 		Annotations: &mcp.ToolAnnotations{
 			ReadOnlyHint:  true,
 			OpenWorldHint: boolPtr(false),

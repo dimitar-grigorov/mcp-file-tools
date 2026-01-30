@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"strings"
 	"testing"
 )
 
@@ -26,15 +25,56 @@ func TestHandleListEncodings(t *testing.T) {
 		t.Fatal("expected encodings list, got empty")
 	}
 
-	text := strings.Join(output.Encodings, " ")
-
-	// Check for UTF-8
-	if !strings.Contains(text, "utf-8") {
-		t.Errorf("expected utf-8 in encodings list, got %q", text)
+	// Check minimum expected number of encodings (we now support 20)
+	if len(output.Encodings) < 15 {
+		t.Errorf("expected at least 15 encodings, got %d", len(output.Encodings))
 	}
 
-	// Check for CP1251
-	if !strings.Contains(text, "cp1251") {
-		t.Errorf("expected cp1251 in encodings list, got %q", text)
+	// Helper to check if encoding exists
+	hasEncoding := func(name string) bool {
+		for _, enc := range output.Encodings {
+			if enc.Name == name {
+				return true
+			}
+			for _, alias := range enc.Aliases {
+				if alias == name {
+					return true
+				}
+			}
+		}
+		return false
+	}
+
+	// Check for UTF-8
+	if !hasEncoding("utf-8") {
+		t.Error("expected utf-8 in encodings list")
+	}
+
+	// Check for Windows-1251 (Cyrillic)
+	if !hasEncoding("windows-1251") && !hasEncoding("cp1251") {
+		t.Error("expected windows-1251/cp1251 in encodings list")
+	}
+
+	// Check for Windows-1252 (Western European)
+	if !hasEncoding("windows-1252") && !hasEncoding("cp1252") {
+		t.Error("expected windows-1252/cp1252 in encodings list")
+	}
+
+	// Check for Windows-1250 (Central European)
+	if !hasEncoding("windows-1250") && !hasEncoding("cp1250") {
+		t.Error("expected windows-1250/cp1250 in encodings list")
+	}
+
+	// Check encoding structure
+	for _, enc := range output.Encodings {
+		if enc.Name == "" {
+			t.Error("encoding name should not be empty")
+		}
+		if enc.DisplayName == "" {
+			t.Error("encoding display name should not be empty")
+		}
+		if enc.Description == "" {
+			t.Error("encoding description should not be empty")
+		}
 	}
 }

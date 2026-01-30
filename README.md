@@ -1,19 +1,28 @@
 # MCP File Tools
 
-MCP server that lets AI assistants work with legacy-encoded files. Reads and writes files in Windows-1251, CP1251, and other non-UTF-8 encodings that would otherwise corrupt data.
+MCP server that lets AI assistants work with legacy-encoded files. Reads and writes files in non-UTF-8 encodings that would otherwise corrupt data.
 
 **Perfect for:** Delphi/Pascal projects, legacy VB6 apps, old PHP/HTML sites, config files with non-UTF-8 text.
 
 ## What It Does
 
-Provides 5 tools for file operations with automatic encoding conversion:
-- `read_text_file` - Read files with encoding detection/conversion
+Provides 8 tools for file operations with automatic encoding conversion:
+- `read_text_file` - Read files with encoding auto-detection and conversion
 - `write_file` - Write files in specific encodings
 - `list_directory` - Browse directories with pattern filtering
+- `directory_tree` - Get recursive tree view as JSON
 - `detect_encoding` - Auto-detect file encoding with confidence score
 - `list_encodings` - Show all supported encodings
+- `get_file_info` - Get file/directory metadata
+- `list_allowed_directories` - Show accessible directories
 
-**Supported encodings:** UTF-8, CP1251/Windows-1251 (Cyrillic)
+**Supported encodings (20 total):**
+- **Cyrillic:** Windows-1251, KOI8-R, KOI8-U, CP866, ISO-8859-5
+- **Western European:** Windows-1252, ISO-8859-1, ISO-8859-15
+- **Central European:** Windows-1250, ISO-8859-2
+- **Greek:** Windows-1253, ISO-8859-7
+- **Turkish:** Windows-1254, ISO-8859-9
+- **Other:** Hebrew (1255), Arabic (1256), Baltic (1257), Vietnamese (1258), Thai (874)
 
 See [TOOLS.md](TOOLS.md) for detailed parameters and examples.
 
