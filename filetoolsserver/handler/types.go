@@ -14,7 +14,9 @@ type ReadTextFileInput struct {
 
 // ReadTextFileOutput defines output for read_text_file tool
 type ReadTextFileOutput struct {
-	Content string `json:"content"`
+	Content            string `json:"content"`
+	DetectedEncoding   string `json:"detectedEncoding,omitempty"`
+	EncodingConfidence int    `json:"encodingConfidence,omitempty"`
 }
 
 // WriteFileInput defines input parameters for write_file tool.
