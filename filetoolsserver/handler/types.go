@@ -93,3 +93,23 @@ type GetFileInfoOutput struct {
 	Permissions string `json:"permissions"`
 }
 
+// DirectoryTreeInput defines input parameters for directory_tree tool.
+// Path: Root directory to generate tree from (required)
+// ExcludePatterns: Glob patterns to exclude from the tree (optional)
+type DirectoryTreeInput struct {
+	Path            string   `json:"path"`
+	ExcludePatterns []string `json:"excludePatterns,omitempty"`
+}
+
+// DirectoryTreeOutput defines output for directory_tree tool
+type DirectoryTreeOutput struct {
+	Tree string `json:"tree"`
+}
+
+// TreeEntry represents a single entry in the directory tree
+type TreeEntry struct {
+	Name     string       `json:"name"`
+	Type     string       `json:"type"`
+	Children *[]TreeEntry `json:"children,omitempty"`
+}
+

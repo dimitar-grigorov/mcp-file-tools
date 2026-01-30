@@ -21,6 +21,7 @@ Tools provided:
 - read_text_file: Read files with auto-detection and encoding conversion (use instead of Read)
 - write_file: Write files with encoding conversion (use instead of Write)
 - list_directory: List files with pattern filtering
+- directory_tree: Get recursive tree view of files and directories as JSON
 - detect_encoding: Auto-detect file encoding with confidence score
 - list_encodings: Show all supported encodings
 - list_allowed_directories: Show accessible directories
@@ -105,6 +106,15 @@ func NewServer(allowedDirs []string) *mcp.Server {
 			OpenWorldHint: boolPtr(false),
 		},
 	}, h.HandleGetFileInfo)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "directory_tree",
+		Description: "Get a recursive tree view of files and directories as a JSON structure. Each entry includes 'name', 'type' (file/directory), and 'children' for directories. Files have no children array, while directories always have a children array (which may be empty). The output is formatted with 2-space indentation for readability. Only works within allowed directories. Parameters: path (required), excludePatterns (optional array of glob patterns to exclude).",
+		Annotations: &mcp.ToolAnnotations{
+			ReadOnlyHint:  true,
+			OpenWorldHint: boolPtr(false),
+		},
+	}, h.HandleDirectoryTree)
 
 	// Write tools
 	mcp.AddTool(server, &mcp.Tool{
