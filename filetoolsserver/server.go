@@ -1,6 +1,8 @@
 package filetoolsserver
 
 import (
+	"log/slog"
+
 	"github.com/dimitar-grigorov/mcp-file-tools/filetoolsserver/handler"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -24,8 +26,9 @@ func boolPtr(b bool) *bool {
 	return &b
 }
 
-// NewServer creates a new MCP server with all file tools registered
-func NewServer(allowedDirs []string) *mcp.Server {
+// NewServer creates a new MCP server with all file tools registered.
+// If logger is nil, logging middleware is disabled but recovery is still active.
+func NewServer(allowedDirs []string, logger *slog.Logger) *mcp.Server {
 	h := handler.NewHandler(allowedDirs)
 
 	impl := &mcp.Implementation{
@@ -35,12 +38,14 @@ func NewServer(allowedDirs []string) *mcp.Server {
 
 	opts := &mcp.ServerOptions{
 		Instructions:            serverInstructions,
+		Logger:                  logger,
 		InitializedHandler:      createInitializedHandler(h),
 		RootsListChangedHandler: createRootsListChangedHandler(h),
 	}
 	server := mcp.NewServer(impl, opts)
 
 	// Register all tools using the new AddTool API with annotations
+	// All handlers are wrapped with recovery middleware (and logging if logger is provided)
 
 	// Read-only tools
 	mcp.AddTool(server, &mcp.Tool{
@@ -50,7 +55,7 @@ func NewServer(allowedDirs []string) *mcp.Server {
 			ReadOnlyHint:  true,
 			OpenWorldHint: boolPtr(false),
 		},
-	}, h.HandleReadTextFile)
+	}, handler.Wrap(logger, "read_text_file", h.HandleReadTextFile))
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "list_directory",
@@ -59,7 +64,7 @@ func NewServer(allowedDirs []string) *mcp.Server {
 			ReadOnlyHint:  true,
 			OpenWorldHint: boolPtr(false),
 		},
-	}, h.HandleListDirectory)
+	}, handler.Wrap(logger, "list_directory", h.HandleListDirectory))
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "list_encodings",
@@ -68,7 +73,7 @@ func NewServer(allowedDirs []string) *mcp.Server {
 			ReadOnlyHint:  true,
 			OpenWorldHint: boolPtr(false),
 		},
-	}, h.HandleListEncodings)
+	}, handler.Wrap(logger, "list_encodings", h.HandleListEncodings))
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "detect_encoding",
@@ -77,7 +82,7 @@ func NewServer(allowedDirs []string) *mcp.Server {
 			ReadOnlyHint:  true,
 			OpenWorldHint: boolPtr(false),
 		},
-	}, h.HandleDetectEncoding)
+	}, handler.Wrap(logger, "detect_encoding", h.HandleDetectEncoding))
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "list_allowed_directories",
@@ -86,7 +91,7 @@ func NewServer(allowedDirs []string) *mcp.Server {
 			ReadOnlyHint:  true,
 			OpenWorldHint: boolPtr(false),
 		},
-	}, h.HandleListAllowedDirectories)
+	}, handler.Wrap(logger, "list_allowed_directories", h.HandleListAllowedDirectories))
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "get_file_info",
@@ -95,7 +100,7 @@ func NewServer(allowedDirs []string) *mcp.Server {
 			ReadOnlyHint:  true,
 			OpenWorldHint: boolPtr(false),
 		},
-	}, h.HandleGetFileInfo)
+	}, handler.Wrap(logger, "get_file_info", h.HandleGetFileInfo))
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "directory_tree",
@@ -104,7 +109,7 @@ func NewServer(allowedDirs []string) *mcp.Server {
 			ReadOnlyHint:  true,
 			OpenWorldHint: boolPtr(false),
 		},
-	}, h.HandleDirectoryTree)
+	}, handler.Wrap(logger, "directory_tree", h.HandleDirectoryTree))
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "search_files",
@@ -113,7 +118,7 @@ func NewServer(allowedDirs []string) *mcp.Server {
 			ReadOnlyHint:  true,
 			OpenWorldHint: boolPtr(false),
 		},
-	}, h.HandleSearchFiles)
+	}, handler.Wrap(logger, "search_files", h.HandleSearchFiles))
 
 	// Write tools
 	mcp.AddTool(server, &mcp.Tool{
@@ -125,7 +130,7 @@ func NewServer(allowedDirs []string) *mcp.Server {
 			DestructiveHint: boolPtr(false),
 			OpenWorldHint:   boolPtr(false),
 		},
-	}, h.HandleCreateDirectory)
+	}, handler.Wrap(logger, "create_directory", h.HandleCreateDirectory))
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "write_file",
@@ -136,7 +141,7 @@ func NewServer(allowedDirs []string) *mcp.Server {
 			DestructiveHint: boolPtr(true),
 			OpenWorldHint:   boolPtr(false),
 		},
-	}, h.HandleWriteFile)
+	}, handler.Wrap(logger, "write_file", h.HandleWriteFile))
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "move_file",
@@ -147,7 +152,7 @@ func NewServer(allowedDirs []string) *mcp.Server {
 			DestructiveHint: boolPtr(false),
 			OpenWorldHint:   boolPtr(false),
 		},
-	}, h.HandleMoveFile)
+	}, handler.Wrap(logger, "move_file", h.HandleMoveFile))
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "edit_file",
@@ -158,7 +163,7 @@ func NewServer(allowedDirs []string) *mcp.Server {
 			DestructiveHint: boolPtr(true),
 			OpenWorldHint:   boolPtr(false),
 		},
-	}, h.HandleEditFile)
+	}, handler.Wrap(logger, "edit_file", h.HandleEditFile))
 
 	return server
 }
