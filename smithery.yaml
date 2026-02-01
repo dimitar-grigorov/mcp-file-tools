@@ -1,5 +1,5 @@
 # Smithery configuration file: https://smithery.ai/docs/config#smitheryyaml
-# This MCP server provides tools for reading/writing legacy-encoded files
+# Non-UTF-8 file encoding server: Cyrillic (CP1251, KOI8), Windows-1250-1258, ISO-8859 with auto-detection and Unicode conversion.
 
 runtime: container
 
