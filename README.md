@@ -1,6 +1,6 @@
 # MCP File Tools
 
-MCP server that lets AI assistants work with legacy-encoded files. Reads and writes files in non-UTF-8 encodings that would otherwise corrupt data.
+Non-UTF-8 file encoding server: Cyrillic (CP1251, KOI8), Windows-1250-1258, ISO-8859 with auto-detection and Unicode conversion. Lets AI assistants read and write files in legacy encodings that would otherwise corrupt data.
 
 **Perfect for:** Delphi/Pascal projects, legacy VB6 apps, old PHP/HTML sites, config files with non-UTF-8 text.
 
