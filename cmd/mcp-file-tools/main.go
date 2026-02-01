@@ -32,7 +32,8 @@ func main() {
 	}
 
 	// Create MCP server with allowed directories (can be empty, directories can be added dynamically)
-	server := filetoolsserver.NewServer(normalized)
+	// Pass nil for logger to disable logging middleware (recovery still active)
+	server := filetoolsserver.NewServer(normalized, nil)
 
 	// Run server on stdio transport
 	ctx := context.Background()
