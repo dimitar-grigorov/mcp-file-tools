@@ -5,14 +5,17 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 
+	"github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/pmezard/go-difflib/difflib"
 )
 
 // HandleEditFile applies line-based edits to a text file.
+// Supports non-UTF-8 encodings via auto-detection or explicit encoding parameter.
 func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, input EditFileInput) (*mcp.CallToolResult, EditFileOutput, error) {
 	if len(input.Edits) == 0 {
 		return errorResult(ErrEditsRequired.Error()), EditFileOutput{}, nil
@@ -28,8 +31,35 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 		return errorResult(fmt.Sprintf("failed to read file: %v", err)), EditFileOutput{}, nil
 	}
 
+	// Determine encoding (auto-detect or use provided)
+	encodingName := strings.ToLower(input.Encoding)
+	if encodingName == "" {
+		// Auto-detect encoding
+		detected := encoding.Detect(data)
+		encodingName = detected.Charset
+		slog.Debug("edit_file: auto-detected encoding", "path", input.Path, "encoding", encodingName, "confidence", detected.Confidence)
+	}
+
+	// Decode file content to UTF-8 for matching
+	var content string
+	if encoding.IsUTF8(encodingName) {
+		content = string(data)
+	} else {
+		enc, ok := encoding.Get(encodingName)
+		if !ok {
+			return errorResult(fmt.Sprintf("unsupported encoding: %s", encodingName)), EditFileOutput{}, nil
+		}
+		decoder := enc.NewDecoder()
+		decoded, err := decoder.Bytes(data)
+		if err != nil {
+			return errorResult(fmt.Sprintf("failed to decode file with %s: %v", encodingName, err)), EditFileOutput{}, nil
+		}
+		content = string(decoded)
+		slog.Debug("edit_file: decoded content", "path", input.Path, "encoding", encodingName, "originalSize", len(data), "decodedSize", len(decoded))
+	}
+
 	// Normalize line endings (CRLF -> LF) for consistent processing
-	content := normalizeLineEndings(string(data))
+	content = normalizeLineEndings(content)
 
 	// Apply edits sequentially
 	modifiedContent, err := applyEdits(content, input.Edits)
@@ -43,9 +73,9 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 	// Format diff with markdown code fence
 	formattedDiff := formatDiffOutput(diff)
 
-	// Write file if not dry run (atomic write)
+	// Write file if not dry run (atomic write with encoding)
 	if !input.DryRun {
-		if err := atomicWriteFile(v.Path, modifiedContent); err != nil {
+		if err := atomicWriteFileWithEncoding(v.Path, modifiedContent, encodingName); err != nil {
 			return errorResult(fmt.Sprintf("failed to write file: %v", err)), EditFileOutput{}, nil
 		}
 	}
@@ -199,10 +229,9 @@ func formatDiffOutput(diff string) string {
 	return fmt.Sprintf("%sdiff\n%s%s\n\n", fence, diff, fence)
 }
 
-// atomicWriteFile writes content to a file atomically using a temp file and rename.
-// This prevents partial writes and race conditions.
-// Uses defer to guarantee temp file cleanup even on panic.
-func atomicWriteFile(filepath, content string) (err error) {
+// atomicWriteFileWithEncoding writes content to a file atomically with encoding conversion.
+// Content is expected to be UTF-8 and will be encoded to the specified encoding.
+func atomicWriteFileWithEncoding(filepath, content, encodingName string) (err error) {
 	// Generate random temp filename
 	randBytes := make([]byte, 16)
 	if _, err := rand.Read(randBytes); err != nil {
@@ -217,8 +246,26 @@ func atomicWriteFile(filepath, content string) (err error) {
 		}
 	}()
 
+	// Encode content if not UTF-8
+	var dataToWrite []byte
+	if encoding.IsUTF8(encodingName) {
+		dataToWrite = []byte(content)
+	} else {
+		enc, ok := encoding.Get(encodingName)
+		if !ok {
+			return fmt.Errorf("unsupported encoding: %s", encodingName)
+		}
+		encoder := enc.NewEncoder()
+		encoded, err := encoder.Bytes([]byte(content))
+		if err != nil {
+			return fmt.Errorf("failed to encode content to %s: %w", encodingName, err)
+		}
+		dataToWrite = encoded
+		slog.Debug("edit_file: encoded content for write", "encoding", encodingName, "utf8Size", len(content), "encodedSize", len(encoded))
+	}
+
 	// Write to temp file
-	if err = os.WriteFile(tempPath, []byte(content), 0644); err != nil {
+	if err = os.WriteFile(tempPath, dataToWrite, 0644); err != nil {
 		return err
 	}
 

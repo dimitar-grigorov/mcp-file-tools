@@ -213,3 +213,54 @@ func TestHandleEditFile_ValidationErrors(t *testing.T) {
 		})
 	}
 }
+
+func TestEditFile_CP1251Encoding(t *testing.T) {
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+
+	// CP1251 encoded Cyrillic text: "Невалиден тип." (Invalid type.)
+	// In CP1251: Н=0xCD, е=0xE5, в=0xE2, а=0xE0, л=0xEB, и=0xE8, д=0xE4, н=0xED
+	cp1251Content := []byte{
+		0xCD, 0xE5, 0xE2, 0xE0, 0xEB, 0xE8, 0xE4, 0xE5, 0xED, // Невалиден
+		0x20,       // space
+		0xF2, 0xE8, 0xEF, // тип
+		0x2E, // .
+	}
+
+	testFile := filepath.Join(tempDir, "cyrillic.txt")
+	if err := os.WriteFile(testFile, cp1251Content, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Edit using UTF-8 search text (what Claude sends)
+	input := EditFileInput{
+		Path:     testFile,
+		Edits:    []EditOperation{{OldText: "Невалиден тип.", NewText: "Типът е невалиден."}},
+		Encoding: "cp1251",
+	}
+
+	result, output, err := h.HandleEditFile(context.Background(), nil, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.IsError {
+		t.Errorf("edit failed: %v", output)
+	}
+
+	// Verify the file was modified correctly
+	modifiedData, _ := os.ReadFile(testFile)
+
+	// Expected CP1251: "Типът е невалиден." (The type is invalid.)
+	expectedCP1251 := []byte{
+		0xD2, 0xE8, 0xEF, 0xFA, 0xF2, // Типът
+		0x20,             // space
+		0xE5,             // е
+		0x20,             // space
+		0xED, 0xE5, 0xE2, 0xE0, 0xEB, 0xE8, 0xE4, 0xE5, 0xED, // невалиден
+		0x2E, // .
+	}
+
+	if string(modifiedData) != string(expectedCP1251) {
+		t.Errorf("file content mismatch.\ngot bytes: %v\nwant bytes: %v", modifiedData, expectedCP1251)
+	}
+}
