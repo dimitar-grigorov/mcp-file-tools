@@ -19,8 +19,8 @@ func (h *Handler) HandleWriteFile(ctx context.Context, req *mcp.CallToolRequest,
 	}
 	validatedPath := v.Path
 
-	// Default encoding
-	encodingName := h.defaultEncoding
+	// Default encoding from config
+	encodingName := h.config.DefaultEncoding
 	if input.Encoding != "" {
 		encodingName = strings.ToLower(input.Encoding)
 	}

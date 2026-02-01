@@ -117,6 +117,29 @@ Once installed, just ask Claude:
 - **Automatic:** Claude Desktop/Code provide workspace directories automatically
 - **Manual:** Specify directories in config `args: ["/path/to/project"]`
 
+## Configuration
+
+The server can be configured via environment variables:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `MCP_DEFAULT_ENCODING` | Default encoding for `write_file` when none specified | `cp1251` |
+| `MCP_MAX_FILE_SIZE` | Maximum file size in bytes for operations | `10485760` (10MB) |
+
+**Example (Claude Desktop config):**
+```json
+{
+  "mcpServers": {
+    "file-tools": {
+      "command": "/path/to/mcp-file-tools",
+      "env": {
+        "MCP_DEFAULT_ENCODING": "utf-8"
+      }
+    }
+  }
+}
+```
+
 ## Use Cases
 
 ### Legacy Codebases
