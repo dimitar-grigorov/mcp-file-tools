@@ -1,10 +1,10 @@
 package security
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"testing"
 )
 
@@ -337,8 +337,9 @@ func TestValidatePath_Symlinks(t *testing.T) {
 				t.Errorf("%s: unexpected error: %v", tt.description, err)
 			}
 			if tt.shouldError && err != nil {
-				if !strings.Contains(err.Error(), "outside allowed directories") {
-					t.Errorf("%s: expected 'outside allowed directories' error, got: %v", tt.description, err)
+				// Symlink to forbidden file should return ErrSymlinkDenied
+				if !errors.Is(err, ErrSymlinkDenied) {
+					t.Errorf("%s: expected ErrSymlinkDenied, got: %v", tt.description, err)
 				}
 			}
 		})
@@ -376,8 +377,8 @@ func TestValidatePath_PathTraversal(t *testing.T) {
 			if err == nil {
 				t.Errorf("%s: expected error but got none", tt.description)
 			}
-			if err != nil && !strings.Contains(err.Error(), "outside allowed directories") {
-				t.Errorf("%s: expected 'outside allowed directories' error, got: %v", tt.description, err)
+			if err != nil && !errors.Is(err, ErrPathDenied) {
+				t.Errorf("%s: expected ErrPathDenied, got: %v", tt.description, err)
 			}
 		})
 	}
