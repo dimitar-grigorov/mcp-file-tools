@@ -65,14 +65,6 @@ func (h *Handler) HandleReadTextFile(ctx context.Context, req *mcp.CallToolReque
 	return &mcp.CallToolResult{}, output, nil
 }
 
-// errorResult creates an error CallToolResult with the given message
-func errorResult(message string) *mcp.CallToolResult {
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{&mcp.TextContent{Text: message}},
-		IsError: true,
-	}
-}
-
 // validateReadInput validates the input parameters for reading a file
 func validateReadInput(input ReadTextFileInput) error {
 	if input.Path == "" {

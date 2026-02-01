@@ -35,4 +35,7 @@ var (
 	// ErrEditNoMatch is returned when old_text cannot be found in the file.
 	// Wrap this error to include context: fmt.Errorf("%w:\n%s", ErrEditNoMatch, oldText)
 	ErrEditNoMatch = errors.New("could not find exact match for edit")
+
+	// ErrOldTextEmpty is returned when an edit operation has an empty old_text field.
+	ErrOldTextEmpty = errors.New("edit old_text cannot be empty")
 )
