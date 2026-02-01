@@ -15,7 +15,7 @@ import (
 func (h *Handler) HandleDirectoryTree(ctx context.Context, req *mcp.CallToolRequest, input DirectoryTreeInput) (*mcp.CallToolResult, DirectoryTreeOutput, error) {
 	// Validate input
 	if input.Path == "" {
-		return errorResult("path is required and must be a non-empty string"), DirectoryTreeOutput{}, nil
+		return errorResult(ErrPathRequired.Error()), DirectoryTreeOutput{}, nil
 	}
 
 	// Validate path against allowed directories
@@ -30,7 +30,7 @@ func (h *Handler) HandleDirectoryTree(ctx context.Context, req *mcp.CallToolRequ
 		return errorResult(fmt.Sprintf("failed to access path: %v", err)), DirectoryTreeOutput{}, nil
 	}
 	if !stat.IsDir() {
-		return errorResult("path must be a directory"), DirectoryTreeOutput{}, nil
+		return errorResult(ErrPathMustBeDirectory.Error()), DirectoryTreeOutput{}, nil
 	}
 
 	// Build the tree

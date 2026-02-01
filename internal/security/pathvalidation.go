@@ -47,7 +47,7 @@ func IsPathWithinAllowedDirectories(absolutePath string, allowedDirs []string) b
 // Returns the validated absolute path or an error if access is denied.
 func ValidatePath(requestedPath string, allowedDirs []string) (string, error) {
 	if len(allowedDirs) == 0 {
-		return "", fmt.Errorf("no allowed directories configured - please provide directories via CLI arguments or MCP roots protocol")
+		return "", ErrNoAllowedDirs
 	}
 
 	expanded := ExpandHome(requestedPath)
@@ -66,7 +66,7 @@ func ValidatePath(requestedPath string, allowedDirs []string) (string, error) {
 	normalized := normalizePath(absolute)
 
 	if !IsPathWithinAllowedDirectories(normalized, allowedDirs) {
-		return "", fmt.Errorf("access denied - path outside allowed directories: %s", absolute)
+		return "", fmt.Errorf("%w: %s", ErrPathDenied, absolute)
 	}
 
 	// Resolve allowed directories for symlink comparison
@@ -92,13 +92,13 @@ func ValidatePath(requestedPath string, allowedDirs []string) (string, error) {
 					if IsPathWithinAllowedDirectories(normalized, resolvedAllowedDirs) {
 						return absolute, nil
 					}
-					return "", fmt.Errorf("parent directory does not exist: %s", parentDir)
+					return "", fmt.Errorf("%w: %s", ErrParentNotExists, parentDir)
 				}
 				return "", fmt.Errorf("failed to resolve parent directory: %w", err)
 			}
 			normalizedParent := normalizePath(realParent)
 			if !IsPathWithinAllowedDirectories(normalizedParent, resolvedAllowedDirs) {
-				return "", fmt.Errorf("access denied - parent directory outside allowed directories: %s", realParent)
+				return "", fmt.Errorf("%w: %s", ErrParentDirDenied, realParent)
 			}
 			return absolute, nil
 		}
@@ -108,7 +108,7 @@ func ValidatePath(requestedPath string, allowedDirs []string) (string, error) {
 	// Validate symlink target
 	normalizedReal := normalizePath(realPath)
 	if !IsPathWithinAllowedDirectories(normalizedReal, resolvedAllowedDirs) {
-		return "", fmt.Errorf("access denied - symlink target outside allowed directories: %s", realPath)
+		return "", fmt.Errorf("%w: %s", ErrSymlinkDenied, realPath)
 	}
 
 	return realPath, nil
@@ -168,7 +168,7 @@ func NormalizeAllowedDirs(dirs []string) ([]string, error) {
 				return nil, fmt.Errorf("cannot stat directory %s: %w", resolved, err)
 			}
 			if !info.IsDir() {
-				return nil, fmt.Errorf("%s is not a directory", resolved)
+				return nil, fmt.Errorf("%w: %s", ErrNotDirectory, resolved)
 			}
 		}
 

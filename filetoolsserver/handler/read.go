@@ -76,10 +76,10 @@ func errorResult(message string) *mcp.CallToolResult {
 // validateReadInput validates the input parameters for reading a file
 func validateReadInput(input ReadTextFileInput) error {
 	if input.Path == "" {
-		return fmt.Errorf("path is required and must be a non-empty string")
+		return ErrPathRequired
 	}
 	if input.Head != nil && input.Tail != nil {
-		return fmt.Errorf("cannot specify both head and tail")
+		return ErrHeadTailConflict
 	}
 	return nil
 }
@@ -93,7 +93,7 @@ func resolveEncoding(inputEncoding string, data []byte) (encodingResult, error) 
 		result.name = strings.ToLower(inputEncoding)
 		enc, ok := encoding.Get(result.name)
 		if !ok {
-			return result, fmt.Errorf("unsupported encoding: %s. Use list_encodings to see available encodings", result.name)
+			return result, fmt.Errorf("%w: %s. Use list_encodings to see available encodings", ErrEncodingUnsupported, result.name)
 		}
 		result.encoder = enc
 		return result, nil

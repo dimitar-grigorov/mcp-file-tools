@@ -13,12 +13,12 @@ import (
 func (h *Handler) HandleSearchFiles(ctx context.Context, req *mcp.CallToolRequest, input SearchFilesInput) (*mcp.CallToolResult, SearchFilesOutput, error) {
 	// Validate path
 	if input.Path == "" {
-		return errorResult("path is required and must be a non-empty string"), SearchFilesOutput{}, nil
+		return errorResult(ErrPathRequired.Error()), SearchFilesOutput{}, nil
 	}
 
 	// Validate pattern
 	if input.Pattern == "" {
-		return errorResult("pattern is required and must be a non-empty string"), SearchFilesOutput{}, nil
+		return errorResult(ErrPatternRequired.Error()), SearchFilesOutput{}, nil
 	}
 
 	// Validate path against allowed directories
@@ -33,7 +33,7 @@ func (h *Handler) HandleSearchFiles(ctx context.Context, req *mcp.CallToolReques
 		return errorResult("failed to access path: " + err.Error()), SearchFilesOutput{}, nil
 	}
 	if !stat.IsDir() {
-		return errorResult("path must be a directory"), SearchFilesOutput{}, nil
+		return errorResult(ErrPathMustBeDirectory.Error()), SearchFilesOutput{}, nil
 	}
 
 	// Perform the search

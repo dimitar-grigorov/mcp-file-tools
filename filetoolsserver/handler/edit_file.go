@@ -18,10 +18,10 @@ import (
 func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, input EditFileInput) (*mcp.CallToolResult, EditFileOutput, error) {
 	// Validate inputs
 	if input.Path == "" {
-		return errorResult("path is required"), EditFileOutput{}, nil
+		return errorResult(ErrPathRequired.Error()), EditFileOutput{}, nil
 	}
 	if len(input.Edits) == 0 {
-		return errorResult("edits array is required and must not be empty"), EditFileOutput{}, nil
+		return errorResult(ErrEditsRequired.Error()), EditFileOutput{}, nil
 	}
 
 	// Validate path against allowed directories
@@ -88,7 +88,7 @@ func applyEdits(content string, edits []EditOperation) (string, error) {
 			continue
 		}
 
-		return "", fmt.Errorf("could not find exact match for edit:\n%s", edit.OldText)
+		return "", fmt.Errorf("%w:\n%s", ErrEditNoMatch, edit.OldText)
 	}
 
 	return modifiedContent, nil
