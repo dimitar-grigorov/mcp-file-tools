@@ -11,24 +11,16 @@ import (
 
 // HandleSearchFiles recursively searches for files matching a glob pattern.
 func (h *Handler) HandleSearchFiles(ctx context.Context, req *mcp.CallToolRequest, input SearchFilesInput) (*mcp.CallToolResult, SearchFilesOutput, error) {
-	// Validate path
-	if input.Path == "" {
-		return errorResult(ErrPathRequired.Error()), SearchFilesOutput{}, nil
-	}
-
-	// Validate pattern
 	if input.Pattern == "" {
 		return errorResult(ErrPatternRequired.Error()), SearchFilesOutput{}, nil
 	}
 
-	// Validate path against allowed directories
-	validatedPath, err := h.validatePath(input.Path)
-	if err != nil {
-		return errorResult(err.Error()), SearchFilesOutput{}, nil
+	v := h.ValidatePath(input.Path)
+	if !v.Ok() {
+		return v.Result, SearchFilesOutput{}, nil
 	}
 
-	// Check that the path is a directory
-	stat, err := os.Stat(validatedPath)
+	stat, err := os.Stat(v.Path)
 	if err != nil {
 		return errorResult("failed to access path: " + err.Error()), SearchFilesOutput{}, nil
 	}
@@ -36,8 +28,7 @@ func (h *Handler) HandleSearchFiles(ctx context.Context, req *mcp.CallToolReques
 		return errorResult(ErrPathMustBeDirectory.Error()), SearchFilesOutput{}, nil
 	}
 
-	// Perform the search
-	results, err := searchFiles(validatedPath, input.Pattern, input.ExcludePatterns)
+	results, err := searchFiles(v.Path, input.Pattern, input.ExcludePatterns)
 	if err != nil {
 		return errorResult("search failed: " + err.Error()), SearchFilesOutput{}, nil
 	}

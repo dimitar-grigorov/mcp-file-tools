@@ -13,19 +13,12 @@ import (
 
 // HandleDirectoryTree returns a recursive tree view of files and directories as JSON.
 func (h *Handler) HandleDirectoryTree(ctx context.Context, req *mcp.CallToolRequest, input DirectoryTreeInput) (*mcp.CallToolResult, DirectoryTreeOutput, error) {
-	// Validate input
-	if input.Path == "" {
-		return errorResult(ErrPathRequired.Error()), DirectoryTreeOutput{}, nil
+	v := h.ValidatePath(input.Path)
+	if !v.Ok() {
+		return v.Result, DirectoryTreeOutput{}, nil
 	}
 
-	// Validate path against allowed directories
-	validatedPath, err := h.validatePath(input.Path)
-	if err != nil {
-		return errorResult(err.Error()), DirectoryTreeOutput{}, nil
-	}
-
-	// Check that the path is a directory
-	stat, err := os.Stat(validatedPath)
+	stat, err := os.Stat(v.Path)
 	if err != nil {
 		return errorResult(fmt.Sprintf("failed to access path: %v", err)), DirectoryTreeOutput{}, nil
 	}
@@ -34,7 +27,7 @@ func (h *Handler) HandleDirectoryTree(ctx context.Context, req *mcp.CallToolRequ
 	}
 
 	// Build the tree
-	tree, err := buildTree(validatedPath, input.ExcludePatterns)
+	tree, err := buildTree(v.Path, input.ExcludePatterns)
 	if err != nil {
 		return errorResult(fmt.Sprintf("failed to build directory tree: %v", err)), DirectoryTreeOutput{}, nil
 	}

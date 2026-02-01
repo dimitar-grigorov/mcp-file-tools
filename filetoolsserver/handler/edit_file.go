@@ -13,25 +13,17 @@ import (
 )
 
 // HandleEditFile applies line-based edits to a text file.
-// Each edit replaces exact line sequences with new content.
-// Returns a git-style unified diff showing the changes made.
 func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, input EditFileInput) (*mcp.CallToolResult, EditFileOutput, error) {
-	// Validate inputs
-	if input.Path == "" {
-		return errorResult(ErrPathRequired.Error()), EditFileOutput{}, nil
-	}
 	if len(input.Edits) == 0 {
 		return errorResult(ErrEditsRequired.Error()), EditFileOutput{}, nil
 	}
 
-	// Validate path against allowed directories
-	validatedPath, err := h.validatePath(input.Path)
-	if err != nil {
-		return errorResult(err.Error()), EditFileOutput{}, nil
+	v := h.ValidatePath(input.Path)
+	if !v.Ok() {
+		return v.Result, EditFileOutput{}, nil
 	}
 
-	// Read file content
-	data, err := os.ReadFile(validatedPath)
+	data, err := os.ReadFile(v.Path)
 	if err != nil {
 		return errorResult(fmt.Sprintf("failed to read file: %v", err)), EditFileOutput{}, nil
 	}
@@ -53,7 +45,7 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 
 	// Write file if not dry run (atomic write)
 	if !input.DryRun {
-		if err := atomicWriteFile(validatedPath, modifiedContent); err != nil {
+		if err := atomicWriteFile(v.Path, modifiedContent); err != nil {
 			return errorResult(fmt.Sprintf("failed to write file: %v", err)), EditFileOutput{}, nil
 		}
 	}
