@@ -1,9 +1,9 @@
 {
-  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.dimitar-grigorov/mcp-file-tools",
-  "version": "1.0.0",
+  "version": "1.4.3",
   "title": "MCP File Tools",
-  "description": "File operations with legacy encoding support (CP1251, CP1250).",
+  "description": "File operations with legacy encoding support (CP1251, CP1250, KOI8-R, ISO-8859-x).",
   "repository": {
     "url": "https://github.com/dimitar-grigorov/mcp-file-tools",
     "source": "github"
@@ -11,11 +11,61 @@
   "packages": [
     {
       "registryType": "mcpb",
-      "identifier": "https://github.com/dimitar-grigorov/mcp-file-tools/releases/download/v1.0.0/mcp-file-tools_windows_amd64.exe",
+      "identifier": "https://github.com/dimitar-grigorov/mcp-file-tools/releases/download/v1.5.0/mcp-file-tools_windows_amd64.exe",
       "fileSha256": "TO_BE_FILLED_AFTER_RELEASE",
       "transport": {
         "type": "stdio"
       }
+    }
+  ],
+  "tools": [
+    {
+      "name": "read_text_file",
+      "description": "Read files with automatic encoding detection and conversion to UTF-8"
+    },
+    {
+      "name": "list_directory",
+      "description": "List files and directories with optional glob pattern filtering"
+    },
+    {
+      "name": "list_encodings",
+      "description": "List all supported file encodings"
+    },
+    {
+      "name": "detect_encoding",
+      "description": "Auto-detect file encoding with confidence score and BOM detection"
+    },
+    {
+      "name": "list_allowed_directories",
+      "description": "Returns the list of directories this server is allowed to access"
+    },
+    {
+      "name": "get_file_info",
+      "description": "Retrieve detailed metadata about a file or directory"
+    },
+    {
+      "name": "directory_tree",
+      "description": "Get a recursive tree view of files and directories as JSON"
+    },
+    {
+      "name": "search_files",
+      "description": "Recursively search for files and directories matching a glob pattern"
+    },
+    {
+      "name": "create_directory",
+      "description": "Create a directory recursively (mkdir -p)"
+    },
+    {
+      "name": "write_file",
+      "description": "Write files with encoding conversion from UTF-8"
+    },
+    {
+      "name": "move_file",
+      "description": "Move or rename files and directories"
+    },
+    {
+      "name": "edit_file",
+      "description": "Make line-based edits to a text file with diff output"
     }
   ]
 }
