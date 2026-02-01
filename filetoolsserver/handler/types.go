@@ -145,3 +145,41 @@ type MoveFileOutput struct {
 	Message string `json:"message"`
 }
 
+// SearchFilesInput defines input parameters for search_files tool.
+// Path: Root directory to search from (required)
+// Pattern: Glob pattern to match files (required). Use *.ext for current dir, **/*.ext for recursive
+// ExcludePatterns: Glob patterns to exclude from results (optional)
+type SearchFilesInput struct {
+	Path            string   `json:"path"`
+	Pattern         string   `json:"pattern"`
+	ExcludePatterns []string `json:"excludePatterns,omitempty"`
+}
+
+// SearchFilesOutput defines output for search_files tool
+type SearchFilesOutput struct {
+	Files []string `json:"files"`
+}
+
+// EditOperation defines a single edit operation for edit_file tool.
+// OldText: Text to search for - must match exactly (or with whitespace flexibility)
+// NewText: Text to replace with
+type EditOperation struct {
+	OldText string `json:"oldText"`
+	NewText string `json:"newText"`
+}
+
+// EditFileInput defines input parameters for edit_file tool.
+// Path: Absolute path to the file to edit (required)
+// Edits: Array of edit operations to apply sequentially (required)
+// DryRun: If true, return diff without writing changes (default: false)
+type EditFileInput struct {
+	Path   string          `json:"path"`
+	Edits  []EditOperation `json:"edits"`
+	DryRun bool            `json:"dryRun,omitempty"`
+}
+
+// EditFileOutput defines output for edit_file tool
+type EditFileOutput struct {
+	Diff string `json:"diff"`
+}
+
