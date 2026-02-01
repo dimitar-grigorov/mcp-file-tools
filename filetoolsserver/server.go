@@ -56,7 +56,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 	// Read-only tools
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "read_text_file",
-		Description: "Read files with automatic encoding detection and conversion to UTF-8. USE THIS instead of built-in Read tool when files may contain non-UTF-8 encodings. Auto-detects encoding if not specified. Parameters: path (required), encoding (optional), head (optional), tail (optional).",
+		Description: "Read files with automatic encoding detection and conversion to UTF-8. USE THIS instead of built-in Read tool when files may contain non-UTF-8 encodings. Parameters: path (required), encoding (optional), offset (optional, start line 1-indexed), limit (optional, max lines to read). Returns totalLines for pagination.",
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "Read Text File",
 			ReadOnlyHint:  true,

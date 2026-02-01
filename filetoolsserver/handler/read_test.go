@@ -387,3 +387,191 @@ func TestHandleReadTextFile_HeadCP1251(t *testing.T) {
 		t.Errorf("expected %q, got %q", expected, output.Content)
 	}
 }
+
+func TestHandleReadTextFile_OffsetLimit(t *testing.T) {
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+	testFile := filepath.Join(tempDir, "test.txt")
+
+	// Create a file with 10 lines
+	content := "line1\nline2\nline3\nline4\nline5\nline6\nline7\nline8\nline9\nline10"
+	if err := os.WriteFile(testFile, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	offset := 3
+	limit := 4
+	input := ReadTextFileInput{
+		Path:   testFile,
+		Offset: &offset,
+		Limit:  &limit,
+	}
+
+	result, output, err := h.HandleReadTextFile(context.Background(), nil, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if result.IsError {
+		t.Errorf("expected success, got error")
+	}
+
+	// Should return lines 3-6
+	expected := "line3\nline4\nline5\nline6"
+	if output.Content != expected {
+		t.Errorf("expected %q, got %q", expected, output.Content)
+	}
+
+	if output.TotalLines != 10 {
+		t.Errorf("expected TotalLines=10, got %d", output.TotalLines)
+	}
+
+	if output.StartLine != 3 {
+		t.Errorf("expected StartLine=3, got %d", output.StartLine)
+	}
+
+	if output.EndLine != 6 {
+		t.Errorf("expected EndLine=6, got %d", output.EndLine)
+	}
+}
+
+func TestHandleReadTextFile_OffsetOnly(t *testing.T) {
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+	testFile := filepath.Join(tempDir, "test.txt")
+
+	content := "line1\nline2\nline3\nline4\nline5"
+	if err := os.WriteFile(testFile, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	offset := 3
+	input := ReadTextFileInput{
+		Path:   testFile,
+		Offset: &offset,
+	}
+
+	result, output, err := h.HandleReadTextFile(context.Background(), nil, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if result.IsError {
+		t.Errorf("expected success, got error")
+	}
+
+	// Should return lines 3 to end
+	expected := "line3\nline4\nline5"
+	if output.Content != expected {
+		t.Errorf("expected %q, got %q", expected, output.Content)
+	}
+
+	if output.StartLine != 3 {
+		t.Errorf("expected StartLine=3, got %d", output.StartLine)
+	}
+
+	if output.EndLine != 5 {
+		t.Errorf("expected EndLine=5, got %d", output.EndLine)
+	}
+}
+
+func TestHandleReadTextFile_LimitOnly(t *testing.T) {
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+	testFile := filepath.Join(tempDir, "test.txt")
+
+	content := "line1\nline2\nline3\nline4\nline5"
+	if err := os.WriteFile(testFile, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	limit := 2
+	input := ReadTextFileInput{
+		Path:  testFile,
+		Limit: &limit,
+	}
+
+	result, output, err := h.HandleReadTextFile(context.Background(), nil, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if result.IsError {
+		t.Errorf("expected success, got error")
+	}
+
+	// Should return first 2 lines
+	expected := "line1\nline2"
+	if output.Content != expected {
+		t.Errorf("expected %q, got %q", expected, output.Content)
+	}
+
+	if output.StartLine != 1 {
+		t.Errorf("expected StartLine=1, got %d", output.StartLine)
+	}
+
+	if output.EndLine != 2 {
+		t.Errorf("expected EndLine=2, got %d", output.EndLine)
+	}
+}
+
+func TestHandleReadTextFile_OffsetLimitConflictWithHead(t *testing.T) {
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+	testFile := filepath.Join(tempDir, "test.txt")
+
+	if err := os.WriteFile(testFile, []byte("test"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	offset := 1
+	head := 5
+	input := ReadTextFileInput{
+		Path:   testFile,
+		Offset: &offset,
+		Head:   &head,
+	}
+
+	result, _, err := h.HandleReadTextFile(context.Background(), nil, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !result.IsError {
+		t.Error("expected error for offset/limit with head conflict")
+	}
+}
+
+func TestHandleReadTextFile_TotalLinesReturned(t *testing.T) {
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+	testFile := filepath.Join(tempDir, "test.txt")
+
+	content := "line1\nline2\nline3"
+	if err := os.WriteFile(testFile, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	input := ReadTextFileInput{Path: testFile}
+
+	result, output, err := h.HandleReadTextFile(context.Background(), nil, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if result.IsError {
+		t.Errorf("expected success, got error")
+	}
+
+	if output.TotalLines != 3 {
+		t.Errorf("expected TotalLines=3, got %d", output.TotalLines)
+	}
+
+	if output.StartLine != 1 {
+		t.Errorf("expected StartLine=1, got %d", output.StartLine)
+	}
+
+	if output.EndLine != 3 {
+		t.Errorf("expected EndLine=3, got %d", output.EndLine)
+	}
+}

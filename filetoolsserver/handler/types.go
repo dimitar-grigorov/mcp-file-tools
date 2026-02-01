@@ -2,12 +2,16 @@ package handler
 
 // ReadTextFileInput defines input parameters for read_text_file tool.
 // Path: Path to the file to read (required)
-// Encoding: File encoding - utf-8 (default) or cp1251/windows-1251 (converts to UTF-8). Omit for UTF-8.
-// Head: Read only the first N lines (optional)
+// Encoding: File encoding - auto-detected if not specified (optional)
+// Offset: Start reading from this line number, 1-indexed (optional)
+// Limit: Maximum number of lines to read (optional)
+// Head: Read only the first N lines - deprecated, use Limit (optional)
 // Tail: Read only the last N lines (optional)
 type ReadTextFileInput struct {
 	Path     string `json:"path"`
 	Encoding string `json:"encoding,omitempty"`
+	Offset   *int   `json:"offset,omitempty"`
+	Limit    *int   `json:"limit,omitempty"`
 	Head     *int   `json:"head,omitempty"`
 	Tail     *int   `json:"tail,omitempty"`
 }
@@ -15,6 +19,9 @@ type ReadTextFileInput struct {
 // ReadTextFileOutput defines output for read_text_file tool
 type ReadTextFileOutput struct {
 	Content            string `json:"content"`
+	TotalLines         int    `json:"totalLines"`
+	StartLine          int    `json:"startLine,omitempty"`
+	EndLine            int    `json:"endLine,omitempty"`
 	DetectedEncoding   string `json:"detectedEncoding,omitempty"`
 	EncodingConfidence int    `json:"encodingConfidence,omitempty"`
 }
