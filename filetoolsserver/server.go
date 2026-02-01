@@ -173,7 +173,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "edit_file",
-		Description: "Make line-based edits to a text file. Each edit replaces exact text sequences with new content. Supports whitespace-flexible matching when exact match fails. Returns a git-style unified diff showing the changes. Parameters: path (required), edits (required array of {oldText, newText}), dryRun (optional bool, default false - if true, returns diff without writing).",
+		Description: "Make line-based edits to a text file. Each edit replaces exact text sequences with new content. Supports whitespace-flexible matching when exact match fails. Returns a git-style unified diff showing the changes. Parameters: path (required), edits (required array of {oldText, newText}), dryRun (optional bool, default false - if true, returns diff without writing), encoding (optional, auto-detected).",
 		Annotations: &mcp.ToolAnnotations{
 			Title:           "Edit File",
 			ReadOnlyHint:    false,

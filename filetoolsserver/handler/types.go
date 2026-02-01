@@ -172,10 +172,12 @@ type EditOperation struct {
 // Path: Absolute path to the file to edit (required)
 // Edits: Array of edit operations to apply sequentially (required)
 // DryRun: If true, return diff without writing changes (default: false)
+// Encoding: File encoding (optional, auto-detected if not specified)
 type EditFileInput struct {
-	Path   string          `json:"path"`
-	Edits  []EditOperation `json:"edits"`
-	DryRun bool            `json:"dryRun,omitempty"`
+	Path     string          `json:"path"`
+	Edits    []EditOperation `json:"edits"`
+	DryRun   bool            `json:"dryRun,omitempty"`
+	Encoding string          `json:"encoding,omitempty"`
 }
 
 // EditFileOutput defines output for edit_file tool

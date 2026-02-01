@@ -75,8 +75,13 @@ claude mcp add file-tools ~/.local/bin/mcp-file-tools
 ```bash
 # Install with Go (requires Go 1.23+)
 go install github.com/dimitar-grigorov/mcp-file-tools/cmd/mcp-file-tools@latest
-# Add to Claude Code
+# Add to Claude Code (Linux/macOS)
 claude mcp add file-tools $(go env GOPATH)/bin/mcp-file-tools
+```
+
+```powershell
+# Add to Claude Code (Windows PowerShell)
+claude mcp add file-tools "$(go env GOPATH)\bin\mcp-file-tools.exe"
 ```
 
 ### Other Clients
