@@ -72,6 +72,11 @@ func applyEdits(content string, edits []EditOperation) (string, error) {
 	modifiedContent := content
 
 	for _, edit := range edits {
+		// Validate that oldText is not empty
+		if edit.OldText == "" {
+			return "", ErrOldTextEmpty
+		}
+
 		normalizedOld := normalizeLineEndings(edit.OldText)
 		normalizedNew := normalizeLineEndings(edit.NewText)
 
@@ -204,7 +209,8 @@ func formatDiffOutput(diff string) string {
 
 // atomicWriteFile writes content to a file atomically using a temp file and rename.
 // This prevents partial writes and race conditions.
-func atomicWriteFile(filepath, content string) error {
+// Uses defer to guarantee temp file cleanup even on panic.
+func atomicWriteFile(filepath, content string) (err error) {
 	// Generate random temp filename
 	randBytes := make([]byte, 16)
 	if _, err := rand.Read(randBytes); err != nil {
@@ -212,14 +218,20 @@ func atomicWriteFile(filepath, content string) error {
 	}
 	tempPath := fmt.Sprintf("%s.%s.tmp", filepath, hex.EncodeToString(randBytes))
 
+	// Ensure cleanup on any error or panic
+	defer func() {
+		if err != nil {
+			os.Remove(tempPath)
+		}
+	}()
+
 	// Write to temp file
-	if err := os.WriteFile(tempPath, []byte(content), 0644); err != nil {
+	if err = os.WriteFile(tempPath, []byte(content), 0644); err != nil {
 		return err
 	}
 
 	// Atomic rename
-	if err := os.Rename(tempPath, filepath); err != nil {
-		os.Remove(tempPath) // Cleanup on failure
+	if err = os.Rename(tempPath, filepath); err != nil {
 		return err
 	}
 
