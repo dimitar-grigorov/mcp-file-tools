@@ -129,5 +129,16 @@ func NewServer(allowedDirs []string) *mcp.Server {
 		},
 	}, h.HandleWriteFile)
 
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "move_file",
+		Description: "Move or rename files and directories. Can move files between directories and rename them in a single operation. Fails if destination already exists. Works for both files and directories. Parameters: source (required), destination (required).",
+		Annotations: &mcp.ToolAnnotations{
+			ReadOnlyHint:    false,
+			IdempotentHint:  false,
+			DestructiveHint: boolPtr(false),
+			OpenWorldHint:   boolPtr(false),
+		},
+	}, h.HandleMoveFile)
+
 	return server
 }
