@@ -132,3 +132,16 @@ type CreateDirectoryOutput struct {
 	Message string `json:"message"`
 }
 
+// MoveFileInput defines input parameters for move_file tool.
+// Source: Absolute path to the file or directory to move (required)
+// Destination: Absolute path to the destination location (required)
+type MoveFileInput struct {
+	Source      string `json:"source"`
+	Destination string `json:"destination"`
+}
+
+// MoveFileOutput defines output for move_file tool
+type MoveFileOutput struct {
+	Message string `json:"message"`
+}
+
