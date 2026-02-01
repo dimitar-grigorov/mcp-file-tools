@@ -93,6 +93,105 @@ Get detailed metadata about a file or directory.
 }
 ```
 
+### create_directory
+
+Create a directory recursively (like `mkdir -p`). Succeeds silently if directory already exists.
+
+**Parameters:**
+- `path` (required): Path to directory to create
+
+**Example:**
+```json
+{
+  "path": "/path/to/project/new/nested/dir"
+}
+```
+
+### move_file
+
+Move or rename files and directories. Can move between directories and rename in a single operation. Fails if destination already exists.
+
+**Parameters:**
+- `source` (required): Path to file or directory to move
+- `destination` (required): Destination path
+
+**Example:**
+```json
+{
+  "source": "/path/to/old_name.txt",
+  "destination": "/path/to/new_location/new_name.txt"
+}
+```
+
+### search_files
+
+Recursively search for files and directories matching a glob pattern.
+
+**Parameters:**
+- `path` (required): Root directory to search from
+- `pattern` (required): Glob pattern (`*.txt` for current dir, `**/*.txt` for recursive)
+- `excludePatterns` (optional): Array of patterns to exclude
+
+**Example:**
+```json
+{
+  "path": "/path/to/project",
+  "pattern": "**/*.go",
+  "excludePatterns": ["vendor", "node_modules"]
+}
+```
+
+**Response:**
+```json
+{
+  "files": [
+    "/path/to/project/main.go",
+    "/path/to/project/src/utils.go"
+  ]
+}
+```
+
+### edit_file
+
+Make line-based edits to a text file. Supports exact matching and whitespace-flexible matching. Returns a git-style unified diff showing changes.
+
+**Parameters:**
+- `path` (required): Path to the file to edit
+- `edits` (required): Array of edit operations, each with `oldText` and `newText`
+- `dryRun` (optional): If true, returns diff without writing changes (default: false)
+
+**Features:**
+- Exact text matching (first occurrence)
+- Whitespace-flexible matching (ignores leading whitespace differences)
+- Preserves original indentation
+- CRLF line endings normalized to LF
+- Atomic write (temp file + rename)
+
+**Example:**
+```json
+{
+  "path": "/path/to/file.go",
+  "edits": [
+    {
+      "oldText": "func oldName()",
+      "newText": "func newName()"
+    },
+    {
+      "oldText": "return nil",
+      "newText": "return err"
+    }
+  ],
+  "dryRun": false
+}
+```
+
+**Response:**
+```json
+{
+  "diff": "```diff\n--- /path/to/file.go\n+++ /path/to/file.go\n@@ -1,3 +1,3 @@\n-func oldName()\n+func newName()\n```\n\n"
+}
+```
+
 ## Encoding Tools
 
 ### detect_encoding
