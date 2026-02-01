@@ -121,3 +121,14 @@ type TreeEntry struct {
 	Children *[]TreeEntry `json:"children,omitempty"`
 }
 
+// CreateDirectoryInput defines input parameters for create_directory tool.
+// Path: Absolute path to the directory to create (required)
+type CreateDirectoryInput struct {
+	Path string `json:"path"`
+}
+
+// CreateDirectoryOutput defines output for create_directory tool
+type CreateDirectoryOutput struct {
+	Message string `json:"message"`
+}
+

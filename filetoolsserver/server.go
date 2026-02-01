@@ -9,14 +9,15 @@ import (
 var Version = "dev"
 
 // Server instructions for AI assistants
-const serverInstructions = `MCP filesystem server with non-UTF-8 encoding support (CP1251, CP1252, KOI8-R, etc.).
+const serverInstructions = `MCP filesystem server with non-UTF-8 encoding support.
 
-Workflow for editing files:
-1. Use detect_encoding first to check the file encoding
-2. Reading: Built-in Read tool is fine for any encoding
-3. Writing: If encoding is NOT UTF-8, MUST use write_file with the detected encoding, otherwise file will be corrupted
+IMPORTANT: If "no allowed directories configured" error occurs, inform user to add directory paths as args in .mcp.json config.
 
-Supports 20 encodings. Use list_encodings to see all.`
+Workflow for non-UTF-8 files:
+1. detect_encoding - check file encoding first
+2. write_file with detected encoding - prevents corruption
+
+Supports 20 encodings (CP1251, KOI8-R, ISO-8859-x, etc). Use list_encodings to see all.`
 
 // Helper for bool pointers (DestructiveHint defaults to true, so we need explicit false)
 func boolPtr(b bool) *bool {
@@ -80,7 +81,7 @@ func NewServer(allowedDirs []string) *mcp.Server {
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "list_allowed_directories",
-		Description: "Returns the list of directories that this server is allowed to access. Subdirectories within these allowed directories are also accessible.",
+		Description: "Returns the list of directories this server is allowed to access. Subdirectories are also accessible. If empty, user needs to add directory paths as args in .mcp.json.",
 		Annotations: &mcp.ToolAnnotations{
 			ReadOnlyHint:  true,
 			OpenWorldHint: boolPtr(false),
@@ -106,6 +107,17 @@ func NewServer(allowedDirs []string) *mcp.Server {
 	}, h.HandleDirectoryTree)
 
 	// Write tools
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "create_directory",
+		Description: "Create a directory recursively (mkdir -p). Succeeds silently if already exists. Parameter: path (required).",
+		Annotations: &mcp.ToolAnnotations{
+			ReadOnlyHint:    false,
+			IdempotentHint:  true,
+			DestructiveHint: boolPtr(false),
+			OpenWorldHint:   boolPtr(false),
+		},
+	}, h.HandleCreateDirectory)
+
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "write_file",
 		Description: "Write files with encoding conversion from UTF-8. USE THIS instead of built-in Write tool when writing to non-UTF-8 files (legacy codebases, Cyrillic text). Default encoding is cp1251 for backward compatibility. Parameters: path (required), content (required), encoding (cp1251/windows-1251/utf-8, default: cp1251).",
