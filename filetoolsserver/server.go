@@ -106,6 +106,15 @@ func NewServer(allowedDirs []string) *mcp.Server {
 		},
 	}, h.HandleDirectoryTree)
 
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "search_files",
+		Description: "Recursively search for files and directories matching a glob pattern. Use '*.ext' to match in current directory, '**/*.ext' to match recursively in all subdirectories. Returns full paths to matching items. Parameters: path (required), pattern (required), excludePatterns (optional array of patterns to skip).",
+		Annotations: &mcp.ToolAnnotations{
+			ReadOnlyHint:  true,
+			OpenWorldHint: boolPtr(false),
+		},
+	}, h.HandleSearchFiles)
+
 	// Write tools
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "create_directory",
@@ -139,6 +148,17 @@ func NewServer(allowedDirs []string) *mcp.Server {
 			OpenWorldHint:   boolPtr(false),
 		},
 	}, h.HandleMoveFile)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "edit_file",
+		Description: "Make line-based edits to a text file. Each edit replaces exact text sequences with new content. Supports whitespace-flexible matching when exact match fails. Returns a git-style unified diff showing the changes. Parameters: path (required), edits (required array of {oldText, newText}), dryRun (optional bool, default false - if true, returns diff without writing).",
+		Annotations: &mcp.ToolAnnotations{
+			ReadOnlyHint:    false,
+			IdempotentHint:  false,
+			DestructiveHint: boolPtr(true),
+			OpenWorldHint:   boolPtr(false),
+		},
+	}, h.HandleEditFile)
 
 	return server
 }
