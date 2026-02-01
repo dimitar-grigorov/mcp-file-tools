@@ -23,19 +23,17 @@ type encodingResult struct {
 // HandleReadTextFile reads a file in the specified encoding and returns UTF-8 content.
 // If encoding is not specified, it auto-detects the encoding using chunked sampling.
 func (h *Handler) HandleReadTextFile(ctx context.Context, req *mcp.CallToolRequest, input ReadTextFileInput) (*mcp.CallToolResult, ReadTextFileOutput, error) {
-	// Validate input
-	if err := validateReadInput(input); err != nil {
-		return errorResult(err.Error()), ReadTextFileOutput{}, nil
+	// Validate head/tail conflict
+	if input.Head != nil && input.Tail != nil {
+		return errorResult(ErrHeadTailConflict.Error()), ReadTextFileOutput{}, nil
 	}
 
-	// Validate path against allowed directories
-	validatedPath, err := h.validatePath(input.Path)
-	if err != nil {
-		return errorResult(err.Error()), ReadTextFileOutput{}, nil
+	v := h.ValidatePath(input.Path)
+	if !v.Ok() {
+		return v.Result, ReadTextFileOutput{}, nil
 	}
 
-	// Read file
-	data, err := os.ReadFile(validatedPath)
+	data, err := os.ReadFile(v.Path)
 	if err != nil {
 		return errorResult(fmt.Sprintf("failed to read file: %v", err)), ReadTextFileOutput{}, nil
 	}
@@ -63,17 +61,6 @@ func (h *Handler) HandleReadTextFile(ctx context.Context, req *mcp.CallToolReque
 	}
 
 	return &mcp.CallToolResult{}, output, nil
-}
-
-// validateReadInput validates the input parameters for reading a file
-func validateReadInput(input ReadTextFileInput) error {
-	if input.Path == "" {
-		return ErrPathRequired
-	}
-	if input.Head != nil && input.Tail != nil {
-		return ErrHeadTailConflict
-	}
-	return nil
 }
 
 // resolveEncoding determines the encoding to use, either from explicit input or auto-detection
