@@ -264,3 +264,23 @@ type CopyFileOutput struct {
 	Message string `json:"message"`
 }
 
+// ConvertEncodingInput defines input parameters for convert_encoding tool.
+// Path: Absolute path to the file to convert (required)
+// From: Source encoding - auto-detected if not specified (optional)
+// To: Target encoding (required)
+// Backup: Create .bak backup before converting (optional, default: false)
+type ConvertEncodingInput struct {
+	Path   string `json:"path"`
+	From   string `json:"from,omitempty"`
+	To     string `json:"to"`
+	Backup bool   `json:"backup,omitempty"`
+}
+
+// ConvertEncodingOutput defines output for convert_encoding tool
+type ConvertEncodingOutput struct {
+	Message          string `json:"message"`
+	SourceEncoding   string `json:"sourceEncoding"`
+	TargetEncoding   string `json:"targetEncoding"`
+	BackupPath       string `json:"backupPath,omitempty"`
+}
+

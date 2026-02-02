@@ -232,5 +232,17 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 		},
 	}, handler.Wrap(logger, "edit_file", h.HandleEditFile))
 
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "convert_encoding",
+		Description: "Convert file encoding. Reads in source encoding, writes in target encoding. Parameters: path (required), from (source encoding, auto-detected if omitted), to (target encoding, required), backup (create .bak file, default: false).",
+		Annotations: &mcp.ToolAnnotations{
+			Title:           "Convert Encoding",
+			ReadOnlyHint:    false,
+			IdempotentHint:  true,
+			DestructiveHint: boolPtr(true),
+			OpenWorldHint:   boolPtr(false),
+		},
+	}, handler.Wrap(logger, "convert_encoding", h.HandleConvertEncoding))
+
 	return server
 }
