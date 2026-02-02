@@ -267,6 +267,50 @@ Move or rename files and directories. Can move between directories and rename in
 }
 ```
 
+### copy_file
+
+Copy a file to a new location. Fails if destination already exists. Only copies files, not directories.
+
+**Parameters:**
+- `source` (required): Path to the file to copy
+- `destination` (required): Destination path
+
+**Example:**
+```json
+{
+  "source": "/path/to/original.txt",
+  "destination": "/path/to/backup/original_copy.txt"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Successfully copied /path/to/original.txt to /path/to/backup/original_copy.txt"
+}
+```
+
+### delete_file
+
+Delete a file. Does not delete directories.
+
+**Parameters:**
+- `path` (required): Path to the file to delete
+
+**Example:**
+```json
+{
+  "path": "/path/to/file_to_delete.txt"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Successfully deleted /path/to/file_to_delete.txt"
+}
+```
+
 ### search_files
 
 Recursively search for files and directories matching a glob pattern.
