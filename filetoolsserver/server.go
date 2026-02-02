@@ -110,6 +110,16 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 	}, handler.Wrap(logger, "detect_encoding", h.HandleDetectEncoding))
 
 	mcp.AddTool(server, &mcp.Tool{
+		Name:        "grep_text_file",
+		Description: "Search file contents with regex pattern and encoding support. Concurrent search across files/directories. Parameters: pattern (regex, required), paths (files/dirs array, required), caseSensitive (default: true), contextBefore/contextAfter (lines of context), maxMatches (default: 1000), include/exclude (glob patterns), encoding.",
+		Annotations: &mcp.ToolAnnotations{
+			Title:         "Grep Text File",
+			ReadOnlyHint:  true,
+			OpenWorldHint: boolPtr(false),
+		},
+	}, handler.Wrap(logger, "grep_text_file", h.HandleGrep))
+
+	mcp.AddTool(server, &mcp.Tool{
 		Name:        "list_allowed_directories",
 		Description: "Returns the list of directories this server is allowed to access. Subdirectories are also accessible. If empty, user needs to add directory paths as args in .mcp.json.",
 		Annotations: &mcp.ToolAnnotations{
