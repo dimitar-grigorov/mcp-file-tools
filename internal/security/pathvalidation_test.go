@@ -384,6 +384,29 @@ func TestValidatePath_PathTraversal(t *testing.T) {
 	}
 }
 
+func TestExpandHome(t *testing.T) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Skip("cannot determine home directory")
+	}
+
+	// Test ~ expands to home
+	if got := ExpandHome("~"); got != home {
+		t.Errorf("ExpandHome(~) = %q, want %q", got, home)
+	}
+
+	// Test ~/path expands correctly
+	want := filepath.Join(home, "Documents")
+	if got := ExpandHome("~/Documents"); got != want {
+		t.Errorf("ExpandHome(~/Documents) = %q, want %q", got, want)
+	}
+
+	// Test non-tilde paths unchanged
+	if got := ExpandHome("/usr/bin"); got != "/usr/bin" {
+		t.Errorf("ExpandHome(/usr/bin) = %q, want /usr/bin", got)
+	}
+}
+
 func TestNormalizeAllowedDirs(t *testing.T) {
 	tempDir := t.TempDir()
 	existingDir := filepath.Join(tempDir, "existing")
