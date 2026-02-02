@@ -6,12 +6,14 @@ Non-UTF-8 file encoding server: Cyrillic (CP1251, KOI8), Windows-1250-1258, ISO-
 
 ## What It Does
 
-Provides 12 tools for file operations with automatic encoding conversion:
+Provides 14 tools for file operations with automatic encoding conversion:
 - `read_text_file` - Read files with encoding auto-detection and conversion
+- `read_multiple_files` - Read multiple files concurrently with encoding support
 - `write_file` - Write files in specific encodings
 - `edit_file` - Line-based edits with diff preview and whitespace-flexible matching
 - `list_directory` - Browse directories with pattern filtering
-- `directory_tree` - Get recursive tree view as JSON
+- `tree` - Compact indented tree view (85% fewer tokens than JSON)
+- `directory_tree` - Get recursive tree view as JSON (deprecated, use `tree`)
 - `search_files` - Recursively search for files matching glob patterns
 - `detect_encoding` - Auto-detect file encoding with confidence score
 - `list_encodings` - Show all supported encodings

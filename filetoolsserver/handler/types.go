@@ -216,3 +216,25 @@ type ReadMultipleFilesOutput struct {
 	ErrorCount   int              `json:"errorCount"`
 }
 
+// TreeInput defines input parameters for tree tool.
+// Path: Root directory to display (required)
+// MaxDepth: Maximum recursion depth, 0 = unlimited (optional, default: 0)
+// MaxFiles: Maximum entries to return, 0 = unlimited (optional, default: 1000)
+// DirsOnly: Only show directories, not files (optional, default: false)
+// Exclude: Patterns to exclude (optional)
+type TreeInput struct {
+	Path     string   `json:"path"`
+	MaxDepth int      `json:"maxDepth,omitempty"`
+	MaxFiles int      `json:"maxFiles,omitempty"`
+	DirsOnly bool     `json:"dirsOnly,omitempty"`
+	Exclude  []string `json:"exclude,omitempty"`
+}
+
+// TreeOutput defines output for tree tool
+type TreeOutput struct {
+	Tree      string `json:"tree"`
+	FileCount int    `json:"fileCount"`
+	DirCount  int    `json:"dirCount"`
+	Truncated bool   `json:"truncated,omitempty"`
+}
+
