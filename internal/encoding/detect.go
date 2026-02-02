@@ -46,11 +46,11 @@ func Detect(data []byte) DetectionResult {
 	}
 }
 
-// DetectFromChunks detects encoding from file data, using chunked sampling for large files.
+// DetectSample detects encoding by sampling beginning, middle, and end of data.
 // For small files (< 128KB), it uses all data.
-// For larger files, it samples beginning, middle, and end.
+// For larger files, it samples beginning, middle, and end (3 samples).
 // Returns the detection result and whether the detected encoding should be trusted.
-func DetectFromChunks(data []byte) (DetectionResult, bool) {
+func DetectSample(data []byte) (DetectionResult, bool) {
 	fileSize := len(data)
 
 	// For small files, detect on entire content
@@ -99,4 +99,91 @@ func DetectFromChunks(data []byte) (DetectionResult, bool) {
 	result = Detect(samples)
 	trusted := result.Confidence >= MinConfidenceThreshold
 	return result, trusted
+}
+
+// DetectFromChunks is an alias for DetectSample for backwards compatibility.
+func DetectFromChunks(data []byte) (DetectionResult, bool) {
+	return DetectSample(data)
+}
+
+// DetectChunked detects encoding by reading all chunks and calculating weighted average confidence.
+// Each chunk is detected independently, and results are aggregated.
+// Weight is based on chunk size (larger chunks have more weight).
+// Returns the detection result with weighted average confidence.
+func DetectChunked(data []byte) DetectionResult {
+	fileSize := len(data)
+
+	// For small files, detect on entire content
+	if fileSize <= ChunkSize {
+		return Detect(data)
+	}
+
+	// Check for BOM first (only in first chunk)
+	if len(data) >= 3 && data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF {
+		return DetectionResult{Charset: "utf-8", Confidence: 100, HasBOM: true}
+	}
+
+	// Process file in chunks
+	type chunkResult struct {
+		encoding   string
+		confidence int
+		weight     int // chunk size as weight
+	}
+
+	var results []chunkResult
+	offset := 0
+
+	for offset < fileSize {
+		end := offset + ChunkSize
+		if end > fileSize {
+			end = fileSize
+		}
+
+		chunk := data[offset:end]
+		chunkSize := len(chunk)
+
+		detected := Detect(chunk)
+		if detected.Charset != "" {
+			results = append(results, chunkResult{
+				encoding:   detected.Charset,
+				confidence: detected.Confidence,
+				weight:     chunkSize,
+			})
+		}
+
+		offset = end
+	}
+
+	if len(results) == 0 {
+		return DetectionResult{}
+	}
+
+	// Find the most common encoding
+	encodingCounts := make(map[string]int)
+	encodingWeights := make(map[string]int)
+	encodingConfidenceSum := make(map[string]int)
+
+	for _, r := range results {
+		encodingCounts[r.encoding]++
+		encodingWeights[r.encoding] += r.weight
+		encodingConfidenceSum[r.encoding] += r.confidence * r.weight
+	}
+
+	// Find encoding with highest total weight
+	var bestEncoding string
+	var bestWeight int
+	for enc, weight := range encodingWeights {
+		if weight > bestWeight {
+			bestWeight = weight
+			bestEncoding = enc
+		}
+	}
+
+	// Calculate weighted average confidence for the best encoding
+	weightedConfidence := encodingConfidenceSum[bestEncoding] / encodingWeights[bestEncoding]
+
+	return DetectionResult{
+		Charset:    bestEncoding,
+		Confidence: weightedConfidence,
+	}
 }

@@ -72,8 +72,10 @@ type ListEncodingsOutput struct {
 
 // DetectEncodingInput defines input parameters for detect_encoding tool.
 // Path: Path to the file to detect encoding for (required)
+// Mode: Detection mode - "sample" (default, begin/middle/end), "chunked" (all chunks, weighted avg), "full" (entire file)
 type DetectEncodingInput struct {
 	Path string `json:"path"`
+	Mode string `json:"mode,omitempty"`
 }
 
 // DetectEncodingOutput defines output for detect_encoding tool

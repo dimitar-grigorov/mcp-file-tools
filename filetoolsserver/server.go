@@ -101,7 +101,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "detect_encoding",
-		Description: "Auto-detect file encoding with confidence score (0-100) and BOM detection. ALWAYS use this first when encountering � characters or garbled text. Parameter: path (required).",
+		Description: "Auto-detect file encoding with confidence score (0-100) and BOM detection. ALWAYS use this first when encountering � characters or garbled text. Parameters: path (required), mode (sample=begin/middle/end, chunked=all chunks weighted avg, full=entire file; default: sample).",
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "Detect Encoding",
 			ReadOnlyHint:  true,
