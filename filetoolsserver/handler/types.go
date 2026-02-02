@@ -284,16 +284,7 @@ type ConvertEncodingOutput struct {
 	BackupPath       string `json:"backupPath,omitempty"`
 }
 
-// GrepInput defines input parameters for grep_text_file tool.
-// Pattern: Regex pattern to search for (required)
-// Paths: Files or directories to search (required)
-// CaseSensitive: Case-sensitive search (optional, default: true)
-// ContextBefore: Lines to show before each match (optional, default: 0)
-// ContextAfter: Lines to show after each match (optional, default: 0)
-// MaxMatches: Maximum matches to return (optional, default: 1000)
-// Include: Glob pattern to include files (optional, e.g. "*.pas")
-// Exclude: Glob pattern to exclude files (optional, e.g. "*.bak")
-// Encoding: Force specific encoding (optional, auto-detected if not specified)
+// GrepInput defines input for grep_text_files tool.
 type GrepInput struct {
 	Pattern       string   `json:"pattern"`
 	Paths         []string `json:"paths"`

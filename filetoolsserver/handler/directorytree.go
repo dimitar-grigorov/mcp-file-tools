@@ -17,7 +17,6 @@ func (h *Handler) HandleDirectoryTree(ctx context.Context, req *mcp.CallToolRequ
 	if !v.Ok() {
 		return v.Result, DirectoryTreeOutput{}, nil
 	}
-
 	stat, err := os.Stat(v.Path)
 	if err != nil {
 		return errorResult(fmt.Sprintf("failed to access path: %v", err)), DirectoryTreeOutput{}, nil
@@ -25,68 +24,58 @@ func (h *Handler) HandleDirectoryTree(ctx context.Context, req *mcp.CallToolRequ
 	if !stat.IsDir() {
 		return errorResult(ErrPathMustBeDirectory.Error()), DirectoryTreeOutput{}, nil
 	}
-
-	// Build the tree
-	tree, err := buildTree(v.Path, input.ExcludePatterns)
+	tree, err := buildTree(ctx, v.Path, input.ExcludePatterns)
 	if err != nil {
+		if err == context.Canceled || err == context.DeadlineExceeded {
+			return errorResult("operation cancelled"), DirectoryTreeOutput{}, nil
+		}
 		return errorResult(fmt.Sprintf("failed to build directory tree: %v", err)), DirectoryTreeOutput{}, nil
 	}
-
-	// Marshal to JSON with 2-space indentation for readability
 	jsonBytes, err := json.MarshalIndent(tree, "", "  ")
 	if err != nil {
 		return errorResult(fmt.Sprintf("failed to marshal tree to JSON: %v", err)), DirectoryTreeOutput{}, nil
 	}
-
 	output := DirectoryTreeOutput{Tree: string(jsonBytes)}
 	return &mcp.CallToolResult{}, output, nil
 }
 
 // buildTree recursively builds a tree of directory entries
-func buildTree(dirPath string, excludePatterns []string) ([]TreeEntry, error) {
+func buildTree(ctx context.Context, dirPath string, excludePatterns []string) ([]TreeEntry, error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
 	entries, err := os.ReadDir(dirPath)
 	if err != nil {
 		return nil, err
 	}
-
 	var result []TreeEntry
-
 	for _, entry := range entries {
 		name := entry.Name()
-
-		// Check if this entry should be excluded
 		if shouldExclude(name, excludePatterns) {
 			continue
 		}
-
-		treeEntry := TreeEntry{
-			Name: name,
-		}
-
+		treeEntry := TreeEntry{Name: name}
 		if entry.IsDir() {
 			treeEntry.Type = "directory"
-
-			// Recursively build subtree
 			childPath := filepath.Join(dirPath, name)
-			children, err := buildTree(childPath, excludePatterns)
+			children, err := buildTree(ctx, childPath, excludePatterns)
 			if err != nil {
-				// Skip directories we can't read (permissions, etc.)
+				if err == context.Canceled || err == context.DeadlineExceeded {
+					return nil, err
+				}
 				continue
 			}
 			treeEntry.Children = &children
 		} else {
 			treeEntry.Type = "file"
-			// Files don't have children (nil pointer = omitted in JSON)
 		}
-
 		result = append(result, treeEntry)
 	}
-
-	// Ensure we return empty array instead of nil for directories
 	if result == nil {
 		result = []TreeEntry{}
 	}
-
 	return result, nil
 }
 

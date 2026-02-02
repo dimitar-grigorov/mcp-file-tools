@@ -15,20 +15,21 @@ func (h *Handler) HandleReadMultipleFiles(ctx context.Context, req *mcp.CallTool
 	if len(input.Paths) == 0 {
 		return errorResult("paths array is required and must contain at least one path"), ReadMultipleFilesOutput{}, nil
 	}
-
 	results := make([]FileReadResult, len(input.Paths))
 	var wg sync.WaitGroup
-
 	for i, path := range input.Paths {
 		wg.Add(1)
 		go func(idx int, filePath string) {
 			defer wg.Done()
-			results[idx] = h.readSingleFile(filePath, input.Encoding)
+			select {
+			case <-ctx.Done():
+				results[idx] = FileReadResult{Path: filePath, Error: "operation cancelled"}
+			default:
+				results[idx] = h.readSingleFile(filePath, input.Encoding)
+			}
 		}(i, path)
 	}
-
 	wg.Wait()
-
 	var successCount, errorCount int
 	for _, r := range results {
 		if r.Error != "" {
@@ -37,7 +38,6 @@ func (h *Handler) HandleReadMultipleFiles(ctx context.Context, req *mcp.CallTool
 			successCount++
 		}
 	}
-
 	return &mcp.CallToolResult{}, ReadMultipleFilesOutput{
 		Results:      results,
 		SuccessCount: successCount,

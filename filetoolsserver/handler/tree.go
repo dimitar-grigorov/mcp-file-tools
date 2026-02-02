@@ -17,7 +17,6 @@ func (h *Handler) HandleTree(ctx context.Context, req *mcp.CallToolRequest, inpu
 	if !v.Ok() {
 		return v.Result, TreeOutput{}, nil
 	}
-
 	stat, err := os.Stat(v.Path)
 	if err != nil {
 		return errorResult(fmt.Sprintf("failed to access path: %v", err)), TreeOutput{}, nil
@@ -25,13 +24,10 @@ func (h *Handler) HandleTree(ctx context.Context, req *mcp.CallToolRequest, inpu
 	if !stat.IsDir() {
 		return errorResult(ErrPathMustBeDirectory.Error()), TreeOutput{}, nil
 	}
-
-	// Set defaults
 	maxFiles := input.MaxFiles
 	if maxFiles == 0 {
 		maxFiles = 1000
 	}
-
 	state := &treeState{
 		maxFiles:  maxFiles,
 		maxDepth:  input.MaxDepth,
@@ -41,10 +37,8 @@ func (h *Handler) HandleTree(ctx context.Context, req *mcp.CallToolRequest, inpu
 		dirCount:  0,
 		truncated: false,
 	}
-
 	var sb strings.Builder
-	buildCompactTree(&sb, v.Path, 0, state)
-
+	buildCompactTree(ctx, &sb, v.Path, 0, state)
 	return &mcp.CallToolResult{}, TreeOutput{
 		Tree:      sb.String(),
 		FileCount: state.fileCount,
@@ -67,38 +61,39 @@ func (s *treeState) totalCount() int {
 	return s.fileCount + s.dirCount
 }
 
-func buildCompactTree(sb *strings.Builder, dirPath string, depth int, state *treeState) {
+func buildCompactTree(ctx context.Context, sb *strings.Builder, dirPath string, depth int, state *treeState) {
+	select {
+	case <-ctx.Done():
+		state.truncated = true
+		return
+	default:
+	}
 	if state.truncated {
 		return
 	}
 	if state.maxDepth > 0 && depth >= state.maxDepth {
 		return
 	}
-
 	entries, err := os.ReadDir(dirPath)
 	if err != nil {
 		return
 	}
-
 	indent := strings.Repeat("  ", depth)
-
 	for _, entry := range entries {
 		if state.totalCount() >= state.maxFiles {
 			state.truncated = true
 			return
 		}
-
 		name := entry.Name()
 		if shouldExcludeTree(name, state.exclude) {
 			continue
 		}
-
 		if entry.IsDir() {
 			state.dirCount++
 			sb.WriteString(indent)
 			sb.WriteString(name)
 			sb.WriteString("/\n")
-			buildCompactTree(sb, filepath.Join(dirPath, name), depth+1, state)
+			buildCompactTree(ctx, sb, filepath.Join(dirPath, name), depth+1, state)
 		} else if !state.dirsOnly {
 			state.fileCount++
 			sb.WriteString(indent)
