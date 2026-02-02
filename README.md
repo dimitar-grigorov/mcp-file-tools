@@ -6,21 +6,23 @@ Non-UTF-8 file encoding server: Cyrillic (CP1251, KOI8), Windows-1250-1258, ISO-
 
 ## What It Does
 
-Provides 14 tools for file operations with automatic encoding conversion:
-- `read_text_file` - Read files with encoding auto-detection and conversion
-- `read_multiple_files` - Read multiple files concurrently with encoding support
-- `write_file` - Write files in specific encodings
-- `edit_file` - Line-based edits with diff preview and whitespace-flexible matching
-- `list_directory` - Browse directories with pattern filtering
-- `tree` - Compact indented tree view (85% fewer tokens than JSON)
-- `directory_tree` - Get recursive tree view as JSON (deprecated, use `tree`)
-- `search_files` - Recursively search for files matching glob patterns
-- `detect_encoding` - Auto-detect file encoding with confidence score
-- `list_encodings` - Show all supported encodings
-- `get_file_info` - Get file/directory metadata
-- `create_directory` - Create directories recursively (mkdir -p)
-- `move_file` - Move or rename files and directories
-- `list_allowed_directories` - Show accessible directories
+Provides 16 tools for file operations with automatic encoding conversion:
+- [`read_text_file`](TOOLS.md#read_text_file) - Read files with encoding auto-detection and conversion
+- [`read_multiple_files`](TOOLS.md#read_multiple_files) - Read multiple files concurrently with encoding support
+- [`write_file`](TOOLS.md#write_file) - Write files in specific encodings
+- [`edit_file`](TOOLS.md#edit_file) - Line-based edits with diff preview and whitespace-flexible matching
+- [`copy_file`](TOOLS.md#copy_file) - Copy a file to a new location
+- [`delete_file`](TOOLS.md#delete_file) - Delete a file
+- [`list_directory`](TOOLS.md#list_directory) - Browse directories with pattern filtering
+- [`tree`](TOOLS.md#tree) - Compact indented tree view (85% fewer tokens than JSON)
+- [`directory_tree`](TOOLS.md#directory_tree-deprecated) - Get recursive tree view as JSON (deprecated, use `tree`)
+- [`search_files`](TOOLS.md#search_files) - Recursively search for files matching glob patterns
+- [`detect_encoding`](TOOLS.md#detect_encoding) - Auto-detect file encoding with confidence score
+- [`list_encodings`](TOOLS.md#list_encodings) - Show all supported encodings
+- [`get_file_info`](TOOLS.md#get_file_info) - Get file/directory metadata
+- [`create_directory`](TOOLS.md#create_directory) - Create directories recursively (mkdir -p)
+- [`move_file`](TOOLS.md#move_file) - Move or rename files and directories
+- [`list_allowed_directories`](TOOLS.md#list_allowed_directories) - Show accessible directories
 
 **Supported encodings (20 total):**
 - **Cyrillic:** Windows-1251, KOI8-R, KOI8-U, CP866, ISO-8859-5
