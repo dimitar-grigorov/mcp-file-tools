@@ -12,15 +12,20 @@ import (
 var Version = "dev"
 
 // Server instructions for AI assistants
-const serverInstructions = `MCP filesystem server with non-UTF-8 encoding support.
+const serverInstructions = `MCP filesystem server with non-UTF-8 encoding support (20 encodings: CP1251, KOI8-R, ISO-8859-x, etc).
 
-IMPORTANT: If "no allowed directories configured" error occurs, inform user to add directory paths as args in .mcp.json config.
+PREFER THESE TOOLS for file operations when encoding matters:
+- read_text_file: auto-detects encoding, returns UTF-8
+- write_file: converts UTF-8 to target encoding (default: cp1251)
+- edit_file: in-place edits with encoding support, returns diff
+- detect_encoding: diagnose encoding issues (garbled text, � characters)
 
 Workflow for non-UTF-8 files:
-1. detect_encoding - check file encoding first
-2. write_file with detected encoding - prevents corruption
+1. detect_encoding - identify file encoding
+2. read_text_file or edit_file - read/modify with encoding
+3. write_file with encoding - preserves original encoding
 
-Supports 20 encodings (CP1251, KOI8-R, ISO-8859-x, etc). Use list_encodings to see all.`
+If "no allowed directories configured" error: add directory paths as args in .mcp.json.`
 
 // Helper for bool pointers (DestructiveHint defaults to true, so we need explicit false)
 func boolPtr(b bool) *bool {
@@ -56,7 +61,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 	// Read-only tools
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "read_text_file",
-		Description: "Read files with automatic encoding detection and conversion to UTF-8. USE THIS instead of built-in Read tool when files may contain non-UTF-8 encodings. Parameters: path (required), encoding (optional), offset (optional, start line 1-indexed), limit (optional, max lines to read). Returns totalLines for pagination.",
+		Description: "Read file with encoding auto-detection, converts to UTF-8. USE THIS for non-UTF-8 files (Cyrillic, legacy codebases). Parameters: path (required), encoding, offset (1-indexed start line), limit. Returns totalLines for pagination.",
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "Read Text File",
 			ReadOnlyHint:  true,
@@ -66,7 +71,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "read_multiple_files",
-		Description: "Read the contents of multiple files simultaneously. More efficient than reading files one by one. Each file's content is returned with encoding info. Individual file failures don't stop the operation. Parameters: paths (required array of file paths), encoding (optional, applies to all files - auto-detected per file if not specified).",
+		Description: "Read multiple files concurrently with encoding support. Individual failures don't stop operation. Parameters: paths (required array), encoding (optional, auto-detected per file).",
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "Read Multiple Files",
 			ReadOnlyHint:  true,
@@ -96,7 +101,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "detect_encoding",
-		Description: "Auto-detect file encoding with confidence score and BOM detection. ALWAYS use this first when you encounter � characters or unknown encoding. Returns encoding name, confidence percentage (0-100), and whether file has BOM. Parameter: path (required).",
+		Description: "Auto-detect file encoding with confidence score (0-100) and BOM detection. ALWAYS use this first when encountering � characters or garbled text. Parameter: path (required).",
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "Detect Encoding",
 			ReadOnlyHint:  true,
@@ -116,7 +121,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "get_file_info",
-		Description: "Retrieve detailed metadata about a file or directory. Returns size, creation time, last modified time, last accessed time, permissions, and type (file/directory). Only works within allowed directories. Parameter: path (required).",
+		Description: "Get file/directory metadata: size, created/modified/accessed times, permissions, type. Parameter: path (required).",
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "Get File Info",
 			ReadOnlyHint:  true,
@@ -126,17 +131,27 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "directory_tree",
-		Description: "Get a recursive tree view of files and directories as a JSON structure. Each entry includes 'name', 'type' (file/directory), and 'children' for directories. Files have no children array, while directories always have a children array (which may be empty). The output is formatted with 2-space indentation for readability. Only works within allowed directories. Parameters: path (required), excludePatterns (optional array of glob patterns to exclude).",
+		Description: "DEPRECATED: Use 'tree' instead (85% fewer tokens). Returns JSON tree structure for compatibility with mcp-js-servers. Parameters: path (required), excludePatterns (optional).",
 		Annotations: &mcp.ToolAnnotations{
-			Title:         "Directory Tree",
+			Title:         "Directory Tree (JSON)",
 			ReadOnlyHint:  true,
 			OpenWorldHint: boolPtr(false),
 		},
 	}, handler.Wrap(logger, "directory_tree", h.HandleDirectoryTree))
 
 	mcp.AddTool(server, &mcp.Tool{
+		Name:        "tree",
+		Description: "Compact indented tree view (85% fewer tokens than directory_tree). Directories end with /. Parameters: path (required), maxDepth (0=unlimited), maxFiles (default 1000), dirsOnly, exclude.",
+		Annotations: &mcp.ToolAnnotations{
+			Title:         "Tree (Compact)",
+			ReadOnlyHint:  true,
+			OpenWorldHint: boolPtr(false),
+		},
+	}, handler.Wrap(logger, "tree", h.HandleTree))
+
+	mcp.AddTool(server, &mcp.Tool{
 		Name:        "search_files",
-		Description: "Recursively search for files and directories matching a glob pattern. Use '*.ext' to match in current directory, '**/*.ext' to match recursively in all subdirectories. Returns full paths to matching items. Parameters: path (required), pattern (required), excludePatterns (optional array of patterns to skip).",
+		Description: "Recursively search for files matching a glob pattern (*.ext or **/*.ext). Returns full paths. Parameters: path (required), pattern (required), excludePatterns.",
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "Search Files",
 			ReadOnlyHint:  true,
@@ -159,7 +174,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "write_file",
-		Description: "Write files with encoding conversion from UTF-8. USE THIS instead of built-in Write tool when writing to non-UTF-8 files (legacy codebases, Cyrillic text). Default encoding is cp1251 (configurable via MCP_DEFAULT_ENCODING). Parameters: path (required), content (required), encoding (cp1251/windows-1251/utf-8, default: cp1251).",
+		Description: "Write file with encoding conversion from UTF-8. USE THIS for non-UTF-8 files (Cyrillic, legacy codebases). Parameters: path (required), content (required), encoding (default: cp1251).",
 		Annotations: &mcp.ToolAnnotations{
 			Title:           "Write File",
 			ReadOnlyHint:    false,
@@ -171,7 +186,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "move_file",
-		Description: "Move or rename files and directories. Can move files between directories and rename them in a single operation. Fails if destination already exists. Works for both files and directories. Parameters: source (required), destination (required).",
+		Description: "Move or rename files/directories. Fails if destination exists. Parameters: source (required), destination (required).",
 		Annotations: &mcp.ToolAnnotations{
 			Title:           "Move File",
 			ReadOnlyHint:    false,
@@ -183,7 +198,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "edit_file",
-		Description: "Make line-based edits to a text file. Each edit replaces exact text sequences with new content. Supports whitespace-flexible matching when exact match fails. Returns a git-style unified diff showing the changes. Parameters: path (required), edits (required array of {oldText, newText}), dryRun (optional bool, default false - if true, returns diff without writing), encoding (optional, auto-detected).",
+		Description: "Replace text sequences in a file with whitespace-flexible matching. Returns unified diff. Parameters: path (required), edits (array of {oldText, newText}), dryRun (preview without writing), encoding.",
 		Annotations: &mcp.ToolAnnotations{
 			Title:           "Edit File",
 			ReadOnlyHint:    false,

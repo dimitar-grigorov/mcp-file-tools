@@ -35,6 +35,42 @@ Read file contents with automatic encoding detection and optional partial readin
 }
 ```
 
+### read_multiple_files
+
+Read multiple files concurrently with encoding support. Individual file failures don't stop the operation.
+
+**Parameters:**
+- `paths` (required): Array of file paths to read
+- `encoding` (optional): Encoding for all files (auto-detected per file if omitted)
+
+**Example:**
+```json
+{
+  "paths": ["/path/to/file1.pas", "/path/to/file2.pas"],
+  "encoding": "cp1251"
+}
+```
+
+**Response:**
+```json
+{
+  "results": [
+    {
+      "path": "/path/to/file1.pas",
+      "content": "program Hello;...",
+      "detectedEncoding": "windows-1251",
+      "encodingConfidence": 95
+    },
+    {
+      "path": "/path/to/file2.pas",
+      "content": "unit Utils;..."
+    }
+  ],
+  "successCount": 2,
+  "errorCount": 0
+}
+```
+
 ### write_file
 
 Write content to file. UTF-8 writes as-is; other encodings convert from UTF-8.
@@ -123,28 +159,49 @@ List files and directories with optional pattern filtering.
 }
 ```
 
-### directory_tree
+### tree
 
-Get a recursive tree view of files and directories as JSON.
+Compact indented tree view optimized for AI/LLM consumption. Uses ~85% fewer tokens than `directory_tree`.
 
 **Parameters:**
 - `path` (required): Root directory
-- `excludePatterns` (optional): Array of glob patterns to exclude
+- `maxDepth` (optional): Maximum recursion depth (0 = unlimited)
+- `maxFiles` (optional): Maximum entries to return (default: 1000)
+- `dirsOnly` (optional): Only show directories, not files
+- `exclude` (optional): Array of patterns to exclude
 
 **Example:**
 ```json
 {
   "path": "/path/to/project",
-  "excludePatterns": ["node_modules", ".git"]
+  "maxDepth": 3,
+  "exclude": ["node_modules", ".git"]
 }
 ```
 
 **Response:**
 ```json
 {
-  "tree": "{\"name\":\"project\",\"type\":\"directory\",\"children\":[...]}"
+  "tree": "src/\n  handler/\n    read.go\n    write.go\n  server.go\nREADME.md",
+  "fileCount": 4,
+  "dirCount": 2,
+  "truncated": false
 }
 ```
+
+### directory_tree (deprecated)
+
+Get a recursive tree view as JSON. **Use `tree` instead for 85% fewer tokens.**
+
+**Parameters:**
+- `path` (required): Root directory
+- `excludePatterns` (optional): Array of glob patterns to exclude
+
+**Response:**
+```json
+{
+  "tree": "{\"name\":\"project\",\"type\":\"directory\",\"children\":[...]}"
+}
 
 ### get_file_info
 
