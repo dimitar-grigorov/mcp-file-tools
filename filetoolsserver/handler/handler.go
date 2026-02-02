@@ -41,11 +41,6 @@ func NewHandler(allowedDirs []string, opts ...Option) *Handler {
 	return h
 }
 
-// GetConfig returns the handler's configuration
-func (h *Handler) GetConfig() *config.Config {
-	return h.config
-}
-
 // GetAllowedDirectories returns a copy of the allowed directories
 func (h *Handler) GetAllowedDirectories() []string {
 	h.mu.RLock()

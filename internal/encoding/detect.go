@@ -46,14 +46,6 @@ func Detect(data []byte) DetectionResult {
 	}
 }
 
-// IsValidUTF8 checks if the given bytes are valid UTF-8.
-func IsValidUTF8(data []byte) bool {
-	if len(data) >= 3 && data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF {
-		return true
-	}
-	return utf8.Valid(data)
-}
-
 // DetectFromChunks detects encoding from file data, using chunked sampling for large files.
 // For small files (< 128KB), it uses all data.
 // For larger files, it samples beginning, middle, and end.
