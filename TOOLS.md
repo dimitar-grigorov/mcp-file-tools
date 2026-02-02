@@ -4,20 +4,34 @@
 
 ### read_text_file
 
-Read file contents with automatic encoding detection and optional partial reading (head/tail). UTF-8 files pass through unchanged; other encodings convert to UTF-8.
+Read file contents with automatic encoding detection and optional partial reading. UTF-8 files pass through unchanged; other encodings convert to UTF-8.
 
 **Parameters:**
 - `path` (required): Path to the file
-- `encoding` (optional): Encoding name (auto-detects if omitted). See [Supported Encodings](#supported-encodings).
-- `head` (optional): Read only the first N lines
+- `encoding` (optional): Encoding name (auto-detects if omitted)
+- `offset` (optional): Start reading from this line number (1-indexed)
+- `limit` (optional): Maximum number of lines to read
+- `head` (optional): Read only the first N lines (deprecated, use `limit`)
 - `tail` (optional): Read only the last N lines
 
 **Example:**
 ```json
 {
   "path": "/path/to/file.pas",
-  "encoding": "cp1251",
-  "head": 50
+  "offset": 100,
+  "limit": 50
+}
+```
+
+**Response:**
+```json
+{
+  "content": "line 100\nline 101\n...",
+  "totalLines": 500,
+  "startLine": 100,
+  "endLine": 149,
+  "detectedEncoding": "windows-1251",
+  "encodingConfidence": 95
 }
 ```
 
@@ -28,14 +42,59 @@ Write content to file. UTF-8 writes as-is; other encodings convert from UTF-8.
 **Parameters:**
 - `path` (required): Path to the file
 - `content` (required): Content to write
-- `encoding` (optional): Target encoding (default: cp1251). See [Supported Encodings](#supported-encodings).
+- `encoding` (optional): Target encoding (default: cp1251)
 
 **Example:**
 ```json
 {
   "path": "/path/to/file.pas",
-  "content": "program Hello;\nbegin\n  writeln('Здравей');\nend.",
+  "content": "program Hello;\nbegin\n  writeln('Zdravei');\nend.",
   "encoding": "cp1251"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Successfully wrote 48 bytes to /path/to/file.pas"
+}
+```
+
+### edit_file
+
+Make line-based edits to a text file. Supports exact matching and whitespace-flexible matching. Returns a git-style unified diff showing changes.
+
+**Parameters:**
+- `path` (required): Path to the file to edit
+- `edits` (required): Array of edit operations, each with `oldText` and `newText`
+- `dryRun` (optional): If true, returns diff without writing changes (default: false)
+- `encoding` (optional): File encoding (auto-detected if not specified)
+
+**Features:**
+- Exact text matching (first occurrence)
+- Whitespace-flexible matching (ignores leading whitespace differences)
+- Preserves original indentation
+- CRLF line endings normalized to LF
+- Atomic write (temp file + rename)
+
+**Example:**
+```json
+{
+  "path": "/path/to/file.go",
+  "edits": [
+    {
+      "oldText": "func oldName()",
+      "newText": "func newName()"
+    }
+  ],
+  "dryRun": false
+}
+```
+
+**Response:**
+```json
+{
+  "diff": "--- /path/to/file.go\n+++ /path/to/file.go\n@@ -1,3 +1,3 @@\n-func oldName()\n+func newName()\n"
 }
 ```
 
@@ -57,6 +116,13 @@ List files and directories with optional pattern filtering.
 }
 ```
 
+**Response:**
+```json
+{
+  "files": ["main.pas", "utils.pas", "forms.pas"]
+}
+```
+
 ### directory_tree
 
 Get a recursive tree view of files and directories as JSON.
@@ -70,6 +136,13 @@ Get a recursive tree view of files and directories as JSON.
 {
   "path": "/path/to/project",
   "excludePatterns": ["node_modules", ".git"]
+}
+```
+
+**Response:**
+```json
+{
+  "tree": "{\"name\":\"project\",\"type\":\"directory\",\"children\":[...]}"
 }
 ```
 
@@ -107,6 +180,13 @@ Create a directory recursively (like `mkdir -p`). Succeeds silently if directory
 }
 ```
 
+**Response:**
+```json
+{
+  "message": "Directory created: /path/to/project/new/nested/dir"
+}
+```
+
 ### move_file
 
 Move or rename files and directories. Can move between directories and rename in a single operation. Fails if destination already exists.
@@ -120,6 +200,13 @@ Move or rename files and directories. Can move between directories and rename in
 {
   "source": "/path/to/old_name.txt",
   "destination": "/path/to/new_location/new_name.txt"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Moved /path/to/old_name.txt to /path/to/new_location/new_name.txt"
 }
 ```
 
@@ -148,47 +235,6 @@ Recursively search for files and directories matching a glob pattern.
     "/path/to/project/main.go",
     "/path/to/project/src/utils.go"
   ]
-}
-```
-
-### edit_file
-
-Make line-based edits to a text file. Supports exact matching and whitespace-flexible matching. Returns a git-style unified diff showing changes.
-
-**Parameters:**
-- `path` (required): Path to the file to edit
-- `edits` (required): Array of edit operations, each with `oldText` and `newText`
-- `dryRun` (optional): If true, returns diff without writing changes (default: false)
-
-**Features:**
-- Exact text matching (first occurrence)
-- Whitespace-flexible matching (ignores leading whitespace differences)
-- Preserves original indentation
-- CRLF line endings normalized to LF
-- Atomic write (temp file + rename)
-
-**Example:**
-```json
-{
-  "path": "/path/to/file.go",
-  "edits": [
-    {
-      "oldText": "func oldName()",
-      "newText": "func newName()"
-    },
-    {
-      "oldText": "return nil",
-      "newText": "return err"
-    }
-  ],
-  "dryRun": false
-}
-```
-
-**Response:**
-```json
-{
-  "diff": "```diff\n--- /path/to/file.go\n+++ /path/to/file.go\n@@ -1,3 +1,3 @@\n-func oldName()\n+func newName()\n```\n\n"
 }
 ```
 
@@ -235,6 +281,13 @@ Returns all supported encodings with metadata.
 Returns directories the server is allowed to access.
 
 **Parameters:** None
+
+**Response:**
+```json
+{
+  "directories": ["/home/user/projects", "/var/data"]
+}
+```
 
 ## Supported Encodings
 
