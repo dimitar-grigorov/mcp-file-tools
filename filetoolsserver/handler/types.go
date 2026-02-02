@@ -238,3 +238,27 @@ type TreeOutput struct {
 	Truncated bool   `json:"truncated,omitempty"`
 }
 
+// DeleteFileInput defines input parameters for delete_file tool.
+// Path: Absolute path to the file to delete (required)
+type DeleteFileInput struct {
+	Path string `json:"path"`
+}
+
+// DeleteFileOutput defines output for delete_file tool
+type DeleteFileOutput struct {
+	Message string `json:"message"`
+}
+
+// CopyFileInput defines input parameters for copy_file tool.
+// Source: Absolute path to the file to copy (required)
+// Destination: Absolute path to the destination (required)
+type CopyFileInput struct {
+	Source      string `json:"source"`
+	Destination string `json:"destination"`
+}
+
+// CopyFileOutput defines output for copy_file tool
+type CopyFileOutput struct {
+	Message string `json:"message"`
+}
+

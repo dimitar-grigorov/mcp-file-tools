@@ -197,6 +197,30 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 	}, handler.Wrap(logger, "move_file", h.HandleMoveFile))
 
 	mcp.AddTool(server, &mcp.Tool{
+		Name:        "copy_file",
+		Description: "Copy a file. Fails if destination exists. Parameters: source (required), destination (required).",
+		Annotations: &mcp.ToolAnnotations{
+			Title:           "Copy File",
+			ReadOnlyHint:    false,
+			IdempotentHint:  true,
+			DestructiveHint: boolPtr(false),
+			OpenWorldHint:   boolPtr(false),
+		},
+	}, handler.Wrap(logger, "copy_file", h.HandleCopyFile))
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "delete_file",
+		Description: "Delete a file. Does not delete directories. Parameter: path (required).",
+		Annotations: &mcp.ToolAnnotations{
+			Title:           "Delete File",
+			ReadOnlyHint:    false,
+			IdempotentHint:  false,
+			DestructiveHint: boolPtr(true),
+			OpenWorldHint:   boolPtr(false),
+		},
+	}, handler.Wrap(logger, "delete_file", h.HandleDeleteFile))
+
+	mcp.AddTool(server, &mcp.Tool{
 		Name:        "edit_file",
 		Description: "Replace text sequences in a file with whitespace-flexible matching. Returns unified diff. Parameters: path (required), edits (array of {oldText, newText}), dryRun (preview without writing), encoding.",
 		Annotations: &mcp.ToolAnnotations{
