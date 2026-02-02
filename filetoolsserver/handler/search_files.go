@@ -14,12 +14,10 @@ func (h *Handler) HandleSearchFiles(ctx context.Context, req *mcp.CallToolReques
 	if input.Pattern == "" {
 		return errorResult(ErrPatternRequired.Error()), SearchFilesOutput{}, nil
 	}
-
 	v := h.ValidatePath(input.Path)
 	if !v.Ok() {
 		return v.Result, SearchFilesOutput{}, nil
 	}
-
 	stat, err := os.Stat(v.Path)
 	if err != nil {
 		return errorResult("failed to access path: " + err.Error()), SearchFilesOutput{}, nil
@@ -27,63 +25,53 @@ func (h *Handler) HandleSearchFiles(ctx context.Context, req *mcp.CallToolReques
 	if !stat.IsDir() {
 		return errorResult(ErrPathMustBeDirectory.Error()), SearchFilesOutput{}, nil
 	}
-
-	results, err := searchFiles(v.Path, input.Pattern, input.ExcludePatterns)
+	results, err := searchFiles(ctx, v.Path, input.Pattern, input.ExcludePatterns)
 	if err != nil {
+		if err == context.Canceled || err == context.DeadlineExceeded {
+			return errorResult("search cancelled"), SearchFilesOutput{}, nil
+		}
 		return errorResult("search failed: " + err.Error()), SearchFilesOutput{}, nil
 	}
-
 	return &mcp.CallToolResult{}, SearchFilesOutput{Files: results}, nil
 }
 
 // searchFiles recursively searches for files matching the pattern
-func searchFiles(rootPath, pattern string, excludePatterns []string) ([]string, error) {
+func searchFiles(ctx context.Context, rootPath, pattern string, excludePatterns []string) ([]string, error) {
 	var results []string
-
 	err := filepath.Walk(rootPath, func(fullPath string, info os.FileInfo, err error) error {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
 		if err != nil {
-			// Skip paths we can't access
 			return nil
 		}
-
-		// Compute relative path from root
 		relativePath, err := filepath.Rel(rootPath, fullPath)
 		if err != nil {
 			return nil
 		}
-
-		// Skip the root directory itself
 		if relativePath == "." {
 			return nil
 		}
-
-		// Normalize path separators to forward slashes for consistent matching
 		relativePathNorm := filepath.ToSlash(relativePath)
-
-		// Check if this path should be excluded
 		if shouldExcludePath(relativePathNorm, excludePatterns) {
 			if info.IsDir() {
 				return filepath.SkipDir
 			}
 			return nil
 		}
-
-		// Check if path matches the search pattern
 		if matchGlobPattern(relativePathNorm, pattern) {
 			results = append(results, fullPath)
 		}
-
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
-
 	if results == nil {
 		results = []string{}
 	}
-
 	return results, nil
 }
 
