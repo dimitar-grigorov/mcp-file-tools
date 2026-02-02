@@ -21,7 +21,28 @@ func (h *Handler) HandleDetectEncoding(ctx context.Context, req *mcp.CallToolReq
 		return errorResult(fmt.Sprintf("failed to read file: %v", err)), DetectEncodingOutput{}, nil
 	}
 
-	result := encoding.Detect(data)
+	// Determine detection mode (default: sample)
+	mode := input.Mode
+	if mode == "" {
+		mode = "sample"
+	}
+
+	var result encoding.DetectionResult
+
+	switch mode {
+	case "sample":
+		// Sample beginning, middle, and end
+		result, _ = encoding.DetectSample(data)
+	case "chunked":
+		// Read all chunks with weighted average confidence
+		result = encoding.DetectChunked(data)
+	case "full":
+		// Read entire file at once
+		result = encoding.Detect(data)
+	default:
+		return errorResult(fmt.Sprintf("invalid mode: %s (valid: sample, chunked, full)", mode)), DetectEncodingOutput{}, nil
+	}
+
 	if result.Charset == "" {
 		return errorResult("Could not detect encoding"), DetectEncodingOutput{}, nil
 	}

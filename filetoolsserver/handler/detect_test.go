@@ -164,3 +164,90 @@ func TestHandleDetectEncoding_EmptyPath(t *testing.T) {
 		t.Errorf("expected 'path is required' message, got %q", text)
 	}
 }
+
+func TestHandleDetectEncoding_ModeChunked(t *testing.T) {
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+	testFile := filepath.Join(tempDir, "test.txt")
+	content := "Hello, World! This is UTF-8 text for chunked mode testing."
+
+	if err := os.WriteFile(testFile, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	input := DetectEncodingInput{
+		Path: testFile,
+		Mode: "chunked",
+	}
+
+	result, output, err := h.HandleDetectEncoding(context.Background(), nil, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if result.IsError {
+		t.Errorf("expected success, got error: %v", result.Content)
+	}
+
+	if !strings.Contains(strings.ToLower(output.Encoding), "utf-8") && !strings.Contains(strings.ToLower(output.Encoding), "ascii") {
+		t.Errorf("expected UTF-8 or ASCII detection in chunked mode, got %q", output.Encoding)
+	}
+}
+
+func TestHandleDetectEncoding_ModeFull(t *testing.T) {
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+	testFile := filepath.Join(tempDir, "test.txt")
+	content := "Hello, World! This is UTF-8 text for full mode testing."
+
+	if err := os.WriteFile(testFile, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	input := DetectEncodingInput{
+		Path: testFile,
+		Mode: "full",
+	}
+
+	result, output, err := h.HandleDetectEncoding(context.Background(), nil, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if result.IsError {
+		t.Errorf("expected success, got error: %v", result.Content)
+	}
+
+	if !strings.Contains(strings.ToLower(output.Encoding), "utf-8") && !strings.Contains(strings.ToLower(output.Encoding), "ascii") {
+		t.Errorf("expected UTF-8 or ASCII detection in full mode, got %q", output.Encoding)
+	}
+}
+
+func TestHandleDetectEncoding_InvalidMode(t *testing.T) {
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+	testFile := filepath.Join(tempDir, "test.txt")
+
+	if err := os.WriteFile(testFile, []byte("content"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	input := DetectEncodingInput{
+		Path: testFile,
+		Mode: "invalid",
+	}
+
+	result, _, err := h.HandleDetectEncoding(context.Background(), nil, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !result.IsError {
+		t.Errorf("expected error for invalid mode")
+	}
+
+	text := extractTextFromResult(result.Content)
+	if !strings.Contains(text, "invalid mode") {
+		t.Errorf("expected 'invalid mode' message, got %q", text)
+	}
+}
