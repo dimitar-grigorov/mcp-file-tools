@@ -47,27 +47,6 @@ func TestDetect_EmptyData(t *testing.T) {
 	}
 }
 
-func TestIsValidUTF8(t *testing.T) {
-	tests := []struct {
-		name string
-		data []byte
-		want bool
-	}{
-		{"valid ascii", []byte("Hello"), true},
-		{"valid utf8", []byte("Привет"), true},
-		{"utf8 bom", []byte{0xEF, 0xBB, 0xBF, 'a'}, true},
-		{"invalid sequence", []byte{0xFF, 0xFE}, false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := IsValidUTF8(tt.data); got != tt.want {
-				t.Errorf("IsValidUTF8() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestDetectFromChunks_SmallFile(t *testing.T) {
 	data := []byte("Hello, World!")
 	result, trusted := DetectFromChunks(data)

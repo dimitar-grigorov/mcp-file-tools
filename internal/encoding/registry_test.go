@@ -2,8 +2,6 @@ package encoding
 
 import (
 	"testing"
-
-	"golang.org/x/text/encoding/charmap"
 )
 
 func TestGet(t *testing.T) {
@@ -33,50 +31,6 @@ func TestGet(t *testing.T) {
 			}
 			if tt.wantOk && !tt.wantNil && enc == nil {
 				t.Errorf("Get(%q) = nil, want non-nil encoding", tt.name)
-			}
-		})
-	}
-}
-
-func TestGetInfo(t *testing.T) {
-	info, ok := GetInfo("cp1251")
-	if !ok {
-		t.Fatal("GetInfo(cp1251) failed")
-	}
-	if info.DisplayName != "Windows-1251" {
-		t.Errorf("DisplayName = %q, want Windows-1251", info.DisplayName)
-	}
-	if info.Encoding != charmap.Windows1251 {
-		t.Error("Encoding mismatch for cp1251")
-	}
-
-	_, ok = GetInfo("nonexistent")
-	if ok {
-		t.Error("GetInfo(nonexistent) should return false")
-	}
-}
-
-func TestGetCanonicalName(t *testing.T) {
-	tests := []struct {
-		input string
-		want  string
-		ok    bool
-	}{
-		{"cp1251", "windows-1251", true},
-		{"CP1251", "windows-1251", true},
-		{"windows-1251", "windows-1251", true},
-		{"utf8", "utf-8", true},
-		{"invalid", "", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
-			got, ok := GetCanonicalName(tt.input)
-			if ok != tt.ok {
-				t.Errorf("GetCanonicalName(%q) ok = %v, want %v", tt.input, ok, tt.ok)
-			}
-			if got != tt.want {
-				t.Errorf("GetCanonicalName(%q) = %q, want %q", tt.input, got, tt.want)
 			}
 		})
 	}

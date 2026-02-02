@@ -1,7 +1,6 @@
 package encoding
 
 import (
-	"fmt"
 	"sort"
 	"strings"
 
@@ -167,21 +166,15 @@ var encodings = map[string]EncodingInfo{
 // Maps all names (canonical + aliases) to their EncodingInfo.
 var registry map[string]*EncodingInfo
 
-// canonicalNames maps all names to their canonical name.
-var canonicalNames map[string]string
-
 func init() {
 	registry = make(map[string]*EncodingInfo)
-	canonicalNames = make(map[string]string)
 
 	for canonical, info := range encodings {
 		infoCopy := info // Create a copy to get a stable pointer
 		registry[canonical] = &infoCopy
-		canonicalNames[canonical] = canonical
 
 		for _, alias := range info.Aliases {
 			registry[alias] = &infoCopy
-			canonicalNames[alias] = canonical
 		}
 	}
 }
@@ -193,18 +186,6 @@ func Get(name string) (encoding.Encoding, bool) {
 		return nil, false
 	}
 	return info.Encoding, true
-}
-
-// GetInfo returns the full encoding info for the given name.
-func GetInfo(name string) (*EncodingInfo, bool) {
-	info, ok := registry[strings.ToLower(name)]
-	return info, ok
-}
-
-// GetCanonicalName returns the canonical name for an encoding.
-func GetCanonicalName(name string) (string, bool) {
-	canonical, ok := canonicalNames[strings.ToLower(name)]
-	return canonical, ok
 }
 
 // IsUTF8 checks if the encoding name refers to UTF-8.
@@ -240,21 +221,4 @@ func ListEncodings() []EncodingListItem {
 	})
 
 	return items
-}
-
-// List returns a human-readable string of supported encodings (legacy function).
-func List() string {
-	items := ListEncodings()
-	var sb strings.Builder
-	sb.WriteString("Supported encodings:\n")
-
-	for _, item := range items {
-		aliases := ""
-		if len(item.Aliases) > 0 {
-			aliases = fmt.Sprintf(" (%s)", strings.Join(item.Aliases, ", "))
-		}
-		sb.WriteString(fmt.Sprintf("- %s%s - %s\n", item.Name, aliases, item.Description))
-	}
-
-	return sb.String()
 }
