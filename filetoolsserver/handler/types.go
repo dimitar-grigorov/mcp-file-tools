@@ -284,3 +284,45 @@ type ConvertEncodingOutput struct {
 	BackupPath       string `json:"backupPath,omitempty"`
 }
 
+// GrepInput defines input parameters for grep_text_file tool.
+// Pattern: Regex pattern to search for (required)
+// Paths: Files or directories to search (required)
+// CaseSensitive: Case-sensitive search (optional, default: true)
+// ContextBefore: Lines to show before each match (optional, default: 0)
+// ContextAfter: Lines to show after each match (optional, default: 0)
+// MaxMatches: Maximum matches to return (optional, default: 1000)
+// Include: Glob pattern to include files (optional, e.g. "*.pas")
+// Exclude: Glob pattern to exclude files (optional, e.g. "*.bak")
+// Encoding: Force specific encoding (optional, auto-detected if not specified)
+type GrepInput struct {
+	Pattern       string   `json:"pattern"`
+	Paths         []string `json:"paths"`
+	CaseSensitive *bool    `json:"caseSensitive,omitempty"`
+	ContextBefore int      `json:"contextBefore,omitempty"`
+	ContextAfter  int      `json:"contextAfter,omitempty"`
+	MaxMatches    int      `json:"maxMatches,omitempty"`
+	Include       string   `json:"include,omitempty"`
+	Exclude       string   `json:"exclude,omitempty"`
+	Encoding      string   `json:"encoding,omitempty"`
+}
+
+// GrepMatch represents a single match in grep results
+type GrepMatch struct {
+	Path     string   `json:"path"`
+	Line     int      `json:"line"`
+	Column   int      `json:"column"`
+	Text     string   `json:"text"`
+	Before   []string `json:"before,omitempty"`
+	After    []string `json:"after,omitempty"`
+	Encoding string   `json:"encoding,omitempty"`
+}
+
+// GrepOutput defines output for grep_text_file tool
+type GrepOutput struct {
+	Matches       []GrepMatch `json:"matches"`
+	TotalMatches  int         `json:"totalMatches"`
+	FilesSearched int         `json:"filesSearched"`
+	FilesMatched  int         `json:"filesMatched"`
+	Truncated     bool        `json:"truncated,omitempty"`
+}
+
