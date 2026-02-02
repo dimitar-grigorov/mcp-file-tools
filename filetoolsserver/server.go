@@ -65,6 +65,16 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 	}, handler.Wrap(logger, "read_text_file", h.HandleReadTextFile))
 
 	mcp.AddTool(server, &mcp.Tool{
+		Name:        "read_multiple_files",
+		Description: "Read the contents of multiple files simultaneously. More efficient than reading files one by one. Each file's content is returned with encoding info. Individual file failures don't stop the operation. Parameters: paths (required array of file paths), encoding (optional, applies to all files - auto-detected per file if not specified).",
+		Annotations: &mcp.ToolAnnotations{
+			Title:         "Read Multiple Files",
+			ReadOnlyHint:  true,
+			OpenWorldHint: boolPtr(false),
+		},
+	}, handler.Wrap(logger, "read_multiple_files", h.HandleReadMultipleFiles))
+
+	mcp.AddTool(server, &mcp.Tool{
 		Name:        "list_directory",
 		Description: "List files and directories with optional glob pattern filtering (e.g., *.pas, *.dfm). Parameters: path (required), pattern (optional, default: *).",
 		Annotations: &mcp.ToolAnnotations{

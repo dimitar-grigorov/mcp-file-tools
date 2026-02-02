@@ -192,3 +192,27 @@ type EditFileOutput struct {
 	Diff string `json:"diff"`
 }
 
+// ReadMultipleFilesInput defines input parameters for read_multiple_files tool.
+// Paths: Array of file paths to read (required, min 1)
+// Encoding: Encoding for all files - auto-detected per file if not specified (optional)
+type ReadMultipleFilesInput struct {
+	Paths    []string `json:"paths"`
+	Encoding string   `json:"encoding,omitempty"`
+}
+
+// FileReadResult represents the result of reading a single file
+type FileReadResult struct {
+	Path               string `json:"path"`
+	Content            string `json:"content,omitempty"`
+	Error              string `json:"error,omitempty"`
+	DetectedEncoding   string `json:"detectedEncoding,omitempty"`
+	EncodingConfidence int    `json:"encodingConfidence,omitempty"`
+}
+
+// ReadMultipleFilesOutput defines output for read_multiple_files tool
+type ReadMultipleFilesOutput struct {
+	Results      []FileReadResult `json:"results"`
+	SuccessCount int              `json:"successCount"`
+	ErrorCount   int              `json:"errorCount"`
+}
+
