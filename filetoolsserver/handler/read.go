@@ -21,42 +21,34 @@ type encodingResult struct {
 	autoDetected       bool
 }
 
-// HandleReadTextFile reads a file and returns UTF-8 content.
-// Auto-detects encoding if not specified. Supports offset/limit for line ranges.
 func (h *Handler) HandleReadTextFile(ctx context.Context, req *mcp.CallToolRequest, input ReadTextFileInput) (*mcp.CallToolResult, ReadTextFileOutput, error) {
 	v := h.ValidatePath(input.Path)
 	if !v.Ok() {
 		return v.Result, ReadTextFileOutput{}, nil
 	}
 
-	// Check file size - warn if large file will be loaded to memory
 	if loadToMemory, size := h.shouldLoadEntireFile(v.Path); !loadToMemory {
 		slog.Warn("loading large file into memory", "path", input.Path, "size", size, "threshold", h.config.MaxFileSize)
 	}
 
-	// Resolve encoding (detection mode based on file size vs MaxFileSize threshold)
 	encResult, err := h.resolveEncoding(input.Encoding, v.Path)
 	if err != nil {
 		return errorResult(err.Error()), ReadTextFileOutput{}, nil
 	}
 
-	// Read file content
 	data, err := os.ReadFile(v.Path)
 	if err != nil {
 		return errorResult(fmt.Sprintf("failed to read file: %v", err)), ReadTextFileOutput{}, nil
 	}
 
-	// Decode content to UTF-8
 	content, err := decodeContent(data, encResult)
 	if err != nil {
 		return errorResult(fmt.Sprintf("failed to decode file content: %v", err)), ReadTextFileOutput{}, nil
 	}
 
-	// Count total lines
 	lines := strings.Split(content, "\n")
 	totalLines := len(lines)
 
-	// Apply line selection (offset/limit)
 	var startLine, endLine int
 	if input.Offset != nil || input.Limit != nil {
 		content, startLine, endLine = applyOffsetLimit(lines, input.Offset, input.Limit)
@@ -66,7 +58,6 @@ func (h *Handler) HandleReadTextFile(ctx context.Context, req *mcp.CallToolReque
 		endLine = totalLines
 	}
 
-	// Build output
 	output := ReadTextFileOutput{
 		Content:    content,
 		TotalLines: totalLines,
