@@ -126,67 +126,33 @@ func TestConvertLineEndings(t *testing.T) {
 }
 
 func TestDetectLineEndingsFromReader(t *testing.T) {
-	tests := []struct {
-		name      string
-		input     string
-		wantStyle string
-		wantCRLF  int
-		wantLF    int
-	}{
-		{"CRLF only", "line1\r\nline2\r\n", LineEndingCRLF, 2, 0},
-		{"LF only", "line1\nline2\n", LineEndingLF, 0, 2},
-		{"mixed", "line1\r\nline2\nline3", LineEndingMixed, 1, 1},
-		{"none", "no newlines", LineEndingNone, 0, 0},
+	// Test reader wrapper works - detection logic is tested in TestDetectLineEndings
+	r := bytes.NewReader([]byte("line1\r\nline2\r\n"))
+	got, err := DetectLineEndingsFromReader(r)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			r := bytes.NewReader([]byte(tt.input))
-			got, err := DetectLineEndingsFromReader(r)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if got.Style != tt.wantStyle {
-				t.Errorf("Style = %q, want %q", got.Style, tt.wantStyle)
-			}
-			if got.CRLFCount != tt.wantCRLF {
-				t.Errorf("CRLFCount = %d, want %d", got.CRLFCount, tt.wantCRLF)
-			}
-			if got.LFCount != tt.wantLF {
-				t.Errorf("LFCount = %d, want %d", got.LFCount, tt.wantLF)
-			}
-		})
+	if got.Style != LineEndingCRLF {
+		t.Errorf("Style = %q, want %q", got.Style, LineEndingCRLF)
+	}
+	if got.CRLFCount != 2 {
+		t.Errorf("CRLFCount = %d, want 2", got.CRLFCount)
 	}
 }
 
 func TestDetectLineEndingsFromFile(t *testing.T) {
 	tempDir := t.TempDir()
-
-	tests := []struct {
-		name      string
-		content   []byte
-		wantStyle string
-	}{
-		{"CRLF file", []byte("line1\r\nline2\r\n"), LineEndingCRLF},
-		{"LF file", []byte("line1\nline2\n"), LineEndingLF},
-		{"mixed file", []byte("line1\r\nline2\n"), LineEndingMixed},
+	path := filepath.Join(tempDir, "test.txt")
+	if err := os.WriteFile(path, []byte("line1\r\nline2\r\n"), 0644); err != nil {
+		t.Fatal(err)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			path := filepath.Join(tempDir, tt.name+".txt")
-			if err := os.WriteFile(path, tt.content, 0644); err != nil {
-				t.Fatal(err)
-			}
-
-			got, err := DetectLineEndingsFromFile(path)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if got.Style != tt.wantStyle {
-				t.Errorf("Style = %q, want %q", got.Style, tt.wantStyle)
-			}
-		})
+	got, err := DetectLineEndingsFromFile(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.Style != LineEndingCRLF {
+		t.Errorf("Style = %q, want %q", got.Style, LineEndingCRLF)
 	}
 }
 
