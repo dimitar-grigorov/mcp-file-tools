@@ -31,6 +31,9 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 		slog.Warn("loading large file into memory", "path", input.Path, "size", size, "threshold", h.config.MaxFileSize)
 	}
 
+	// Preserve original file permissions
+	originalMode := getFileMode(v.Path)
+
 	data, err := os.ReadFile(v.Path)
 	if err != nil {
 		return errorResult(fmt.Sprintf("failed to read file: %v", err)), EditFileOutput{}, nil
@@ -87,7 +90,7 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 
 	// Write file if not dry run (atomic write with encoding and line ending preservation)
 	if !input.DryRun {
-		if err := atomicWriteFileWithEncoding(v.Path, modifiedContent, encodingName, lineEndings.Style); err != nil {
+		if err := atomicWriteFileWithEncoding(v.Path, modifiedContent, encodingName, lineEndings.Style, originalMode); err != nil {
 			return errorResult(fmt.Sprintf("failed to write file: %v", err)), EditFileOutput{}, nil
 		}
 	}
@@ -239,7 +242,8 @@ func formatDiffOutput(diff string) string {
 // atomicWriteFileWithEncoding writes content to a file atomically with encoding conversion.
 // Content is expected to be UTF-8 (with LF line endings) and will be encoded to the specified encoding.
 // Line endings are restored to the original style before writing.
-func atomicWriteFileWithEncoding(filepath, content, encodingName, lineEndingStyle string) (err error) {
+// File permissions are preserved from the original file.
+func atomicWriteFileWithEncoding(filepath, content, encodingName, lineEndingStyle string, mode os.FileMode) (err error) {
 	// Generate random temp filename
 	randBytes := make([]byte, 16)
 	if _, err := rand.Read(randBytes); err != nil {
@@ -275,8 +279,8 @@ func atomicWriteFileWithEncoding(filepath, content, encodingName, lineEndingStyl
 		slog.Debug("edit_file: encoded content for write", "encoding", encodingName, "utf8Size", len(content), "encodedSize", len(encoded))
 	}
 
-	// Write to temp file
-	if err = os.WriteFile(tempPath, dataToWrite, 0644); err != nil {
+	// Write to temp file with original permissions
+	if err = os.WriteFile(tempPath, dataToWrite, mode); err != nil {
 		return err
 	}
 

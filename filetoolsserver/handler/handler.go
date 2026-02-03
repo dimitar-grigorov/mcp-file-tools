@@ -1,11 +1,15 @@
 package handler
 
 import (
+	"os"
 	"sync"
 
 	"github.com/dimitar-grigorov/mcp-file-tools/internal/config"
 	"github.com/dimitar-grigorov/mcp-file-tools/internal/security"
 )
+
+// DefaultFileMode is the default permission for new files
+const DefaultFileMode os.FileMode = 0644
 
 // Handler handles all file tool operations
 type Handler struct {
@@ -62,4 +66,13 @@ func (h *Handler) validatePath(path string) (string, error) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return security.ValidatePath(path, h.allowedDirs)
+}
+
+// getFileMode returns the file's current permissions, or DefaultFileMode if file doesn't exist.
+func getFileMode(path string) os.FileMode {
+	info, err := os.Stat(path)
+	if err != nil {
+		return DefaultFileMode
+	}
+	return info.Mode().Perm()
 }

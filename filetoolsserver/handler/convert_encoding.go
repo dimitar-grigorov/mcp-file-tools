@@ -35,6 +35,9 @@ func (h *Handler) HandleConvertEncoding(ctx context.Context, req *mcp.CallToolRe
 		slog.Warn("loading large file into memory", "path", input.Path, "size", size, "threshold", h.config.MaxFileSize)
 	}
 
+	// Preserve original file permissions
+	originalMode := getFileMode(v.Path)
+
 	// Read file
 	data, err := os.ReadFile(v.Path)
 	if err != nil {
@@ -92,17 +95,17 @@ func (h *Handler) HandleConvertEncoding(ctx context.Context, req *mcp.CallToolRe
 		targetData = encoded
 	}
 
-	// Create backup if requested
+	// Create backup if requested (preserve original permissions)
 	var backupPath string
 	if input.Backup {
 		backupPath = v.Path + ".bak"
-		if err := os.WriteFile(backupPath, data, 0644); err != nil {
+		if err := os.WriteFile(backupPath, data, originalMode); err != nil {
 			return errorResult(fmt.Sprintf("failed to create backup: %v", err)), ConvertEncodingOutput{}, nil
 		}
 	}
 
-	// Write converted file
-	if err := os.WriteFile(v.Path, targetData, 0644); err != nil {
+	// Write converted file (preserve original permissions)
+	if err := os.WriteFile(v.Path, targetData, originalMode); err != nil {
 		return errorResult(fmt.Sprintf("failed to write converted file: %v", err)), ConvertEncodingOutput{}, nil
 	}
 
