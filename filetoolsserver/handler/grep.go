@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -40,7 +41,7 @@ func (h *Handler) HandleGrep(ctx context.Context, req *mcp.CallToolRequest, inpu
 	if len(files) == 0 {
 		return &mcp.CallToolResult{}, GrepOutput{Matches: []GrepMatch{}, FilesSearched: 0}, nil
 	}
-	matches, filesMatched, truncated := h.searchFiles(ctx, files, re, input, maxMatches)
+	matches, filesMatched, truncated := h.searchFiles(ctx, files, re, input, maxMatches, h.config.MaxFileSize)
 	return &mcp.CallToolResult{}, GrepOutput{
 		Matches:       matches,
 		TotalMatches:  len(matches),
@@ -106,7 +107,7 @@ func shouldIncludeFile(path string, include, exclude string) bool {
 }
 
 // searchFiles searches all files concurrently using a worker pool.
-func (h *Handler) searchFiles(ctx context.Context, files []string, re *regexp.Regexp, input GrepInput, maxMatches int) ([]GrepMatch, int, bool) {
+func (h *Handler) searchFiles(ctx context.Context, files []string, re *regexp.Regexp, input GrepInput, maxMatches int, maxFileSize int64) ([]GrepMatch, int, bool) {
 	numWorkers := runtime.NumCPU()
 	if numWorkers > len(files) {
 		numWorkers = len(files)
@@ -126,7 +127,7 @@ func (h *Handler) searchFiles(ctx context.Context, files []string, re *regexp.Re
 				case <-ctx.Done():
 					results <- nil
 				default:
-					matches := searchSingleFile(path, re, input)
+					matches := searchSingleFile(path, re, input, maxFileSize)
 					if len(matches) > 0 {
 						mu.Lock()
 						filesMatched++
@@ -163,7 +164,11 @@ func (h *Handler) searchFiles(ctx context.Context, files []string, re *regexp.Re
 }
 
 // searchSingleFile searches for matches in a single file.
-func searchSingleFile(path string, re *regexp.Regexp, input GrepInput) []GrepMatch {
+func searchSingleFile(path string, re *regexp.Regexp, input GrepInput, maxFileSize int64) []GrepMatch {
+	// Check file size - warn if large file will be loaded to memory
+	if info, err := os.Stat(path); err == nil && info.Size() > maxFileSize {
+		slog.Warn("loading large file into memory", "path", path, "size", info.Size(), "threshold", maxFileSize)
+	}
 	data, err := os.ReadFile(path)
 	if err != nil || isBinaryFile(data) {
 		return nil

@@ -26,6 +26,11 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 		return v.Result, EditFileOutput{}, nil
 	}
 
+	// Check file size - warn if large file will be loaded to memory
+	if loadToMemory, size := h.shouldLoadEntireFile(v.Path); !loadToMemory {
+		slog.Warn("loading large file into memory", "path", input.Path, "size", size, "threshold", h.config.MaxFileSize)
+	}
+
 	data, err := os.ReadFile(v.Path)
 	if err != nil {
 		return errorResult(fmt.Sprintf("failed to read file: %v", err)), EditFileOutput{}, nil
