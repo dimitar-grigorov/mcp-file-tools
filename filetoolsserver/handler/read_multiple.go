@@ -55,8 +55,8 @@ func (h *Handler) readSingleFile(path, requestedEncoding string) FileReadResult 
 		return result
 	}
 
-	// Resolve encoding using streaming detection
-	encResult, err := resolveEncoding(requestedEncoding, v.Path)
+	// Resolve encoding (detection mode based on file size vs MaxFileSize threshold)
+	encResult, err := h.resolveEncoding(requestedEncoding, v.Path)
 	if err != nil {
 		result.Error = err.Error()
 		return result

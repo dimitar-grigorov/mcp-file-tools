@@ -20,17 +20,16 @@ type encodingResult struct {
 	autoDetected       bool
 }
 
-// HandleReadTextFile reads a file in the specified encoding and returns UTF-8 content.
-// If encoding is not specified, it auto-detects the encoding using chunked sampling.
-// Supports offset/limit for reading specific line ranges (context-efficient).
+// HandleReadTextFile reads a file and returns UTF-8 content.
+// Auto-detects encoding if not specified. Supports offset/limit for line ranges.
 func (h *Handler) HandleReadTextFile(ctx context.Context, req *mcp.CallToolRequest, input ReadTextFileInput) (*mcp.CallToolResult, ReadTextFileOutput, error) {
 	v := h.ValidatePath(input.Path)
 	if !v.Ok() {
 		return v.Result, ReadTextFileOutput{}, nil
 	}
 
-	// Resolve encoding using streaming detection (only reads ~384KB max for detection)
-	encResult, err := resolveEncoding(input.Encoding, v.Path)
+	// Resolve encoding (detection mode based on file size vs MaxFileSize threshold)
+	encResult, err := h.resolveEncoding(input.Encoding, v.Path)
 	if err != nil {
 		return errorResult(err.Error()), ReadTextFileOutput{}, nil
 	}
@@ -77,9 +76,8 @@ func (h *Handler) HandleReadTextFile(ctx context.Context, req *mcp.CallToolReque
 	return &mcp.CallToolResult{}, output, nil
 }
 
-// resolveEncoding determines the encoding to use, either from explicit input or auto-detection.
-// Uses streaming detection to avoid loading the entire file for encoding detection.
-func resolveEncoding(inputEncoding string, filePath string) (encodingResult, error) {
+// resolveEncoding returns explicit encoding or auto-detects based on file size.
+func (h *Handler) resolveEncoding(inputEncoding string, filePath string) (encodingResult, error) {
 	result := encodingResult{}
 
 	if inputEncoding != "" {
@@ -93,9 +91,16 @@ func resolveEncoding(inputEncoding string, filePath string) (encodingResult, err
 		return result, nil
 	}
 
-	// Auto-detect encoding using streaming (sample mode - reads only ~384KB max)
+	// Determine detection mode based on file size
+	detectionMode := "full" // Default: load entire file for best accuracy
+	fileInfo, err := os.Stat(filePath)
+	if err == nil && fileInfo.Size() > h.config.MaxFileSize {
+		detectionMode = "sample" // Large file: use streaming detection
+	}
+
+	// Auto-detect encoding
 	result.autoDetected = true
-	detection, err := encoding.DetectFromFile(filePath, "sample")
+	detection, err := encoding.DetectFromFile(filePath, detectionMode)
 	if err != nil {
 		// Detection failed, fall back to UTF-8
 		result.name = "utf-8"

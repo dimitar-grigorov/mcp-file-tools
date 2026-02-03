@@ -45,13 +45,13 @@ func TestLoad_InvalidEncoding(t *testing.T) {
 }
 
 func TestLoad_CustomMaxFileSize(t *testing.T) {
-	os.Setenv(EnvMaxFileSize, "5242880")
+	os.Setenv(EnvMaxFileSize, "134217728") // 128MB
 	defer os.Unsetenv(EnvMaxFileSize)
 
 	cfg := Load()
 
-	if cfg.MaxFileSize != 5242880 {
-		t.Errorf("expected max size 5242880, got %d", cfg.MaxFileSize)
+	if cfg.MaxFileSize != 134217728 {
+		t.Errorf("expected max file size 134217728, got %d", cfg.MaxFileSize)
 	}
 }
 

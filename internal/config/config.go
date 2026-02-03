@@ -15,7 +15,7 @@ const (
 
 	// Default values
 	DefaultEncoding = "cp1251"
-	DefaultMaxSize  = int64(10 * 1024 * 1024) // 10MB
+	DefaultMaxSize  = int64(64 * 1024 * 1024) // 64MB - files smaller than this are loaded into memory
 )
 
 // Config holds server configuration loaded from environment variables.
@@ -25,9 +25,12 @@ type Config struct {
 	// Default: "cp1251" (for backward compatibility with legacy codebases)
 	DefaultEncoding string
 
-	// MaxFileSize is the maximum file size in bytes for read/write operations.
+	// MaxFileSize is the threshold for loading files into memory vs streaming.
+	// Files smaller than this are loaded entirely into memory for better performance.
+	// Files larger use streaming I/O to reduce memory usage.
+	// Also used as threshold for encoding detection mode (full vs sample).
 	// Set via MCP_MAX_FILE_SIZE environment variable.
-	// Default: 10485760 (10MB)
+	// Default: 67108864 (64MB)
 	MaxFileSize int64
 }
 
