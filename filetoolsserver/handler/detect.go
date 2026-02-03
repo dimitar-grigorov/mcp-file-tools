@@ -2,8 +2,6 @@ package handler
 
 import (
 	"context"
-	"fmt"
-	"os"
 
 	"github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -16,31 +14,14 @@ func (h *Handler) HandleDetectEncoding(ctx context.Context, req *mcp.CallToolReq
 		return v.Result, DetectEncodingOutput{}, nil
 	}
 
-	data, err := os.ReadFile(v.Path)
-	if err != nil {
-		return errorResult(fmt.Sprintf("failed to read file: %v", err)), DetectEncodingOutput{}, nil
-	}
-
-	// Determine detection mode (default: sample)
 	mode := input.Mode
 	if mode == "" {
 		mode = "sample"
 	}
 
-	var result encoding.DetectionResult
-
-	switch mode {
-	case "sample":
-		// Sample beginning, middle, and end
-		result, _ = encoding.DetectSample(data)
-	case "chunked":
-		// Read all chunks with weighted average confidence
-		result = encoding.DetectChunked(data)
-	case "full":
-		// Read entire file at once
-		result = encoding.Detect(data)
-	default:
-		return errorResult(fmt.Sprintf("invalid mode: %s (valid: sample, chunked, full)", mode)), DetectEncodingOutput{}, nil
+	result, err := encoding.DetectFromFile(v.Path, mode)
+	if err != nil {
+		return errorResult(err.Error()), DetectEncodingOutput{}, nil
 	}
 
 	if result.Charset == "" {

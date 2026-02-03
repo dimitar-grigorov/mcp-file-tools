@@ -55,15 +55,17 @@ func (h *Handler) readSingleFile(path, requestedEncoding string) FileReadResult 
 		return result
 	}
 
-	data, err := os.ReadFile(v.Path)
+	// Resolve encoding using streaming detection
+	encResult, err := resolveEncoding(requestedEncoding, v.Path)
 	if err != nil {
-		result.Error = fmt.Sprintf("failed to read file: %v", err)
+		result.Error = err.Error()
 		return result
 	}
 
-	encResult, err := resolveEncoding(requestedEncoding, data)
+	// Read file content for decoding
+	data, err := os.ReadFile(v.Path)
 	if err != nil {
-		result.Error = err.Error()
+		result.Error = fmt.Sprintf("failed to read file: %v", err)
 		return result
 	}
 

@@ -1,21 +1,21 @@
 package encoding
 
 import (
+	"fmt"
+	"io"
+	"os"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/wlynxg/chardet"
 )
 
+// Detection constants
 const (
-	// ChunkSize is the size of chunks to read for encoding detection
-	ChunkSize = 128 * 1024 // 128KB
-	// SmallFileThreshold is the max size to read entirely for detection
-	SmallFileThreshold = 128 * 1024 // 128KB
-	// HighConfidenceThreshold is the confidence level to stop sampling
-	HighConfidenceThreshold = 80
-	// MinConfidenceThreshold is the minimum confidence to use detected encoding
-	MinConfidenceThreshold = 50
+	ChunkSize               = 128 * 1024 // 128KB chunks for detection
+	SmallFileThreshold      = 128 * 1024 // Files smaller than this are read entirely
+	HighConfidenceThreshold = 80         // Confidence level to stop sampling early
+	MinConfidenceThreshold  = 50         // Minimum confidence to trust detection
 )
 
 // DetectionResult holds encoding detection result.
@@ -25,7 +25,26 @@ type DetectionResult struct {
 	HasBOM     bool
 }
 
-// Detect detects the encoding of the given data.
+// --- Primary API (file-based, streaming) ---
+
+// DetectFromFile detects encoding from a file path using streaming I/O.
+// Modes: "sample" (~384KB max), "chunked" (streams entire file), "full" (loads entire file).
+func DetectFromFile(path string, mode string) (DetectionResult, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return DetectionResult{}, fmt.Errorf("failed to open file: %w", err)
+	}
+	defer file.Close()
+
+	stat, err := file.Stat()
+	if err != nil {
+		return DetectionResult{}, fmt.Errorf("failed to stat file: %w", err)
+	}
+
+	return detectFromReader(file, stat.Size(), mode)
+}
+
+// Detect detects encoding from a byte slice.
 func Detect(data []byte) DetectionResult {
 	// Check UTF-8 BOM
 	if len(data) >= 3 && data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF {
@@ -47,129 +66,178 @@ func Detect(data []byte) DetectionResult {
 }
 
 // DetectSample detects encoding by sampling beginning, middle, and end of data.
-// For small files (< 128KB), it uses all data.
-// For larger files, it samples beginning, middle, and end (3 samples).
-// Returns the detection result and whether the detected encoding should be trusted.
+// Returns the result and whether it should be trusted.
+// TODO: Make private or remove when grep.go and convert_encoding.go use streaming I/O.
 func DetectSample(data []byte) (DetectionResult, bool) {
-	fileSize := len(data)
+	size := len(data)
 
-	// For small files, detect on entire content
-	if fileSize <= SmallFileThreshold {
+	if size <= SmallFileThreshold {
 		result := Detect(data)
-		trusted := result.Confidence >= MinConfidenceThreshold
-		return result, trusted
+		return result, result.Confidence >= MinConfidenceThreshold
 	}
 
-	// For larger files, sample chunks from beginning, middle, and end
+	// Sample chunks from beginning, middle, and end
 	var samples []byte
 
 	// Beginning chunk
-	endOfFirst := ChunkSize
-	if endOfFirst > fileSize {
-		endOfFirst = fileSize
-	}
+	endOfFirst := min(ChunkSize, size)
 	samples = append(samples, data[:endOfFirst]...)
 
-	// Check beginning chunk first - if high confidence, use it
+	// Check beginning first - if high confidence, return early
 	result := Detect(samples)
 	if result.Confidence >= HighConfidenceThreshold {
 		return result, true
 	}
 
-	// Middle chunk (if file is large enough)
-	if fileSize > ChunkSize*2 {
-		midStart := (fileSize - ChunkSize) / 2
-		midEnd := midStart + ChunkSize
-		if midEnd > fileSize {
-			midEnd = fileSize
-		}
+	// Middle chunk
+	if size > ChunkSize*2 {
+		midStart := (size - ChunkSize) / 2
+		midEnd := min(midStart+ChunkSize, size)
 		samples = append(samples, data[midStart:midEnd]...)
 	}
 
-	// End chunk (if file is large enough)
-	if fileSize > ChunkSize {
-		endStart := fileSize - ChunkSize
-		if endStart < 0 {
-			endStart = 0
-		}
+	// End chunk
+	if size > ChunkSize {
+		endStart := max(0, size-ChunkSize)
 		samples = append(samples, data[endStart:]...)
 	}
 
-	// Detect on combined samples
 	result = Detect(samples)
-	trusted := result.Confidence >= MinConfidenceThreshold
-	return result, trusted
+	return result, result.Confidence >= MinConfidenceThreshold
 }
 
-// DetectFromChunks is an alias for DetectSample for backwards compatibility.
-func DetectFromChunks(data []byte) (DetectionResult, bool) {
-	return DetectSample(data)
+// --- Internal streaming implementation ---
+
+func detectFromReader(r io.ReaderAt, size int64, mode string) (DetectionResult, error) {
+	switch mode {
+	case "sample":
+		return detectSampleFromReader(r, size)
+	case "chunked":
+		return detectChunkedFromReader(r, size)
+	case "full":
+		return detectFullFromReader(r, size)
+	default:
+		return DetectionResult{}, fmt.Errorf("invalid mode: %s (valid: sample, chunked, full)", mode)
+	}
 }
 
-// DetectChunked detects encoding by reading all chunks and calculating weighted average confidence.
-// Each chunk is detected independently, and results are aggregated.
-// Weight is based on chunk size (larger chunks have more weight).
-// Returns the detection result with weighted average confidence.
-func DetectChunked(data []byte) DetectionResult {
-	fileSize := len(data)
-
-	// For small files, detect on entire content
-	if fileSize <= ChunkSize {
-		return Detect(data)
+func detectSampleFromReader(r io.ReaderAt, size int64) (DetectionResult, error) {
+	if size <= SmallFileThreshold {
+		data := make([]byte, size)
+		if _, err := r.ReadAt(data, 0); err != nil && err != io.EOF {
+			return DetectionResult{}, fmt.Errorf("failed to read file: %w", err)
+		}
+		return Detect(data), nil
 	}
 
-	// Check for BOM first (only in first chunk)
-	if len(data) >= 3 && data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF {
-		return DetectionResult{Charset: "utf-8", Confidence: 100, HasBOM: true}
+	// Read beginning chunk
+	beginChunk := make([]byte, ChunkSize)
+	n, err := r.ReadAt(beginChunk, 0)
+	if err != nil && err != io.EOF {
+		return DetectionResult{}, fmt.Errorf("failed to read beginning: %w", err)
+	}
+	beginChunk = beginChunk[:n]
+
+	// Check for BOM
+	if len(beginChunk) >= 3 && beginChunk[0] == 0xEF && beginChunk[1] == 0xBB && beginChunk[2] == 0xBF {
+		return DetectionResult{Charset: "utf-8", Confidence: 100, HasBOM: true}, nil
+	}
+
+	// Check beginning chunk - if high confidence, return early
+	result := Detect(beginChunk)
+	if result.Confidence >= HighConfidenceThreshold {
+		return result, nil
+	}
+
+	// Collect samples for combined detection
+	samples := make([]byte, 0, ChunkSize*3)
+	samples = append(samples, beginChunk...)
+
+	// Middle chunk
+	if size > int64(ChunkSize*2) {
+		midStart := (size - int64(ChunkSize)) / 2
+		midChunk := make([]byte, ChunkSize)
+		n, err := r.ReadAt(midChunk, midStart)
+		if err != nil && err != io.EOF {
+			return DetectionResult{}, fmt.Errorf("failed to read middle: %w", err)
+		}
+		samples = append(samples, midChunk[:n]...)
+	}
+
+	// End chunk
+	if size > int64(ChunkSize) {
+		endStart := size - int64(ChunkSize)
+		endChunk := make([]byte, ChunkSize)
+		n, err := r.ReadAt(endChunk, endStart)
+		if err != nil && err != io.EOF {
+			return DetectionResult{}, fmt.Errorf("failed to read end: %w", err)
+		}
+		samples = append(samples, endChunk[:n]...)
+	}
+
+	return Detect(samples), nil
+}
+
+func detectChunkedFromReader(r io.ReaderAt, size int64) (DetectionResult, error) {
+	if size <= int64(ChunkSize) {
+		data := make([]byte, size)
+		if _, err := r.ReadAt(data, 0); err != nil && err != io.EOF {
+			return DetectionResult{}, fmt.Errorf("failed to read file: %w", err)
+		}
+		return Detect(data), nil
+	}
+
+	// Check for BOM
+	bomCheck := make([]byte, 3)
+	if n, _ := r.ReadAt(bomCheck, 0); n >= 3 {
+		if bomCheck[0] == 0xEF && bomCheck[1] == 0xBB && bomCheck[2] == 0xBF {
+			return DetectionResult{Charset: "utf-8", Confidence: 100, HasBOM: true}, nil
+		}
 	}
 
 	// Process file in chunks
 	type chunkResult struct {
 		encoding   string
 		confidence int
-		weight     int // chunk size as weight
+		weight     int
 	}
 
 	var results []chunkResult
-	offset := 0
+	chunk := make([]byte, ChunkSize)
 
-	for offset < fileSize {
-		end := offset + ChunkSize
-		if end > fileSize {
-			end = fileSize
+	for offset := int64(0); offset < size; {
+		n, err := r.ReadAt(chunk, offset)
+		if err != nil && err != io.EOF {
+			return DetectionResult{}, fmt.Errorf("failed to read chunk at %d: %w", offset, err)
+		}
+		if n == 0 {
+			break
 		}
 
-		chunk := data[offset:end]
-		chunkSize := len(chunk)
-
-		detected := Detect(chunk)
+		detected := Detect(chunk[:n])
 		if detected.Charset != "" {
 			results = append(results, chunkResult{
 				encoding:   detected.Charset,
 				confidence: detected.Confidence,
-				weight:     chunkSize,
+				weight:     n,
 			})
 		}
-
-		offset = end
+		offset += int64(n)
 	}
 
 	if len(results) == 0 {
-		return DetectionResult{}
+		return DetectionResult{}, nil
 	}
 
-	// Find the most common encoding
-	encodingCounts := make(map[string]int)
+	// Aggregate results with weighted confidence
 	encodingWeights := make(map[string]int)
 	encodingConfidenceSum := make(map[string]int)
 
 	for _, r := range results {
-		encodingCounts[r.encoding]++
 		encodingWeights[r.encoding] += r.weight
 		encodingConfidenceSum[r.encoding] += r.confidence * r.weight
 	}
 
-	// Find encoding with highest total weight
 	var bestEncoding string
 	var bestWeight int
 	for enc, weight := range encodingWeights {
@@ -179,11 +247,16 @@ func DetectChunked(data []byte) DetectionResult {
 		}
 	}
 
-	// Calculate weighted average confidence for the best encoding
-	weightedConfidence := encodingConfidenceSum[bestEncoding] / encodingWeights[bestEncoding]
-
 	return DetectionResult{
 		Charset:    bestEncoding,
-		Confidence: weightedConfidence,
+		Confidence: encodingConfidenceSum[bestEncoding] / encodingWeights[bestEncoding],
+	}, nil
+}
+
+func detectFullFromReader(r io.ReaderAt, size int64) (DetectionResult, error) {
+	data := make([]byte, size)
+	if _, err := r.ReadAt(data, 0); err != nil && err != io.EOF {
+		return DetectionResult{}, fmt.Errorf("failed to read file: %w", err)
 	}
+	return Detect(data), nil
 }
