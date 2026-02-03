@@ -6,7 +6,7 @@ Non-UTF-8 file encoding server: Cyrillic (CP1251, KOI8), Windows-1250-1258, ISO-
 
 ## What It Does
 
-Provides 16 tools for file operations with automatic encoding conversion:
+Provides 19 tools for file operations with automatic encoding conversion:
 - [`read_text_file`](TOOLS.md#read_text_file) - Read files with encoding auto-detection and conversion
 - [`read_multiple_files`](TOOLS.md#read_multiple_files) - Read multiple files concurrently with encoding support
 - [`write_file`](TOOLS.md#write_file) - Write files in specific encodings
@@ -17,7 +17,10 @@ Provides 16 tools for file operations with automatic encoding conversion:
 - [`tree`](TOOLS.md#tree) - Compact indented tree view (85% fewer tokens than JSON)
 - [`directory_tree`](TOOLS.md#directory_tree-deprecated) - Get recursive tree view as JSON (deprecated, use `tree`)
 - [`search_files`](TOOLS.md#search_files) - Recursively search for files matching glob patterns
+- [`grep_text_files`](TOOLS.md#grep_text_files) - Regex search in file contents with encoding support
 - [`detect_encoding`](TOOLS.md#detect_encoding) - Auto-detect file encoding with confidence score
+- [`convert_encoding`](TOOLS.md#convert_encoding) - Convert file between encodings
+- [`detect_line_endings`](TOOLS.md#detect_line_endings) - Detect line ending style (CRLF/LF/mixed)
 - [`list_encodings`](TOOLS.md#list_encodings) - Show all supported encodings
 - [`get_file_info`](TOOLS.md#get_file_info) - Get file/directory metadata
 - [`create_directory`](TOOLS.md#create_directory) - Create directories recursively (mkdir -p)
