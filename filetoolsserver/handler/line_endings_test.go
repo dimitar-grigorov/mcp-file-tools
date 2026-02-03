@@ -196,3 +196,116 @@ func TestDetectLineEndingsFromFile_NotFound(t *testing.T) {
 		t.Error("expected error for nonexistent file")
 	}
 }
+
+func TestHandleDetectLineEndings(t *testing.T) {
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+
+	tests := []struct {
+		name               string
+		content            []byte
+		wantStyle          string
+		wantTotalLines     int
+		wantInconsistent   []int
+		wantInconsistentNil bool
+	}{
+		{
+			name:             "pure CRLF file",
+			content:          []byte("line1\r\nline2\r\nline3"),
+			wantStyle:        LineEndingCRLF,
+			wantTotalLines:   3,
+			wantInconsistent: []int{},
+		},
+		{
+			name:             "pure LF file",
+			content:          []byte("line1\nline2\nline3"),
+			wantStyle:        LineEndingLF,
+			wantTotalLines:   3,
+			wantInconsistent: []int{},
+		},
+		{
+			name:             "mixed - mostly CRLF with one LF",
+			content:          []byte("line1\r\nline2\nline3\r\nline4\r\n"),
+			wantStyle:        LineEndingMixed,
+			wantTotalLines:   5,
+			wantInconsistent: []int{2}, // line 2 has LF when CRLF is dominant
+		},
+		{
+			name:             "mixed - mostly LF with one CRLF",
+			content:          []byte("line1\nline2\r\nline3\nline4\n"),
+			wantStyle:        LineEndingMixed,
+			wantTotalLines:   5,
+			wantInconsistent: []int{2}, // line 2 has CRLF when LF is dominant
+		},
+		{
+			name:             "no line endings",
+			content:          []byte("single line without newline"),
+			wantStyle:        LineEndingNone,
+			wantTotalLines:   1,
+			wantInconsistent: []int{},
+		},
+		{
+			name:             "empty file",
+			content:          []byte{},
+			wantStyle:        LineEndingNone,
+			wantTotalLines:   1,
+			wantInconsistent: []int{},
+		},
+		{
+			name:             "mixed - equal CRLF and LF",
+			content:          []byte("line1\r\nline2\n"),
+			wantStyle:        LineEndingMixed,
+			wantTotalLines:   3,
+			wantInconsistent: []int{2}, // LF is minority when counts equal (CRLF >= LF)
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			testFile := filepath.Join(tempDir, tt.name+".txt")
+			if err := os.WriteFile(testFile, tt.content, 0644); err != nil {
+				t.Fatal(err)
+			}
+
+			input := DetectLineEndingsInput{Path: testFile}
+			result, output, err := h.HandleDetectLineEndings(nil, nil, input)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if result.IsError {
+				t.Errorf("expected success, got error")
+			}
+
+			if output.Style != tt.wantStyle {
+				t.Errorf("Style = %q, want %q", output.Style, tt.wantStyle)
+			}
+			if output.TotalLines != tt.wantTotalLines {
+				t.Errorf("TotalLines = %d, want %d", output.TotalLines, tt.wantTotalLines)
+			}
+			if len(output.InconsistentLines) != len(tt.wantInconsistent) {
+				t.Errorf("InconsistentLines = %v, want %v", output.InconsistentLines, tt.wantInconsistent)
+			} else {
+				for i, line := range output.InconsistentLines {
+					if line != tt.wantInconsistent[i] {
+						t.Errorf("InconsistentLines[%d] = %d, want %d", i, line, tt.wantInconsistent[i])
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestHandleDetectLineEndings_PathValidation(t *testing.T) {
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+
+	// Test path outside allowed directory
+	input := DetectLineEndingsInput{Path: "/not/allowed/path.txt"}
+	result, _, err := h.HandleDetectLineEndings(nil, nil, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.IsError {
+		t.Error("expected error for path outside allowed directory")
+	}
+}

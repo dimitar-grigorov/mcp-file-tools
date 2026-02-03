@@ -2,9 +2,12 @@ package handler
 
 import (
 	"bufio"
+	"context"
 	"io"
 	"os"
 	"strings"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // LineEndingStyle constants for line ending types.
@@ -114,4 +117,89 @@ func ConvertLineEndings(text string, targetStyle string) string {
 		return text // Already no CRLF
 	}
 	return strings.ReplaceAll(text, "\r\n", "\n")
+}
+
+// HandleDetectLineEndings detects line ending style and returns inconsistent line numbers.
+func (h *Handler) HandleDetectLineEndings(ctx context.Context, req *mcp.CallToolRequest, input DetectLineEndingsInput) (*mcp.CallToolResult, DetectLineEndingsOutput, error) {
+	v := h.ValidatePath(input.Path)
+	if !v.Ok() {
+		return v.Result, DetectLineEndingsOutput{}, nil
+	}
+
+	f, err := os.Open(v.Path)
+	if err != nil {
+		return errorResult("failed to open file: " + err.Error()), DetectLineEndingsOutput{}, nil
+	}
+	defer f.Close()
+
+	// Track each line's ending type
+	type lineEnding struct {
+		lineNum int
+		isCRLF  bool
+	}
+	var lineEndings []lineEnding
+
+	br := bufio.NewReader(f)
+	lineNum := 1
+	prevWasCR := false
+
+	for {
+		b, err := br.ReadByte()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return errorResult("failed to read file: " + err.Error()), DetectLineEndingsOutput{}, nil
+		}
+
+		if b == '\n' {
+			lineEndings = append(lineEndings, lineEnding{lineNum: lineNum, isCRLF: prevWasCR})
+			lineNum++
+		}
+		prevWasCR = (b == '\r')
+	}
+
+	// Count totals
+	crlfCount := 0
+	lfCount := 0
+	for _, le := range lineEndings {
+		if le.isCRLF {
+			crlfCount++
+		} else {
+			lfCount++
+		}
+	}
+
+	// Determine style and find inconsistent lines
+	style := determineStyle(crlfCount, lfCount)
+	var inconsistentLines []int
+
+	if style == LineEndingMixed {
+		// Dominant is the one with more occurrences
+		dominantIsCRLF := crlfCount >= lfCount
+		for _, le := range lineEndings {
+			if le.isCRLF != dominantIsCRLF {
+				inconsistentLines = append(inconsistentLines, le.lineNum)
+			}
+		}
+	}
+
+	// Total lines = last line number (includes last line even without trailing newline)
+	totalLines := lineNum
+	if len(lineEndings) > 0 {
+		totalLines = lineNum // lineNum is 1 more than number of newlines found
+	} else {
+		totalLines = 1 // File has content but no newlines = 1 line
+	}
+
+	// Ensure we don't return nil slice (return empty array for JSON)
+	if inconsistentLines == nil {
+		inconsistentLines = []int{}
+	}
+
+	return &mcp.CallToolResult{}, DetectLineEndingsOutput{
+		Style:             style,
+		TotalLines:        totalLines,
+		InconsistentLines: inconsistentLines,
+	}, nil
 }
