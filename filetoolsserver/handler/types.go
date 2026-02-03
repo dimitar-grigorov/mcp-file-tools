@@ -67,6 +67,7 @@ type ListAllowedDirectoriesInput struct{}
 
 type ListAllowedDirectoriesOutput struct {
 	Directories []string `json:"directories"`
+	Message     string   `json:"message,omitempty"`
 }
 
 type GetFileInfoInput struct {

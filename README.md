@@ -106,16 +106,42 @@ For Claude Desktop, VSCode, or Cursor, use the downloaded binary path in your co
 }
 ```
 
-**VSCode / Cursor** (`.vscode/mcp.json`):
+**VSCode / Cursor** - Two options:
+
+**Option 1: Global config (recommended)** - Available in all projects
+
+CLI command (easiest):
+```powershell
+claude mcp add --scope user file-tools -- "%LOCALAPPDATA%\Programs\mcp-file-tools\mcp-file-tools.exe" "D:\Projects"
+```
+
+Or manually edit `%USERPROFILE%\.claude.json`:
 ```json
 {
   "mcpServers": {
     "file-tools": {
-      "command": "/path/to/mcp-file-tools"
+      "type": "stdio",
+      "command": "C:\\Users\\YOUR_NAME\\AppData\\Local\\Programs\\mcp-file-tools\\mcp-file-tools.exe",
+      "args": ["D:\\Projects"]
     }
   }
 }
 ```
+
+**Option 2: Per-project config** - Create `.mcp.json` in project root:
+```json
+{
+  "mcpServers": {
+    "file-tools": {
+      "type": "stdio",
+      "command": "C:\\Users\\YOUR_NAME\\AppData\\Local\\Programs\\mcp-file-tools\\mcp-file-tools.exe",
+      "args": ["D:\\Projects", "D:\\Other\\Directory"]
+    }
+  }
+}
+```
+
+**Note:** The `type: "stdio"` field is required. The `args` array specifies allowed directories - the VSCode extension does not automatically add the workspace directory, so you must list all directories you want to access.
 
 ## How to Use
 
