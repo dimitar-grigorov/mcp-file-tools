@@ -6,11 +6,13 @@ on:
       - '**.md'
       - 'LICENSE'
       - '.gitignore'
+      - 'server.json'
   pull_request:
     paths-ignore:
       - '**.md'
       - 'LICENSE'
       - '.gitignore'
+      - 'server.json'
 
 jobs:
   test:

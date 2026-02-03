@@ -7,12 +7,14 @@ on:
       - '**.md'
       - 'LICENSE'
       - '.gitignore'
+      - 'server.json'
   pull_request:
     branches: [main, master]
     paths-ignore:
       - '**.md'
       - 'LICENSE'
       - '.gitignore'
+      - 'server.json'
 
 jobs:
   build:
