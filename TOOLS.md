@@ -11,8 +11,6 @@ Read file contents with automatic encoding detection and optional partial readin
 - `encoding` (optional): Encoding name (auto-detects if omitted)
 - `offset` (optional): Start reading from this line number (1-indexed)
 - `limit` (optional): Maximum number of lines to read
-- `head` (optional): Read only the first N lines (deprecated, use `limit`)
-- `tail` (optional): Read only the last N lines
 
 **Example:**
 ```json
@@ -339,14 +337,74 @@ Recursively search for files and directories matching a glob pattern.
 }
 ```
 
+### grep_text_files
+
+Search file contents using regex patterns with encoding support. Supports context lines and concurrent searching.
+
+**Parameters:**
+- `pattern` (required): Regular expression pattern to search for
+- `paths` (required): Array of file or directory paths to search
+- `caseSensitive` (optional): Case-sensitive matching (default: true)
+- `contextBefore` (optional): Number of lines to show before each match
+- `contextAfter` (optional): Number of lines to show after each match
+- `maxMatches` (optional): Maximum total matches to return (default: 1000)
+- `include` (optional): Glob pattern to include files (e.g., `*.go`)
+- `exclude` (optional): Glob pattern to exclude files (e.g., `*_test.go`)
+- `encoding` (optional): File encoding (auto-detected if omitted)
+
+**Example:**
+```json
+{
+  "pattern": "func\\s+\\w+",
+  "paths": ["/path/to/project"],
+  "include": "*.go",
+  "contextBefore": 1,
+  "contextAfter": 2,
+  "maxMatches": 100
+}
+```
+
+**Response:**
+```json
+{
+  "matches": [
+    {
+      "path": "/path/to/project/main.go",
+      "line": 15,
+      "column": 1,
+      "text": "func main() {",
+      "before": ["package main"],
+      "after": ["    fmt.Println(\"Hello\")", "}"],
+      "encoding": "utf-8"
+    }
+  ],
+  "totalMatches": 1,
+  "filesSearched": 5,
+  "filesMatched": 1,
+  "truncated": false
+}
+```
+
 ## Encoding Tools
 
 ### detect_encoding
 
-Detect the encoding of a file with confidence percentage.
+Detect the encoding of a file with confidence percentage. Useful for diagnosing encoding issues (garbled text, � characters).
 
 **Parameters:**
 - `path` (required): Path to the file
+- `mode` (optional): Detection mode
+  - `sample` (default): Read begin/middle/end samples - fast, good for most files
+  - `chunked`: Read all chunks with weighted averaging - thorough but slower
+  - `full`: Read entire file - most accurate but uses more memory
+
+**Example:**
+```json
+{
+  "path": "/path/to/file.pas",
+  "mode": "chunked"
+}
+```
 
 **Response:**
 ```json
@@ -356,6 +414,65 @@ Detect the encoding of a file with confidence percentage.
   "has_bom": false
 }
 ```
+
+### convert_encoding
+
+Convert a file from one encoding to another. Reads in source encoding, writes in target encoding.
+
+**Parameters:**
+- `path` (required): Path to the file to convert
+- `from` (optional): Source encoding (auto-detected if omitted)
+- `to` (required): Target encoding
+- `backup` (optional): Create a `.bak` backup file before converting (default: false)
+
+**Example:**
+```json
+{
+  "path": "/path/to/file.pas",
+  "from": "cp1251",
+  "to": "utf-8",
+  "backup": true
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Converted /path/to/file.pas from windows-1251 to utf-8",
+  "sourceEncoding": "windows-1251",
+  "targetEncoding": "utf-8",
+  "backupPath": "/path/to/file.pas.bak"
+}
+```
+
+### detect_line_endings
+
+Detect line ending style (CRLF/LF/mixed) and find lines with inconsistent endings. Useful for diagnosing mixed line ending issues in legacy codebases.
+
+**Parameters:**
+- `path` (required): Path to the file to analyze
+
+**Example:**
+```json
+{
+  "path": "/path/to/file.pas"
+}
+```
+
+**Response:**
+```json
+{
+  "style": "mixed",
+  "totalLines": 150,
+  "inconsistentLines": [45, 78, 123]
+}
+```
+
+**Style values:**
+- `crlf`: All lines use Windows line endings (\\r\\n)
+- `lf`: All lines use Unix line endings (\\n)
+- `mixed`: File has both CRLF and LF endings - `inconsistentLines` lists lines with minority style
+- `none`: File has no line endings (single line or empty)
 
 ### list_encodings
 
