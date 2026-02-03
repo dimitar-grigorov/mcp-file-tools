@@ -46,8 +46,11 @@ func (h *Handler) HandleWriteFile(ctx context.Context, req *mcp.CallToolRequest,
 		contentToWrite = encoded
 	}
 
+	// Preserve original permissions if file exists, otherwise use default
+	mode := getFileMode(validatedPath)
+
 	// Write file
-	if err := os.WriteFile(validatedPath, contentToWrite, 0644); err != nil {
+	if err := os.WriteFile(validatedPath, contentToWrite, mode); err != nil {
 		return errorResult(fmt.Sprintf("failed to write file: %v", err)), WriteFileOutput{}, nil
 	}
 
