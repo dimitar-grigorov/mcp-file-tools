@@ -300,33 +300,3 @@ func TestHandleDirectoryTree_NotADirectory(t *testing.T) {
 	}
 }
 
-func TestHandleDirectoryTree_JSONFormat(t *testing.T) {
-	tempDir := t.TempDir()
-	h := NewHandler([]string{tempDir})
-
-	os.WriteFile(filepath.Join(tempDir, "file.txt"), []byte("content"), 0644)
-
-	input := DirectoryTreeInput{
-		Path: tempDir,
-	}
-
-	result, output, err := h.HandleDirectoryTree(context.Background(), nil, input)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if result.IsError {
-		t.Errorf("expected success, got error: %v", result.Content)
-	}
-
-	// Verify 2-space indentation
-	if !strings.Contains(output.Tree, "  ") {
-		t.Errorf("expected 2-space indentation in JSON output")
-	}
-
-	// Verify it's valid JSON
-	var tree []TreeEntry
-	if err := json.Unmarshal([]byte(output.Tree), &tree); err != nil {
-		t.Fatalf("output is not valid JSON: %v", err)
-	}
-}

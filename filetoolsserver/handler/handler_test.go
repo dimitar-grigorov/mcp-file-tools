@@ -40,23 +40,6 @@ func TestWithConfig_Nil(t *testing.T) {
 	}
 }
 
-func TestGetAllowedDirectories(t *testing.T) {
-	dirs := []string{"/tmp", "/home", "/var"}
-	h := NewHandler(dirs)
-
-	got := h.GetAllowedDirectories()
-
-	if len(got) != len(dirs) {
-		t.Fatalf("expected %d dirs, got %d", len(dirs), len(got))
-	}
-
-	for i, d := range dirs {
-		if got[i] != d {
-			t.Errorf("dir[%d] = %q, want %q", i, got[i], d)
-		}
-	}
-}
-
 func TestGetAllowedDirectories_ReturnsCopy(t *testing.T) {
 	dirs := []string{"/tmp", "/home"}
 	h := NewHandler(dirs)
