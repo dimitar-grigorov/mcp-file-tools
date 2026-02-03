@@ -41,7 +41,7 @@ func (h *Handler) HandleGrep(ctx context.Context, req *mcp.CallToolRequest, inpu
 	if len(files) == 0 {
 		return &mcp.CallToolResult{}, GrepOutput{Matches: []GrepMatch{}, FilesSearched: 0}, nil
 	}
-	matches, filesMatched, truncated := h.searchFiles(ctx, files, re, input, maxMatches, h.config.MaxFileSize)
+	matches, filesMatched, truncated := h.searchFiles(ctx, files, re, input, maxMatches, h.config.MemoryThreshold)
 	return &mcp.CallToolResult{}, GrepOutput{
 		Matches:       matches,
 		TotalMatches:  len(matches),

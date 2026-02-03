@@ -28,7 +28,7 @@ func (h *Handler) HandleReadTextFile(ctx context.Context, req *mcp.CallToolReque
 	}
 
 	if loadToMemory, size := h.shouldLoadEntireFile(v.Path); !loadToMemory {
-		slog.Warn("loading large file into memory", "path", input.Path, "size", size, "threshold", h.config.MaxFileSize)
+		slog.Warn("loading large file into memory", "path", input.Path, "size", size, "threshold", h.config.MemoryThreshold)
 	}
 
 	encResult, err := h.resolveEncoding(input.Encoding, v.Path)

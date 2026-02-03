@@ -28,7 +28,7 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 
 	// Check file size - warn if large file will be loaded to memory
 	if loadToMemory, size := h.shouldLoadEntireFile(v.Path); !loadToMemory {
-		slog.Warn("loading large file into memory", "path", input.Path, "size", size, "threshold", h.config.MaxFileSize)
+		slog.Warn("loading large file into memory", "path", input.Path, "size", size, "threshold", h.config.MemoryThreshold)
 	}
 
 	// Preserve original file permissions
@@ -40,7 +40,7 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 	}
 
 	// Detect line endings before any processing
-	// TODO: Use DetectLineEndingsFromFile for streaming when file > MaxFileSize
+	// TODO: Use DetectLineEndingsFromFile for streaming when file > MemoryThreshold
 	lineEndings := DetectLineEndings(data)
 	if lineEndings.Style == LineEndingMixed {
 		slog.Warn("file has mixed line endings", "path", input.Path, "crlf", lineEndings.CRLFCount, "lf", lineEndings.LFCount)

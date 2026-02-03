@@ -13,7 +13,7 @@ func (h *Handler) shouldLoadEntireFile(path string) (bool, int64) {
 	if err != nil {
 		return true, 0
 	}
-	return info.Size() <= h.config.MaxFileSize, info.Size()
+	return info.Size() <= h.config.MemoryThreshold, info.Size()
 }
 
 // PathValidationResult holds the result of path validation.

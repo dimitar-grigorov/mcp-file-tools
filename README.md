@@ -136,7 +136,7 @@ The server can be configured via environment variables:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `MCP_DEFAULT_ENCODING` | Default encoding for `write_file` when none specified | `cp1251` |
-| `MCP_MAX_FILE_SIZE` | Maximum file size in bytes for operations | `10485760` (10MB) |
+| `MCP_MEMORY_THRESHOLD` | Memory threshold in bytes. Files smaller are loaded into memory for faster I/O; larger files use streaming. Also affects encoding detection mode. | `67108864` (64MB) |
 
 **Example (Claude Desktop config):**
 ```json

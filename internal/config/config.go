@@ -11,7 +11,7 @@ import (
 const (
 	// Environment variable names
 	EnvDefaultEncoding = "MCP_DEFAULT_ENCODING"
-	EnvMaxFileSize     = "MCP_MAX_FILE_SIZE"
+	EnvMemoryThreshold = "MCP_MEMORY_THRESHOLD"
 
 	// Default values
 	DefaultEncoding = "cp1251"
@@ -25,20 +25,20 @@ type Config struct {
 	// Default: "cp1251" (for backward compatibility with legacy codebases)
 	DefaultEncoding string
 
-	// MaxFileSize is the threshold for loading files into memory vs streaming.
+	// MemoryThreshold is the threshold for loading files into memory vs streaming.
 	// Files smaller than this are loaded entirely into memory for better performance.
 	// Files larger use streaming I/O to reduce memory usage.
 	// Also used as threshold for encoding detection mode (full vs sample).
-	// Set via MCP_MAX_FILE_SIZE environment variable.
+	// Set via MCP_MEMORY_THRESHOLD environment variable.
 	// Default: 67108864 (64MB)
-	MaxFileSize int64
+	MemoryThreshold int64
 }
 
 // Load reads configuration from environment variables with sensible defaults.
 func Load() *Config {
 	cfg := &Config{
 		DefaultEncoding: DefaultEncoding,
-		MaxFileSize:     DefaultMaxSize,
+		MemoryThreshold: DefaultMaxSize,
 	}
 
 	// Load default encoding from environment
@@ -50,10 +50,10 @@ func Load() *Config {
 		// If invalid encoding, silently use default (cp1251)
 	}
 
-	// Load max file size from environment
-	if sizeStr := os.Getenv(EnvMaxFileSize); sizeStr != "" {
+	// Load memory threshold from environment
+	if sizeStr := os.Getenv(EnvMemoryThreshold); sizeStr != "" {
 		if size, err := strconv.ParseInt(sizeStr, 10, 64); err == nil && size > 0 {
-			cfg.MaxFileSize = size
+			cfg.MemoryThreshold = size
 		}
 	}
 
