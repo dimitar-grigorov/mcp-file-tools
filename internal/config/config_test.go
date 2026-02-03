@@ -8,7 +8,7 @@ import (
 func TestLoad_Defaults(t *testing.T) {
 	// Clear any environment variables
 	os.Unsetenv(EnvDefaultEncoding)
-	os.Unsetenv(EnvMaxFileSize)
+	os.Unsetenv(EnvMemoryThreshold)
 
 	cfg := Load()
 
@@ -16,8 +16,8 @@ func TestLoad_Defaults(t *testing.T) {
 		t.Errorf("expected default encoding %q, got %q", DefaultEncoding, cfg.DefaultEncoding)
 	}
 
-	if cfg.MaxFileSize != DefaultMaxSize {
-		t.Errorf("expected default max size %d, got %d", DefaultMaxSize, cfg.MaxFileSize)
+	if cfg.MemoryThreshold != DefaultMaxSize {
+		t.Errorf("expected default memory threshold %d, got %d", DefaultMaxSize, cfg.MemoryThreshold)
 	}
 }
 
@@ -44,37 +44,37 @@ func TestLoad_InvalidEncoding(t *testing.T) {
 	}
 }
 
-func TestLoad_CustomMaxFileSize(t *testing.T) {
-	os.Setenv(EnvMaxFileSize, "134217728") // 128MB
-	defer os.Unsetenv(EnvMaxFileSize)
+func TestLoad_CustomMemoryThreshold(t *testing.T) {
+	os.Setenv(EnvMemoryThreshold, "134217728") // 128MB
+	defer os.Unsetenv(EnvMemoryThreshold)
 
 	cfg := Load()
 
-	if cfg.MaxFileSize != 134217728 {
-		t.Errorf("expected max file size 134217728, got %d", cfg.MaxFileSize)
+	if cfg.MemoryThreshold != 134217728 {
+		t.Errorf("expected memory threshold 134217728, got %d", cfg.MemoryThreshold)
 	}
 }
 
-func TestLoad_InvalidMaxFileSize(t *testing.T) {
-	os.Setenv(EnvMaxFileSize, "not-a-number")
-	defer os.Unsetenv(EnvMaxFileSize)
+func TestLoad_InvalidMemoryThreshold(t *testing.T) {
+	os.Setenv(EnvMemoryThreshold, "not-a-number")
+	defer os.Unsetenv(EnvMemoryThreshold)
 
 	cfg := Load()
 
 	// Should fall back to default when invalid
-	if cfg.MaxFileSize != DefaultMaxSize {
-		t.Errorf("expected fallback to %d for invalid size, got %d", DefaultMaxSize, cfg.MaxFileSize)
+	if cfg.MemoryThreshold != DefaultMaxSize {
+		t.Errorf("expected fallback to %d for invalid threshold, got %d", DefaultMaxSize, cfg.MemoryThreshold)
 	}
 }
 
-func TestLoad_NegativeMaxFileSize(t *testing.T) {
-	os.Setenv(EnvMaxFileSize, "-1000")
-	defer os.Unsetenv(EnvMaxFileSize)
+func TestLoad_NegativeMemoryThreshold(t *testing.T) {
+	os.Setenv(EnvMemoryThreshold, "-1000")
+	defer os.Unsetenv(EnvMemoryThreshold)
 
 	cfg := Load()
 
 	// Should fall back to default when negative
-	if cfg.MaxFileSize != DefaultMaxSize {
-		t.Errorf("expected fallback to %d for negative size, got %d", DefaultMaxSize, cfg.MaxFileSize)
+	if cfg.MemoryThreshold != DefaultMaxSize {
+		t.Errorf("expected fallback to %d for negative threshold, got %d", DefaultMaxSize, cfg.MemoryThreshold)
 	}
 }

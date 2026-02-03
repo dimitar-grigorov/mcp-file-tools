@@ -32,7 +32,7 @@ func (h *Handler) HandleConvertEncoding(ctx context.Context, req *mcp.CallToolRe
 
 	// Check file size - warn if large file will be loaded to memory
 	if loadToMemory, size := h.shouldLoadEntireFile(v.Path); !loadToMemory {
-		slog.Warn("loading large file into memory", "path", input.Path, "size", size, "threshold", h.config.MaxFileSize)
+		slog.Warn("loading large file into memory", "path", input.Path, "size", size, "threshold", h.config.MemoryThreshold)
 	}
 
 	// Preserve original file permissions

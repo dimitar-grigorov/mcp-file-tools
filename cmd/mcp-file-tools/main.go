@@ -33,7 +33,7 @@ func main() {
 
 	// Create MCP server with allowed directories (can be empty, directories can be added dynamically)
 	// Pass nil for logger to disable logging middleware (recovery still active)
-	// Pass nil for config to load from environment variables (MCP_DEFAULT_ENCODING, MCP_MAX_FILE_SIZE)
+	// Pass nil for config to load from environment variables (MCP_DEFAULT_ENCODING, MCP_MEMORY_THRESHOLD)
 	server := filetoolsserver.NewServer(normalized, nil, nil)
 
 	// Run server on stdio transport
