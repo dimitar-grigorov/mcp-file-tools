@@ -1,0 +1,59 @@
+name: Publish to MCP Registry
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag to publish (e.g., v1.4.8)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write  # Required for MCP Registry OIDC auth
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Download checksums
+        run: |
+          curl -sL "https://github.com/${{ github.repository }}/releases/download/${{ inputs.version }}/checksums.txt" -o checksums.txt
+          cat checksums.txt
+
+      - name: Update server.json with new version and checksums
+        run: |
+          VERSION="${{ inputs.version }}"
+          VERSION="${VERSION#v}"  # Remove 'v' prefix if present
+
+          # Update version
+          sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" server.json
+
+          # Update download URLs
+          sed -i "s|/v[0-9.]*-*[^/]*/|/v$VERSION/|g" server.json
+
+          # Update SHA256 checksums for each binary
+          for binary in windows_amd64.exe windows_arm64.exe linux_amd64 linux_arm64 darwin_amd64 darwin_arm64; do
+            SHA=$(grep "mcp-file-tools_${binary}\$" checksums.txt | awk '{print $1}')
+            if [ -n "$SHA" ]; then
+              jq --arg sha "$SHA" --arg bin "$binary" \
+                '(.packages[] | select(.identifier | contains($bin))).fileSha256 = $sha' \
+                server.json > tmp.json && mv tmp.json server.json
+            fi
+          done
+
+          echo "Updated server.json:"
+          cat server.json
+
+      - name: Download mcp-publisher
+        run: |
+          curl -sL https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher-linux-amd64 -o mcp-publisher
+          chmod +x mcp-publisher
+
+      - name: Publish to MCP Registry
+        run: |
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish
