@@ -90,15 +90,15 @@ func main() {
 	}
 	check("directory_tree (exclude)", !r11.IsError && !hasFile)
 
-	// Head/tail
+	// Offset/Limit pagination
 	multiFile := filepath.Join(tempDir, "multi.txt")
-	os.WriteFile(multiFile, []byte("a\nb\nc\nd\n"), 0644)
-	head, tail := 2, 2
-	r12, o12, _ := h.HandleReadTextFile(ctx, nil, handler.ReadTextFileInput{Path: multiFile, Head: &head})
-	check("read_text_file (head)", !r12.IsError && o12.Content == "a\nb")
+	os.WriteFile(multiFile, []byte("a\nb\nc\nd"), 0644)
+	limit, offset := 2, 3
+	r12, o12, _ := h.HandleReadTextFile(ctx, nil, handler.ReadTextFileInput{Path: multiFile, Limit: &limit})
+	check("read_text_file (limit=2)", !r12.IsError && o12.Content == "a\nb")
 
-	r13, o13, _ := h.HandleReadTextFile(ctx, nil, handler.ReadTextFileInput{Path: multiFile, Tail: &tail})
-	check("read_text_file (tail)", !r13.IsError && o13.Content == "d\n")
+	r13, o13, _ := h.HandleReadTextFile(ctx, nil, handler.ReadTextFileInput{Path: multiFile, Offset: &offset, Limit: &limit})
+	check("read_text_file (offset=3, limit=2)", !r13.IsError && o13.Content == "c\nd")
 
 	// Auto-detect and encoding registry
 	r14, o14, _ := h.HandleReadTextFile(ctx, nil, handler.ReadTextFileInput{Path: cyrillicFile})
