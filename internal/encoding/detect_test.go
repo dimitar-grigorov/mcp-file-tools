@@ -47,9 +47,9 @@ func TestDetect_EmptyData(t *testing.T) {
 	}
 }
 
-func TestDetectFromChunks_SmallFile(t *testing.T) {
+func TestDetectSample_SmallFile(t *testing.T) {
 	data := []byte("Hello, World!")
-	result, trusted := DetectFromChunks(data)
+	result, trusted := DetectSample(data)
 
 	if !isASCIICompatible(result.Charset) {
 		t.Errorf("Charset = %q, want utf-8 or ascii", result.Charset)
@@ -59,10 +59,10 @@ func TestDetectFromChunks_SmallFile(t *testing.T) {
 	}
 }
 
-func TestDetectFromChunks_LargeFile(t *testing.T) {
+func TestDetectSample_LargeFile(t *testing.T) {
 	// Create a file larger than SmallFileThreshold
 	data := bytes.Repeat([]byte("Hello, World! "), SmallFileThreshold/14+1)
-	result, _ := DetectFromChunks(data)
+	result, _ := DetectSample(data)
 
 	if !isASCIICompatible(result.Charset) {
 		t.Errorf("Charset = %q, want utf-8 or ascii", result.Charset)
