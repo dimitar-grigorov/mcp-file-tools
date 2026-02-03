@@ -36,6 +36,13 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 		return errorResult(fmt.Sprintf("failed to read file: %v", err)), EditFileOutput{}, nil
 	}
 
+	// Detect line endings before any processing
+	// TODO: Use DetectLineEndingsFromFile for streaming when file > MaxFileSize
+	lineEndings := DetectLineEndings(data)
+	if lineEndings.Style == LineEndingMixed {
+		slog.Warn("file has mixed line endings", "path", input.Path, "crlf", lineEndings.CRLFCount, "lf", lineEndings.LFCount)
+	}
+
 	// Determine encoding (auto-detect or use provided)
 	encodingName := strings.ToLower(input.Encoding)
 	if encodingName == "" {
@@ -64,7 +71,7 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 	}
 
 	// Normalize line endings (CRLF -> LF) for consistent processing
-	content = normalizeLineEndings(content)
+	content = ConvertLineEndings(content, LineEndingLF)
 
 	// Apply edits sequentially
 	modifiedContent, err := applyEdits(content, input.Edits)
@@ -78,19 +85,14 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 	// Format diff with markdown code fence
 	formattedDiff := formatDiffOutput(diff)
 
-	// Write file if not dry run (atomic write with encoding)
+	// Write file if not dry run (atomic write with encoding and line ending preservation)
 	if !input.DryRun {
-		if err := atomicWriteFileWithEncoding(v.Path, modifiedContent, encodingName); err != nil {
+		if err := atomicWriteFileWithEncoding(v.Path, modifiedContent, encodingName, lineEndings.Style); err != nil {
 			return errorResult(fmt.Sprintf("failed to write file: %v", err)), EditFileOutput{}, nil
 		}
 	}
 
 	return &mcp.CallToolResult{}, EditFileOutput{Diff: formattedDiff}, nil
-}
-
-// normalizeLineEndings converts CRLF to LF for consistent text processing
-func normalizeLineEndings(text string) string {
-	return strings.ReplaceAll(text, "\r\n", "\n")
 }
 
 // applyEdits applies a sequence of edit operations to content.
@@ -104,8 +106,8 @@ func applyEdits(content string, edits []EditOperation) (string, error) {
 			return "", ErrOldTextEmpty
 		}
 
-		normalizedOld := normalizeLineEndings(edit.OldText)
-		normalizedNew := normalizeLineEndings(edit.NewText)
+		normalizedOld := ConvertLineEndings(edit.OldText, LineEndingLF)
+		normalizedNew := ConvertLineEndings(edit.NewText, LineEndingLF)
 
 		// Try exact match first
 		if strings.Contains(modifiedContent, normalizedOld) {
@@ -235,8 +237,9 @@ func formatDiffOutput(diff string) string {
 }
 
 // atomicWriteFileWithEncoding writes content to a file atomically with encoding conversion.
-// Content is expected to be UTF-8 and will be encoded to the specified encoding.
-func atomicWriteFileWithEncoding(filepath, content, encodingName string) (err error) {
+// Content is expected to be UTF-8 (with LF line endings) and will be encoded to the specified encoding.
+// Line endings are restored to the original style before writing.
+func atomicWriteFileWithEncoding(filepath, content, encodingName, lineEndingStyle string) (err error) {
 	// Generate random temp filename
 	randBytes := make([]byte, 16)
 	if _, err := rand.Read(randBytes); err != nil {
@@ -250,6 +253,9 @@ func atomicWriteFileWithEncoding(filepath, content, encodingName string) (err er
 			os.Remove(tempPath)
 		}
 	}()
+
+	// Restore original line endings before encoding
+	content = ConvertLineEndings(content, lineEndingStyle)
 
 	// Encode content if not UTF-8
 	var dataToWrite []byte
