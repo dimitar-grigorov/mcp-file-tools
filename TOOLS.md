@@ -103,6 +103,7 @@ Make line-based edits to a text file. Supports exact matching and whitespace-fle
 - `edits` (required): Array of edit operations, each with `oldText` and `newText`
 - `dryRun` (optional): If true, returns diff without writing changes (default: false)
 - `encoding` (optional): File encoding (auto-detected if not specified)
+- `forceWritable` (optional): If true, clears read-only flag before editing (default: true)
 
 **Features:**
 - Exact text matching (first occurrence)
@@ -110,6 +111,7 @@ Make line-based edits to a text file. Supports exact matching and whitespace-fle
 - Preserves original indentation
 - CRLF line endings normalized to LF
 - Atomic write (temp file + rename)
+- Automatically clears read-only flag (disable with `forceWritable: false`)
 
 **Example:**
 ```json
@@ -128,9 +130,12 @@ Make line-based edits to a text file. Supports exact matching and whitespace-fle
 **Response:**
 ```json
 {
-  "diff": "--- /path/to/file.go\n+++ /path/to/file.go\n@@ -1,3 +1,3 @@\n-func oldName()\n+func newName()\n"
+  "diff": "--- /path/to/file.go\n+++ /path/to/file.go\n@@ -1,3 +1,3 @@\n-func oldName()\n+func newName()\n",
+  "readOnlyCleared": true
 }
 ```
+
+The `readOnlyCleared` field indicates if the read-only flag was removed (only present when true).
 
 ## Directory Operations
 
