@@ -34,6 +34,22 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 	// Preserve original file permissions
 	originalMode := getFileMode(v.Path)
 
+	// Handle read-only files
+	readOnlyCleared := false
+	forceWritable := input.ForceWritable == nil || *input.ForceWritable // default: true
+	if isReadOnly(originalMode) {
+		if !forceWritable {
+			return errorResult("file is read-only; set forceWritable: true to clear the read-only flag"), EditFileOutput{}, nil
+		}
+		if !input.DryRun {
+			if err := clearReadOnly(v.Path, originalMode); err != nil {
+				return errorResult(fmt.Sprintf("failed to clear read-only flag: %v", err)), EditFileOutput{}, nil
+			}
+			readOnlyCleared = true
+			slog.Info("cleared read-only flag", "path", input.Path)
+		}
+	}
+
 	data, err := os.ReadFile(v.Path)
 	if err != nil {
 		return errorResult(fmt.Sprintf("failed to read file: %v", err)), EditFileOutput{}, nil
@@ -95,7 +111,7 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 		}
 	}
 
-	return &mcp.CallToolResult{}, EditFileOutput{Diff: formattedDiff}, nil
+	return &mcp.CallToolResult{}, EditFileOutput{Diff: formattedDiff, ReadOnlyCleared: readOnlyCleared}, nil
 }
 
 // applyEdits applies a sequence of edit operations to content.
@@ -290,4 +306,18 @@ func atomicWriteFileWithEncoding(filepath, content, encodingName, lineEndingStyl
 	}
 
 	return nil
+}
+
+// isReadOnly checks if the file mode indicates the file is read-only.
+// On Unix, checks if the owner write bit is not set.
+// On Windows, this also works as Go maps the read-only attribute to mode bits.
+func isReadOnly(mode os.FileMode) bool {
+	return mode&0200 == 0 // owner write bit not set
+}
+
+// clearReadOnly removes the read-only flag from a file.
+// Adds owner write permission (0200) to the existing mode.
+func clearReadOnly(path string, currentMode os.FileMode) error {
+	newMode := currentMode | 0200 // add owner write permission
+	return os.Chmod(path, newMode)
 }
