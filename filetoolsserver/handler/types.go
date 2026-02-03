@@ -313,3 +313,16 @@ type GrepOutput struct {
 	Truncated     bool        `json:"truncated,omitempty"`
 }
 
+// DetectLineEndingsInput defines input parameters for detect_line_endings tool.
+// Path: Path to the file to analyze (required)
+type DetectLineEndingsInput struct {
+	Path string `json:"path"`
+}
+
+// DetectLineEndingsOutput defines output for detect_line_endings tool
+type DetectLineEndingsOutput struct {
+	Style             string `json:"style"`             // "crlf", "lf", "mixed", or "none"
+	TotalLines        int    `json:"totalLines"`        // Total number of lines in file
+	InconsistentLines []int  `json:"inconsistentLines"` // Line numbers with minority/different line ending style
+}
+

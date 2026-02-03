@@ -169,6 +169,16 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 		},
 	}, handler.Wrap(logger, "search_files", h.HandleSearchFiles))
 
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "detect_line_endings",
+		Description: "Detect line ending style (crlf/lf/mixed/none) and find inconsistent lines. Returns dominant style, total lines, and array of line numbers with minority line endings. Useful for finding mixed line ending issues in legacy codebases. Parameter: path (required).",
+		Annotations: &mcp.ToolAnnotations{
+			Title:         "Detect Line Endings",
+			ReadOnlyHint:  true,
+			OpenWorldHint: boolPtr(false),
+		},
+	}, handler.Wrap(logger, "detect_line_endings", h.HandleDetectLineEndings))
+
 	// Write tools
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "create_directory",
