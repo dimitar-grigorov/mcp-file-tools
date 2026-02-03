@@ -24,14 +24,6 @@ type encodingResult struct {
 // If encoding is not specified, it auto-detects the encoding using chunked sampling.
 // Supports offset/limit for reading specific line ranges (context-efficient).
 func (h *Handler) HandleReadTextFile(ctx context.Context, req *mcp.CallToolRequest, input ReadTextFileInput) (*mcp.CallToolResult, ReadTextFileOutput, error) {
-	// Validate conflicting parameters
-	if input.Head != nil && input.Tail != nil {
-		return errorResult(ErrHeadTailConflict.Error()), ReadTextFileOutput{}, nil
-	}
-	if (input.Offset != nil || input.Limit != nil) && (input.Head != nil || input.Tail != nil) {
-		return errorResult("cannot use offset/limit with head/tail"), ReadTextFileOutput{}, nil
-	}
-
 	v := h.ValidatePath(input.Path)
 	if !v.Ok() {
 		return v.Result, ReadTextFileOutput{}, nil
@@ -60,12 +52,10 @@ func (h *Handler) HandleReadTextFile(ctx context.Context, req *mcp.CallToolReque
 	lines := strings.Split(content, "\n")
 	totalLines := len(lines)
 
-	// Apply line selection (offset/limit or head/tail)
+	// Apply line selection (offset/limit)
 	var startLine, endLine int
 	if input.Offset != nil || input.Limit != nil {
 		content, startLine, endLine = applyOffsetLimit(lines, input.Offset, input.Limit)
-	} else if input.Head != nil || input.Tail != nil {
-		content, startLine, endLine = applyHeadTailWithRange(lines, input.Head, input.Tail)
 	} else {
 		content = strings.Join(lines, "\n")
 		startLine = 1
@@ -180,29 +170,4 @@ func applyOffsetLimit(lines []string, offset, limit *int) (string, int, int) {
 
 	selectedLines := lines[startIdx:endIdx]
 	return strings.Join(selectedLines, "\n"), startIdx + 1, endIdx
-}
-
-// applyHeadTailWithRange applies head or tail and returns range info.
-// Returns content, startLine, endLine.
-func applyHeadTailWithRange(lines []string, head, tail *int) (string, int, int) {
-	totalLines := len(lines)
-
-	if head != nil {
-		n := *head
-		if n >= 0 && n < totalLines {
-			return strings.Join(lines[:n], "\n"), 1, n
-		}
-		return strings.Join(lines, "\n"), 1, totalLines
-	}
-
-	if tail != nil {
-		n := *tail
-		if n >= 0 && n < totalLines {
-			startLine := totalLines - n + 1
-			return strings.Join(lines[totalLines-n:], "\n"), startLine, totalLines
-		}
-		return strings.Join(lines, "\n"), 1, totalLines
-	}
-
-	return strings.Join(lines, "\n"), 1, totalLines
 }

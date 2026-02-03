@@ -5,15 +5,11 @@ package handler
 // Encoding: File encoding - auto-detected if not specified (optional)
 // Offset: Start reading from this line number, 1-indexed (optional)
 // Limit: Maximum number of lines to read (optional)
-// Head: Read only the first N lines - deprecated, use Limit (optional)
-// Tail: Read only the last N lines (optional)
 type ReadTextFileInput struct {
 	Path     string `json:"path"`
 	Encoding string `json:"encoding,omitempty"`
 	Offset   *int   `json:"offset,omitempty"`
 	Limit    *int   `json:"limit,omitempty"`
-	Head     *int   `json:"head,omitempty"`
-	Tail     *int   `json:"tail,omitempty"`
 }
 
 // ReadTextFileOutput defines output for read_text_file tool

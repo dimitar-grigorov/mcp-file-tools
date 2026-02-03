@@ -16,9 +16,6 @@ var (
 	// ErrEditsRequired is returned when the edits array is missing or empty.
 	ErrEditsRequired = errors.New("edits array is required and must not be empty")
 
-	// ErrHeadTailConflict is returned when both head and tail options are specified.
-	ErrHeadTailConflict = errors.New("cannot specify both head and tail")
-
 	// ErrPathMustBeDirectory is returned when a directory is expected but a file was provided.
 	ErrPathMustBeDirectory = errors.New("path must be a directory")
 )
