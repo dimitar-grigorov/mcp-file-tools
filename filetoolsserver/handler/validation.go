@@ -1,8 +1,20 @@
 package handler
 
 import (
+	"os"
+
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
+
+// shouldLoadEntireFile returns true if the file is small enough to load into memory.
+// Returns (shouldLoad, fileSize). On stat error, defaults to true (load into memory).
+func (h *Handler) shouldLoadEntireFile(path string) (bool, int64) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return true, 0
+	}
+	return info.Size() <= h.config.MaxFileSize, info.Size()
+}
 
 // PathValidationResult holds the result of path validation.
 type PathValidationResult struct {

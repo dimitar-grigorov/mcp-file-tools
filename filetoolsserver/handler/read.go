@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 
@@ -28,14 +29,18 @@ func (h *Handler) HandleReadTextFile(ctx context.Context, req *mcp.CallToolReque
 		return v.Result, ReadTextFileOutput{}, nil
 	}
 
+	// Check file size - warn if large file will be loaded to memory
+	if loadToMemory, size := h.shouldLoadEntireFile(v.Path); !loadToMemory {
+		slog.Warn("loading large file into memory", "path", input.Path, "size", size, "threshold", h.config.MaxFileSize)
+	}
+
 	// Resolve encoding (detection mode based on file size vs MaxFileSize threshold)
 	encResult, err := h.resolveEncoding(input.Encoding, v.Path)
 	if err != nil {
 		return errorResult(err.Error()), ReadTextFileOutput{}, nil
 	}
 
-	// Read file content for decoding
-	// TODO: This still loads the entire file - optimize with streaming in future
+	// Read file content
 	data, err := os.ReadFile(v.Path)
 	if err != nil {
 		return errorResult(fmt.Sprintf("failed to read file: %v", err)), ReadTextFileOutput{}, nil
@@ -92,10 +97,9 @@ func (h *Handler) resolveEncoding(inputEncoding string, filePath string) (encodi
 	}
 
 	// Determine detection mode based on file size
-	detectionMode := "full" // Default: load entire file for best accuracy
-	fileInfo, err := os.Stat(filePath)
-	if err == nil && fileInfo.Size() > h.config.MaxFileSize {
-		detectionMode = "sample" // Large file: use streaming detection
+	detectionMode := "full"
+	if loadToMemory, _ := h.shouldLoadEntireFile(filePath); !loadToMemory {
+		detectionMode = "sample"
 	}
 
 	// Auto-detect encoding

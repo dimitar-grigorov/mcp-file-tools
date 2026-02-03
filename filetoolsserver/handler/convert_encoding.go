@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 
@@ -27,6 +28,11 @@ func (h *Handler) HandleConvertEncoding(ctx context.Context, req *mcp.CallToolRe
 	targetEnc, ok := encoding.Get(strings.ToLower(input.To))
 	if !ok {
 		return errorResult(fmt.Sprintf("unsupported target encoding: %s. Use list_encodings to see available encodings.", input.To)), ConvertEncodingOutput{}, nil
+	}
+
+	// Check file size - warn if large file will be loaded to memory
+	if loadToMemory, size := h.shouldLoadEntireFile(v.Path); !loadToMemory {
+		slog.Warn("loading large file into memory", "path", input.Path, "size", size, "threshold", h.config.MaxFileSize)
 	}
 
 	// Read file
