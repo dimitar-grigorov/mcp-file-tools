@@ -203,111 +203,40 @@ Get a recursive tree view as JSON. **Use `tree` instead for 85% fewer tokens.**
 
 ### get_file_info
 
-Get detailed metadata about a file or directory.
+Get metadata about a file or directory (size, timestamps, permissions).
 
 **Parameters:**
 - `path` (required): Path to file or directory
 
-**Response:**
-```json
-{
-  "size": 1234,
-  "created": "2024-01-15T10:30:00Z",
-  "modified": "2024-01-15T10:30:00Z",
-  "accessed": "2024-01-15T10:30:00Z",
-  "isDirectory": false,
-  "isFile": true,
-  "permissions": "rw-r--r--"
-}
-```
-
 ### create_directory
 
-Create a directory recursively (like `mkdir -p`). Succeeds silently if directory already exists.
+Create a directory recursively (like `mkdir -p`). Succeeds if already exists.
 
 **Parameters:**
 - `path` (required): Path to directory to create
 
-**Example:**
-```json
-{
-  "path": "/path/to/project/new/nested/dir"
-}
-```
-
-**Response:**
-```json
-{
-  "message": "Directory created: /path/to/project/new/nested/dir"
-}
-```
-
 ### move_file
 
-Move or rename files and directories. Can move between directories and rename in a single operation. Fails if destination already exists.
+Move or rename files and directories. Fails if destination exists.
 
 **Parameters:**
-- `source` (required): Path to file or directory to move
+- `source` (required): Path to move
 - `destination` (required): Destination path
-
-**Example:**
-```json
-{
-  "source": "/path/to/old_name.txt",
-  "destination": "/path/to/new_location/new_name.txt"
-}
-```
-
-**Response:**
-```json
-{
-  "message": "Moved /path/to/old_name.txt to /path/to/new_location/new_name.txt"
-}
-```
 
 ### copy_file
 
-Copy a file to a new location. Fails if destination already exists. Only copies files, not directories.
+Copy a file. Fails if destination exists. Does not copy directories.
 
 **Parameters:**
-- `source` (required): Path to the file to copy
+- `source` (required): Source file path
 - `destination` (required): Destination path
-
-**Example:**
-```json
-{
-  "source": "/path/to/original.txt",
-  "destination": "/path/to/backup/original_copy.txt"
-}
-```
-
-**Response:**
-```json
-{
-  "message": "Successfully copied /path/to/original.txt to /path/to/backup/original_copy.txt"
-}
-```
 
 ### delete_file
 
 Delete a file. Does not delete directories.
 
 **Parameters:**
-- `path` (required): Path to the file to delete
-
-**Example:**
-```json
-{
-  "path": "/path/to/file_to_delete.txt"
-}
-```
-
-**Response:**
-```json
-{
-  "message": "Successfully deleted /path/to/file_to_delete.txt"
-}
-```
+- `path` (required): Path to delete
 
 ### search_files
 
@@ -476,36 +405,11 @@ Detect line ending style (CRLF/LF/mixed) and find lines with inconsistent ending
 
 ### list_encodings
 
-Returns all supported encodings with metadata.
-
-**Parameters:** None
-
-**Response:**
-```json
-{
-  "encodings": [
-    {
-      "name": "windows-1251",
-      "displayName": "Windows-1251",
-      "aliases": ["cp1251"],
-      "description": "Windows Cyrillic"
-    }
-  ]
-}
-```
+Returns all 20 supported encodings with name, aliases, and description.
 
 ### list_allowed_directories
 
-Returns directories the server is allowed to access.
-
-**Parameters:** None
-
-**Response:**
-```json
-{
-  "directories": ["/home/user/projects", "/var/data"]
-}
-```
+Returns directories the server is allowed to access. If empty, add paths as args in config.
 
 ## Supported Encodings
 
