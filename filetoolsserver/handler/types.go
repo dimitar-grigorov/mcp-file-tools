@@ -154,10 +154,24 @@ type ReadMultipleFilesInput struct {
 	Encoding string   `json:"encoding,omitempty"`
 }
 
+// Error codes for programmatic error handling
+const (
+	ErrCodeNone            = ""                 // No error
+	ErrCodeNotFound        = "NOT_FOUND"        // File does not exist
+	ErrCodePermission      = "PERMISSION"       // Permission denied
+	ErrCodeAccessDenied    = "ACCESS_DENIED"    // Path outside allowed directories
+	ErrCodeEncoding        = "ENCODING"         // Encoding detection/conversion failed
+	ErrCodeIO              = "IO_ERROR"         // General I/O error
+	ErrCodeInvalidPath     = "INVALID_PATH"     // Path validation failed
+	ErrCodeSymlinkEscape   = "SYMLINK_ESCAPE"   // Symlink target outside allowed dirs
+	ErrCodeOperationFailed = "OPERATION_FAILED" // Generic operation failure
+)
+
 type FileReadResult struct {
 	Path               string `json:"path"`
 	Content            string `json:"content,omitempty"`
 	Error              string `json:"error,omitempty"`
+	ErrorCode          string `json:"errorCode,omitempty"` // Machine-readable error code
 	DetectedEncoding   string `json:"detectedEncoding,omitempty"`
 	EncodingConfidence int    `json:"encodingConfidence,omitempty"`
 }
@@ -166,6 +180,7 @@ type ReadMultipleFilesOutput struct {
 	Results      []FileReadResult `json:"results"`
 	SuccessCount int              `json:"successCount"`
 	ErrorCount   int              `json:"errorCount"`
+	Errors       []string         `json:"errors,omitempty"` // Summary of all errors
 }
 
 // TreeInput for compact tree view. MaxFiles defaults to 1000.
