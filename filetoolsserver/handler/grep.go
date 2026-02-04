@@ -19,7 +19,7 @@ import (
 
 const (
 	defaultMaxMatches = 1000
-	binaryCheckSize   = 1024
+	binaryCheckSize   = 8192 // 8KB to catch files with text header but binary payload
 )
 
 // HandleGrep searches for a pattern in files with encoding support.
@@ -113,16 +113,26 @@ func (h *Handler) collectFiles(ctx context.Context, paths []string, include, exc
 }
 
 // shouldIncludeFile checks if a file matches include/exclude patterns.
+// Matches against both full path (with forward slashes) and basename.
 func shouldIncludeFile(path string, include, exclude string) bool {
 	base := filepath.Base(path)
+	normalized := filepath.ToSlash(path)
 	if exclude != "" {
-		if matched, _ := filepath.Match(exclude, base); matched {
+		if matchedBase, _ := filepath.Match(exclude, base); matchedBase {
+			return false
+		}
+		if matchedPath, _ := filepath.Match(exclude, normalized); matchedPath {
 			return false
 		}
 	}
 	if include != "" {
-		matched, _ := filepath.Match(include, base)
-		return matched
+		if matchedBase, _ := filepath.Match(include, base); matchedBase {
+			return true
+		}
+		if matchedPath, _ := filepath.Match(include, normalized); matchedPath {
+			return true
+		}
+		return false
 	}
 	return true
 }

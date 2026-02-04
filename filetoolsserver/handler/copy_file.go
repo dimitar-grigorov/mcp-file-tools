@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -35,8 +36,8 @@ func (h *Handler) HandleCopyFile(ctx context.Context, req *mcp.CallToolRequest, 
 		return errorResult(fmt.Sprintf("destination already exists: %s", input.Destination)), CopyFileOutput{}, nil
 	}
 
-	// Copy file with source permissions preserved
-	if err := copyFile(src.Path, dst.Path, srcInfo.Mode().Perm()); err != nil {
+	// Copy file with source permissions and timestamps preserved
+	if err := copyFile(src.Path, dst.Path, srcInfo.Mode().Perm(), srcInfo.ModTime()); err != nil {
 		return errorResult(fmt.Sprintf("failed to copy file: %v", err)), CopyFileOutput{}, nil
 	}
 
@@ -44,14 +45,13 @@ func (h *Handler) HandleCopyFile(ctx context.Context, req *mcp.CallToolRequest, 
 	return &mcp.CallToolResult{}, CopyFileOutput{Message: message}, nil
 }
 
-func copyFile(src, dst string, mode os.FileMode) error {
+func copyFile(src, dst string, mode os.FileMode, modTime time.Time) error {
 	srcFile, err := os.Open(src)
 	if err != nil {
 		return err
 	}
 	defer srcFile.Close()
 
-	// Create destination with source file's permissions
 	dstFile, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, mode)
 	if err != nil {
 		return err
@@ -62,5 +62,9 @@ func copyFile(src, dst string, mode os.FileMode) error {
 		return err
 	}
 
-	return dstFile.Sync()
+	if err := dstFile.Sync(); err != nil {
+		return err
+	}
+
+	return os.Chtimes(dst, modTime, modTime)
 }
