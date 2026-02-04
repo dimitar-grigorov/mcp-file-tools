@@ -147,6 +147,7 @@ func decodeContent(data []byte, encResult encodingResult) (string, error) {
 
 // applyOffsetLimit applies offset and limit to select a range of lines.
 // Offset is 1-indexed (like line numbers). Returns content, startLine, endLine.
+// Negative values are treated as not provided.
 func applyOffsetLimit(lines []string, offset, limit *int) (string, int, int) {
 	totalLines := len(lines)
 

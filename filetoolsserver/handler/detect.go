@@ -25,7 +25,7 @@ func (h *Handler) HandleDetectEncoding(ctx context.Context, req *mcp.CallToolReq
 	}
 
 	if result.Charset == "" {
-		return errorResult("Could not detect encoding"), DetectEncodingOutput{}, nil
+		return errorResult("could not detect encoding"), DetectEncodingOutput{}, nil
 	}
 
 	return &mcp.CallToolResult{}, DetectEncodingOutput{
