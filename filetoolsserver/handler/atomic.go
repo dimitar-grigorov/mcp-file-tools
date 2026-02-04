@@ -8,6 +8,8 @@ import (
 	"os"
 )
 
+const tempFileSuffixBytes = 16
+
 // atomicWriteFile writes data atomically using temp file + rename.
 func atomicWriteFile(filepath string, data []byte, mode os.FileMode) (err error) {
 	tempPath, err := generateTempPath(filepath)
@@ -70,7 +72,7 @@ func atomicWriteWithBackup(filepath string, data []byte, mode os.FileMode, backu
 
 // generateTempPath creates a random temp file path based on the target filepath.
 func generateTempPath(filepath string) (string, error) {
-	randBytes := make([]byte, 16)
+	randBytes := make([]byte, tempFileSuffixBytes)
 	if _, err := rand.Read(randBytes); err != nil {
 		return "", fmt.Errorf("failed to generate temp filename: %w", err)
 	}

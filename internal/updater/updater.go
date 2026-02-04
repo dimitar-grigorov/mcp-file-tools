@@ -22,6 +22,9 @@ const (
 
 	// CheckInterval is the minimum time between API calls (respects GitHub rate limits)
 	CheckInterval = 2 * time.Hour
+
+	// httpTimeout is the timeout for HTTP requests to GitHub API
+	httpTimeout = 10 * time.Second
 )
 
 // cache stores the last check result to avoid excessive API calls
@@ -70,7 +73,7 @@ func fetchLatestVersion(ctx context.Context) (string, error) {
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("User-Agent", "mcp-file-tools-update-checker")
 
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := &http.Client{Timeout: httpTimeout}
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", err

@@ -11,6 +11,8 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+const defaultMaxFiles = 1000
+
 // HandleTree returns a compact indented tree view optimized for AI consumption.
 // Uses ~70-80% fewer tokens than JSON format.
 func (h *Handler) HandleTree(ctx context.Context, req *mcp.CallToolRequest, input TreeInput) (*mcp.CallToolResult, TreeOutput, error) {
@@ -27,7 +29,7 @@ func (h *Handler) HandleTree(ctx context.Context, req *mcp.CallToolRequest, inpu
 	}
 	maxFiles := input.MaxFiles
 	if maxFiles == 0 {
-		maxFiles = 1000
+		maxFiles = defaultMaxFiles
 	}
 	state := &treeState{
 		maxFiles:    maxFiles,

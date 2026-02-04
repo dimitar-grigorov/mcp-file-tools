@@ -15,7 +15,7 @@ func (h *Handler) HandleCreateDirectory(ctx context.Context, req *mcp.CallToolRe
 		return v.Result, CreateDirectoryOutput{}, nil
 	}
 
-	if err := os.MkdirAll(v.Path, 0755); err != nil {
+	if err := os.MkdirAll(v.Path, DefaultDirMode); err != nil {
 		return errorResult(fmt.Sprintf("failed to create directory: %v", err)), CreateDirectoryOutput{}, nil
 	}
 

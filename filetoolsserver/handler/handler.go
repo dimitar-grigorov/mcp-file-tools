@@ -8,8 +8,11 @@ import (
 	"github.com/dimitar-grigorov/mcp-file-tools/internal/security"
 )
 
-// DefaultFileMode is the default permission for new files
-const DefaultFileMode os.FileMode = 0644
+// Default permissions for new files and directories
+const (
+	DefaultFileMode os.FileMode = 0644
+	DefaultDirMode  os.FileMode = 0755
+)
 
 // Handler handles all file tool operations
 type Handler struct {
