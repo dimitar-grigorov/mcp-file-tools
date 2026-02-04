@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
+	"github.com/dimitar-grigorov/mcp-file-tools/internal/security"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -63,6 +64,7 @@ func compilePattern(pattern string, caseSensitive *bool) (*regexp.Regexp, error)
 func (h *Handler) collectFiles(paths []string, include, exclude string) []string {
 	var files []string
 	seen := make(map[string]bool)
+	allowedDirs := h.GetAllowedDirectories()
 	for _, path := range paths {
 		v := h.ValidatePath(path)
 		if !v.Ok() {
@@ -74,7 +76,13 @@ func (h *Handler) collectFiles(paths []string, include, exclude string) []string
 		}
 		if info.IsDir() {
 			filepath.WalkDir(v.Path, func(p string, d fs.DirEntry, err error) error {
-				if err != nil || d.IsDir() {
+				if err != nil {
+					return nil
+				}
+				if d.IsDir() {
+					if !security.IsPathSafe(p, allowedDirs) {
+						return filepath.SkipDir
+					}
 					return nil
 				}
 				if shouldIncludeFile(p, include, exclude) && !seen[p] {

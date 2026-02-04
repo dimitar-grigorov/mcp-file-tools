@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/dimitar-grigorov/mcp-file-tools/internal/security"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -29,13 +30,14 @@ func (h *Handler) HandleTree(ctx context.Context, req *mcp.CallToolRequest, inpu
 		maxFiles = 1000
 	}
 	state := &treeState{
-		maxFiles:  maxFiles,
-		maxDepth:  input.MaxDepth,
-		dirsOnly:  input.DirsOnly,
-		exclude:   input.Exclude,
-		fileCount: 0,
-		dirCount:  0,
-		truncated: false,
+		maxFiles:    maxFiles,
+		maxDepth:    input.MaxDepth,
+		dirsOnly:    input.DirsOnly,
+		exclude:     input.Exclude,
+		allowedDirs: h.GetAllowedDirectories(),
+		fileCount:   0,
+		dirCount:    0,
+		truncated:   false,
 	}
 	var sb strings.Builder
 	buildCompactTree(ctx, &sb, v.Path, 0, state)
@@ -48,13 +50,14 @@ func (h *Handler) HandleTree(ctx context.Context, req *mcp.CallToolRequest, inpu
 }
 
 type treeState struct {
-	maxFiles  int
-	maxDepth  int
-	dirsOnly  bool
-	exclude   []string
-	fileCount int
-	dirCount  int
-	truncated bool
+	maxFiles    int
+	maxDepth    int
+	dirsOnly    bool
+	exclude     []string
+	allowedDirs []string
+	fileCount   int
+	dirCount    int
+	truncated   bool
 }
 
 func (s *treeState) totalCount() int {
@@ -89,11 +92,15 @@ func buildCompactTree(ctx context.Context, sb *strings.Builder, dirPath string, 
 			continue
 		}
 		if entry.IsDir() {
+			subPath := filepath.Join(dirPath, name)
+			if !security.IsPathSafe(subPath, state.allowedDirs) {
+				continue
+			}
 			state.dirCount++
 			sb.WriteString(indent)
 			sb.WriteString(name)
 			sb.WriteString("/\n")
-			buildCompactTree(ctx, sb, filepath.Join(dirPath, name), depth+1, state)
+			buildCompactTree(ctx, sb, subPath, depth+1, state)
 		} else if !state.dirsOnly {
 			state.fileCount++
 			sb.WriteString(indent)
