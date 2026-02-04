@@ -72,6 +72,60 @@ func (h *Handler) HandleReadTextFile(ctx context.Context, req *mcp.CallToolReque
 	return &mcp.CallToolResult{}, output, nil
 }
 
+// resolveWriteEncoding returns encoding for writes: explicit > existing file > config default.
+func (h *Handler) resolveWriteEncoding(inputEncoding string, filePath string) (string, error) {
+	// 1. Explicit encoding always wins
+	if inputEncoding != "" {
+		encodingName := strings.ToLower(inputEncoding)
+		if _, ok := encoding.Get(encodingName); !ok {
+			return "", fmt.Errorf("%w: %s. Use list_encodings to see available encodings", ErrEncodingUnsupported, encodingName)
+		}
+		return encodingName, nil
+	}
+
+	// 2. If file exists, detect and preserve its encoding
+	if _, err := os.Stat(filePath); err == nil {
+		detected, err := encoding.DetectFromFile(filePath, "sample")
+		if err == nil && detected.Confidence >= encoding.MinConfidenceThreshold {
+			// Validate the detected encoding is supported
+			if _, ok := encoding.Get(detected.Charset); ok {
+				slog.Debug("preserving existing file encoding", "path", filePath, "encoding", detected.Charset, "confidence", detected.Confidence)
+				return detected.Charset, nil
+			}
+		}
+		// Detection failed or low confidence - fall through to default
+		slog.Debug("encoding detection inconclusive, using default", "path", filePath, "detected", detected.Charset, "confidence", detected.Confidence)
+	}
+
+	// 3. New file or detection failed - use configured default
+	return h.config.DefaultEncoding, nil
+}
+
+// resolveEncodingFromData returns encoding from loaded data: explicit > auto-detect.
+func (h *Handler) resolveEncodingFromData(inputEncoding string, data []byte, filePath string) (string, error) {
+	// 1. Explicit encoding always wins
+	if inputEncoding != "" {
+		encodingName := strings.ToLower(inputEncoding)
+		if _, ok := encoding.Get(encodingName); !ok {
+			return "", fmt.Errorf("%w: %s. Use list_encodings to see available encodings", ErrEncodingUnsupported, encodingName)
+		}
+		return encodingName, nil
+	}
+
+	// 2. Auto-detect from loaded data
+	detected := encoding.Detect(data)
+	if detected.Confidence >= encoding.MinConfidenceThreshold {
+		if _, ok := encoding.Get(detected.Charset); ok {
+			slog.Debug("auto-detected encoding from data", "path", filePath, "encoding", detected.Charset, "confidence", detected.Confidence)
+			return detected.Charset, nil
+		}
+	}
+
+	// 3. Detection failed or low confidence - fall back to UTF-8
+	slog.Debug("encoding detection inconclusive, using utf-8", "path", filePath, "detected", detected.Charset, "confidence", detected.Confidence)
+	return "utf-8", nil
+}
+
 // resolveEncoding returns explicit encoding or auto-detects based on file size.
 func (h *Handler) resolveEncoding(inputEncoding string, filePath string) (encodingResult, error) {
 	result := encodingResult{}

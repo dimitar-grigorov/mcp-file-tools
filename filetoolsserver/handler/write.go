@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -15,15 +14,13 @@ func (h *Handler) HandleWriteFile(ctx context.Context, req *mcp.CallToolRequest,
 		return v.Result, WriteFileOutput{}, nil
 	}
 
-	encodingName := h.config.DefaultEncoding
-	if input.Encoding != "" {
-		encodingName = strings.ToLower(input.Encoding)
+	// Resolve encoding: explicit > preserve existing > configured default
+	encodingName, err := h.resolveWriteEncoding(input.Encoding, v.Path)
+	if err != nil {
+		return errorResult(err.Error()), WriteFileOutput{}, nil
 	}
 
-	enc, ok := encoding.Get(encodingName)
-	if !ok {
-		return errorResult(fmt.Sprintf("unsupported encoding: %s. Use list_encodings to see available encodings.", encodingName)), WriteFileOutput{}, nil
-	}
+	enc, _ := encoding.Get(encodingName) // Already validated by resolveWriteEncoding
 
 	var contentToWrite []byte
 	if encoding.IsUTF8(encodingName) {

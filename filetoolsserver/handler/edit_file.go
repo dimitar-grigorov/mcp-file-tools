@@ -62,13 +62,10 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 		slog.Warn("file has mixed line endings", "path", input.Path, "crlf", lineEndings.CRLFCount, "lf", lineEndings.LFCount)
 	}
 
-	// Determine encoding (auto-detect or use provided)
-	encodingName := strings.ToLower(input.Encoding)
-	if encodingName == "" {
-		// Auto-detect encoding
-		detected := encoding.Detect(data)
-		encodingName = detected.Charset
-		slog.Debug("edit_file: auto-detected encoding", "path", input.Path, "encoding", encodingName, "confidence", detected.Confidence)
+	// Resolve encoding: explicit > auto-detect from data
+	encodingName, err := h.resolveEncodingFromData(input.Encoding, data, input.Path)
+	if err != nil {
+		return errorResult(err.Error()), EditFileOutput{}, nil
 	}
 
 	// Decode file content to UTF-8 for matching
@@ -76,10 +73,7 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 	if encoding.IsUTF8(encodingName) {
 		content = string(data)
 	} else {
-		enc, ok := encoding.Get(encodingName)
-		if !ok {
-			return errorResult(fmt.Sprintf("unsupported encoding: %s", encodingName)), EditFileOutput{}, nil
-		}
+		enc, _ := encoding.Get(encodingName) // Already validated by resolveEncodingFromData
 		decoder := enc.NewDecoder()
 		decoded, err := decoder.Bytes(data)
 		if err != nil {
