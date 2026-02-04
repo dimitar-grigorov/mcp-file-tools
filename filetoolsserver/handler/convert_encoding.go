@@ -95,17 +95,12 @@ func (h *Handler) HandleConvertEncoding(ctx context.Context, req *mcp.CallToolRe
 		targetData = encoded
 	}
 
-	// Create backup if requested (preserve original permissions)
 	var backupPath string
 	if input.Backup {
 		backupPath = v.Path + ".bak"
-		if err := os.WriteFile(backupPath, data, originalMode); err != nil {
-			return errorResult(fmt.Sprintf("failed to create backup: %v", err)), ConvertEncodingOutput{}, nil
-		}
 	}
 
-	// Write converted file (preserve original permissions)
-	if err := os.WriteFile(v.Path, targetData, originalMode); err != nil {
+	if err := atomicWriteWithBackup(v.Path, targetData, originalMode, backupPath); err != nil {
 		return errorResult(fmt.Sprintf("failed to write converted file: %v", err)), ConvertEncodingOutput{}, nil
 	}
 

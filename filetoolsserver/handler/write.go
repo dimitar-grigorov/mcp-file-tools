@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
@@ -39,7 +38,7 @@ func (h *Handler) HandleWriteFile(ctx context.Context, req *mcp.CallToolRequest,
 	}
 
 	mode := getFileMode(v.Path)
-	if err := os.WriteFile(v.Path, contentToWrite, mode); err != nil {
+	if err := atomicWriteFile(v.Path, contentToWrite, mode); err != nil {
 		return errorResult(fmt.Sprintf("failed to write file: %v", err)), WriteFileOutput{}, nil
 	}
 
