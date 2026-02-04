@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/dimitar-grigorov/mcp-file-tools/internal/security"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -25,7 +26,7 @@ func (h *Handler) HandleSearchFiles(ctx context.Context, req *mcp.CallToolReques
 	if !stat.IsDir() {
 		return errorResult(ErrPathMustBeDirectory.Error()), SearchFilesOutput{}, nil
 	}
-	results, err := searchFiles(ctx, v.Path, input.Pattern, input.ExcludePatterns)
+	results, err := searchFiles(ctx, v.Path, input.Pattern, input.ExcludePatterns, h.GetAllowedDirectories())
 	if err != nil {
 		if err == context.Canceled || err == context.DeadlineExceeded {
 			return errorResult("search cancelled"), SearchFilesOutput{}, nil
@@ -36,7 +37,7 @@ func (h *Handler) HandleSearchFiles(ctx context.Context, req *mcp.CallToolReques
 }
 
 // searchFiles recursively searches for files matching the pattern
-func searchFiles(ctx context.Context, rootPath, pattern string, excludePatterns []string) ([]string, error) {
+func searchFiles(ctx context.Context, rootPath, pattern string, excludePatterns, allowedDirs []string) ([]string, error) {
 	var results []string
 	err := filepath.Walk(rootPath, func(fullPath string, info os.FileInfo, err error) error {
 		select {
@@ -46,6 +47,11 @@ func searchFiles(ctx context.Context, rootPath, pattern string, excludePatterns 
 		}
 		if err != nil {
 			return nil
+		}
+		if info.IsDir() && fullPath != rootPath {
+			if !security.IsPathSafe(fullPath, allowedDirs) {
+				return filepath.SkipDir
+			}
 		}
 		relativePath, err := filepath.Rel(rootPath, fullPath)
 		if err != nil {

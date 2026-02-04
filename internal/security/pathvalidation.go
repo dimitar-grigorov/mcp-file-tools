@@ -130,6 +130,30 @@ func normalizePath(p string) string {
 	return p
 }
 
+// IsPathSafe checks if a path (resolving symlinks) is within allowed directories.
+func IsPathSafe(path string, allowedDirs []string) bool {
+	if path == "" || len(allowedDirs) == 0 {
+		return false
+	}
+
+	resolved, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return false
+	}
+
+	resolvedAllowedDirs := make([]string, 0, len(allowedDirs))
+	for _, dir := range allowedDirs {
+		resolvedDir, err := filepath.EvalSymlinks(dir)
+		if err == nil {
+			resolvedAllowedDirs = append(resolvedAllowedDirs, normalizePath(resolvedDir))
+		} else {
+			resolvedAllowedDirs = append(resolvedAllowedDirs, normalizePath(dir))
+		}
+	}
+
+	return IsPathWithinAllowedDirectories(resolved, resolvedAllowedDirs)
+}
+
 // ExpandHome expands the ~ prefix to the user's home directory.
 func ExpandHome(path string) string {
 	if strings.HasPrefix(path, "~/") || path == "~" {
