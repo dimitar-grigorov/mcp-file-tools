@@ -38,7 +38,7 @@ func (h *Handler) HandleGrep(ctx context.Context, req *mcp.CallToolRequest, inpu
 	if maxMatches <= 0 {
 		maxMatches = defaultMaxMatches
 	}
-	files := h.collectFiles(input.Paths, input.Include, input.Exclude)
+	files := h.collectFiles(ctx, input.Paths, input.Include, input.Exclude)
 	if len(files) == 0 {
 		return &mcp.CallToolResult{}, GrepOutput{Matches: []GrepMatch{}, FilesSearched: 0}, nil
 	}
@@ -61,11 +61,17 @@ func compilePattern(pattern string, caseSensitive *bool) (*regexp.Regexp, error)
 }
 
 // collectFiles gathers all files to search from the given paths.
-func (h *Handler) collectFiles(paths []string, include, exclude string) []string {
+func (h *Handler) collectFiles(ctx context.Context, paths []string, include, exclude string) []string {
 	var files []string
 	seen := make(map[string]bool)
 	allowedDirs := h.GetAllowedDirectories()
 	for _, path := range paths {
+		// Check for cancellation between paths
+		select {
+		case <-ctx.Done():
+			return files
+		default:
+		}
 		v := h.ValidatePath(path)
 		if !v.Ok() {
 			continue
@@ -76,7 +82,14 @@ func (h *Handler) collectFiles(paths []string, include, exclude string) []string
 		}
 		if info.IsDir() {
 			filepath.WalkDir(v.Path, func(p string, d fs.DirEntry, err error) error {
+				// Check for cancellation during walk
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				default:
+				}
 				if err != nil {
+					slog.Debug("skipping path due to error", "path", p, "error", err)
 					return nil
 				}
 				if d.IsDir() {

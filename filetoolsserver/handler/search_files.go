@@ -2,6 +2,8 @@ package handler
 
 import (
 	"context"
+	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -39,16 +41,17 @@ func (h *Handler) HandleSearchFiles(ctx context.Context, req *mcp.CallToolReques
 // searchFiles recursively searches for files matching the pattern
 func searchFiles(ctx context.Context, rootPath, pattern string, excludePatterns, allowedDirs []string) ([]string, error) {
 	var results []string
-	err := filepath.Walk(rootPath, func(fullPath string, info os.FileInfo, err error) error {
+	err := filepath.WalkDir(rootPath, func(fullPath string, d fs.DirEntry, err error) error {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
 		}
 		if err != nil {
+			slog.Debug("skipping path due to error", "path", fullPath, "error", err)
 			return nil
 		}
-		if info.IsDir() && fullPath != rootPath {
+		if d.IsDir() && fullPath != rootPath {
 			if !security.IsPathSafe(fullPath, allowedDirs) {
 				return filepath.SkipDir
 			}
@@ -62,7 +65,7 @@ func searchFiles(ctx context.Context, rootPath, pattern string, excludePatterns,
 		}
 		relativePathNorm := filepath.ToSlash(relativePath)
 		if shouldExcludePath(relativePathNorm, excludePatterns) {
-			if info.IsDir() {
+			if d.IsDir() {
 				return filepath.SkipDir
 			}
 			return nil
