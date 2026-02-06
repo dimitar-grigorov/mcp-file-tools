@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime"
 	"sync"
 
 	"github.com/dimitar-grigorov/mcp-file-tools/internal/security"
@@ -18,23 +19,40 @@ func (h *Handler) HandleReadMultipleFiles(ctx context.Context, req *mcp.CallTool
 		return errorResult("paths array is required and must contain at least one path"), ReadMultipleFilesOutput{}, nil
 	}
 	results := make([]FileReadResult, len(input.Paths))
-	var wg sync.WaitGroup
-	for i, path := range input.Paths {
-		wg.Add(1)
-		go func(idx int, filePath string) {
-			defer wg.Done()
-			select {
-			case <-ctx.Done():
-				results[idx] = FileReadResult{
-					Path:      filePath,
-					Error:     "operation cancelled",
-					ErrorCode: ErrCodeOperationFailed,
-				}
-			default:
-				results[idx] = h.readSingleFile(filePath, input.Encoding)
-			}
-		}(i, path)
+
+	numWorkers := runtime.NumCPU()
+	if numWorkers > len(input.Paths) {
+		numWorkers = len(input.Paths)
 	}
+
+	type job struct {
+		idx      int
+		filePath string
+	}
+	jobs := make(chan job, len(input.Paths))
+	var wg sync.WaitGroup
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := range jobs {
+				select {
+				case <-ctx.Done():
+					results[j.idx] = FileReadResult{
+						Path:      j.filePath,
+						Error:     "operation cancelled",
+						ErrorCode: ErrCodeOperationFailed,
+					}
+				default:
+					results[j.idx] = h.readSingleFile(j.filePath, input.Encoding)
+				}
+			}
+		}()
+	}
+	for i, path := range input.Paths {
+		jobs <- job{idx: i, filePath: path}
+	}
+	close(jobs)
 	wg.Wait()
 
 	var successCount, errorCount int
