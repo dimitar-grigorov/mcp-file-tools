@@ -47,14 +47,8 @@ func TestWithRecovery_Panic(t *testing.T) {
 	wrapped := WithRecovery(handler)
 	result, _, err := wrapped(context.Background(), &mcp.CallToolRequest{}, testInput{Value: "test"})
 
-	if err == nil {
-		t.Error("expected error from panic recovery")
-	}
-	if !strings.Contains(err.Error(), "panic recovered") {
-		t.Errorf("expected panic recovery message, got %v", err)
-	}
-	if !strings.Contains(err.Error(), "test panic") {
-		t.Errorf("expected original panic message, got %v", err)
+	if err != nil {
+		t.Errorf("expected no error (panic handled via result), got %v", err)
 	}
 	if result == nil || !result.IsError {
 		t.Error("expected error result")
@@ -69,9 +63,8 @@ func TestWithRecovery_PanicWithNilValue(t *testing.T) {
 	wrapped := WithRecovery(handler)
 	result, _, err := wrapped(context.Background(), &mcp.CallToolRequest{}, testInput{Value: "test"})
 
-	// panic(nil) should still be recovered
-	if err == nil {
-		t.Error("expected error from panic recovery")
+	if err != nil {
+		t.Errorf("expected no error (panic handled via result), got %v", err)
 	}
 	if result == nil || !result.IsError {
 		t.Error("expected error result")
@@ -156,19 +149,19 @@ func TestWrap_CombinesMiddleware(t *testing.T) {
 	result, _, err := wrapped(context.Background(), &mcp.CallToolRequest{}, testInput{})
 
 	// Should recover from panic
-	if err == nil {
-		t.Error("expected error from panic recovery")
+	if err != nil {
+		t.Errorf("expected no error (panic handled via result), got %v", err)
 	}
 	if result == nil || !result.IsError {
 		t.Error("expected error result")
 	}
 
-	// Should log the error (panic causes error return which triggers Error log)
+	// Logging middleware sees IsError result, logs as warning
 	logOutput := buf.String()
 	if !strings.Contains(logOutput, "tool_call_start") {
 		t.Error("expected tool_call_start log")
 	}
-	if !strings.Contains(logOutput, "tool_call_error") {
-		t.Error("expected tool_call_error log")
+	if !strings.Contains(logOutput, "tool_call_failed") {
+		t.Error("expected tool_call_failed log")
 	}
 }
