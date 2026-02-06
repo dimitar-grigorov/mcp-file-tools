@@ -46,14 +46,13 @@ func (h *Handler) HandleReadTextFile(ctx context.Context, req *mcp.CallToolReque
 		return errorResult(fmt.Sprintf("failed to decode file content: %v", err)), ReadTextFileOutput{}, nil
 	}
 
-	lines := strings.Split(content, "\n")
-	totalLines := len(lines)
+	totalLines := strings.Count(content, "\n") + 1
 
 	var startLine, endLine int
 	if input.Offset != nil || input.Limit != nil {
+		lines := strings.Split(content, "\n")
 		content, startLine, endLine = applyOffsetLimit(lines, input.Offset, input.Limit)
 	} else {
-		content = strings.Join(lines, "\n")
 		startLine = 1
 		endLine = totalLines
 	}
