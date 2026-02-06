@@ -407,6 +407,67 @@ func TestExpandHome(t *testing.T) {
 	}
 }
 
+func FuzzIsPathWithinAllowedDirectories(f *testing.F) {
+	seeds := []string{
+		"/home/user/project/file.txt",
+		"/home/user/project/../../../etc/passwd",
+		"/home/user/project2/file.txt",
+		"/home/user/project\x00/etc/passwd",
+		"",
+		"./relative",
+		"../escape",
+		"/home/user/project/./file.txt",
+		"/home/user/project//double//slash",
+		"/home/user/project/\t",
+		"/home/user/project/ ",
+		"\"/home/user/project/quoted\"",
+	}
+	for _, s := range seeds {
+		f.Add(s)
+	}
+
+	allowedDir := "/home/user/project"
+	allowedDirWithSep := allowedDir + "/"
+
+	f.Fuzz(func(t *testing.T, path string) {
+		result := IsPathWithinAllowedDirectories(path, []string{allowedDir})
+
+		if !result {
+			return
+		}
+
+		// Invariant: accepted paths must be within allowed directory
+		cleaned := normalizePath(filepath.Clean(path))
+		if cleaned != allowedDir && !hasPathPrefix(cleaned, allowedDirWithSep) {
+			t.Errorf("path %q was allowed but cleaned path %q is not within %q", path, cleaned, allowedDir)
+		}
+	})
+}
+
+func FuzzNormalizePath(f *testing.F) {
+	seeds := []string{
+		"C:\\Users\\test",
+		"/home/user",
+		"\"quoted path\"",
+		"  spaces  ",
+		"\x00null",
+		"",
+		"~/home",
+		"c:\\mixed/separators\\path",
+	}
+	for _, s := range seeds {
+		f.Add(s)
+	}
+
+	f.Fuzz(func(t *testing.T, path string) {
+		_ = normalizePath(path) // must not panic
+	})
+}
+
+func hasPathPrefix(path, prefix string) bool {
+	return len(path) >= len(prefix) && path[:len(prefix)] == prefix
+}
+
 func TestNormalizeAllowedDirs(t *testing.T) {
 	tempDir := t.TempDir()
 	existingDir := filepath.Join(tempDir, "existing")
