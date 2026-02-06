@@ -138,13 +138,17 @@ func shouldIncludeFile(path string, include, exclude string) bool {
 }
 
 // searchFiles searches all files concurrently using a worker pool.
+// Uses a cancellable context to stop workers early when maxMatches is reached.
 func (h *Handler) searchFiles(ctx context.Context, files []string, re *regexp.Regexp, input GrepInput, maxMatches int, maxFileSize int64) ([]GrepMatch, int, bool) {
 	numWorkers := runtime.NumCPU()
 	if numWorkers > len(files) {
 		numWorkers = len(files)
 	}
-	jobs := make(chan string, len(files))
-	results := make(chan []GrepMatch, len(files))
+	searchCtx, cancelSearch := context.WithCancel(ctx)
+	defer cancelSearch()
+
+	jobs := make(chan string, numWorkers)
+	results := make(chan []GrepMatch, numWorkers)
 	var filesMatched int
 	var mu sync.Mutex
 	// Start workers
@@ -155,7 +159,7 @@ func (h *Handler) searchFiles(ctx context.Context, files []string, re *regexp.Re
 			defer wg.Done()
 			for path := range jobs {
 				select {
-				case <-ctx.Done():
+				case <-searchCtx.Done():
 					results <- nil
 				default:
 					matches := searchSingleFile(path, re, input, maxFileSize)
@@ -169,23 +173,30 @@ func (h *Handler) searchFiles(ctx context.Context, files []string, re *regexp.Re
 			}
 		}()
 	}
-	// Send all jobs
-	for _, file := range files {
-		jobs <- file
-	}
-	close(jobs)
+	// Send jobs, stop early if search is cancelled
+	go func() {
+		defer close(jobs)
+		for _, file := range files {
+			select {
+			case <-searchCtx.Done():
+				return
+			case jobs <- file:
+			}
+		}
+	}()
 	// Close results when workers done
 	go func() {
 		wg.Wait()
 		close(results)
 	}()
-	// Collect results
+	// Collect results, cancel workers when limit reached
 	var allMatches []GrepMatch
 	truncated := false
 	for fileMatches := range results {
 		for _, m := range fileMatches {
 			if len(allMatches) >= maxMatches {
 				truncated = true
+				cancelSearch()
 				break
 			}
 			allMatches = append(allMatches, m)

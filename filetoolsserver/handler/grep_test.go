@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -220,6 +221,35 @@ func TestHandleGrep_CP1251Encoding(t *testing.T) {
 	}
 	if output.TotalMatches != 1 {
 		t.Errorf("expected 1 match with encoding detection, got %d", output.TotalMatches)
+	}
+}
+
+func TestHandleGrep_MaxMatchesMultipleFiles(t *testing.T) {
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+
+	// Create many files, each with a match
+	for i := 0; i < 50; i++ {
+		path := filepath.Join(tempDir, fmt.Sprintf("file%03d.txt", i))
+		os.WriteFile(path, []byte("match line\n"), 0644)
+	}
+
+	result, output, err := h.HandleGrep(context.Background(), nil, GrepInput{
+		Pattern:    "match",
+		Paths:      []string{tempDir},
+		MaxMatches: 5,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.IsError {
+		t.Error("expected success")
+	}
+	if output.TotalMatches != 5 {
+		t.Errorf("expected 5 matches (max), got %d", output.TotalMatches)
+	}
+	if !output.Truncated {
+		t.Error("expected truncated to be true")
 	}
 }
 
