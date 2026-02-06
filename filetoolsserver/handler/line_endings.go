@@ -43,47 +43,6 @@ func DetectLineEndings(data []byte) LineEndingInfo {
 	return info
 }
 
-// DetectLineEndingsFromReader detects line endings by streaming from a reader.
-// Uses buffered reading to avoid loading entire file into memory.
-func DetectLineEndingsFromReader(r io.Reader) (LineEndingInfo, error) {
-	info := LineEndingInfo{}
-	br := bufio.NewReader(r)
-	prevWasCR := false
-
-	for {
-		b, err := br.ReadByte()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return info, err
-		}
-
-		if b == '\n' {
-			if prevWasCR {
-				info.CRLFCount++
-			} else {
-				info.LFCount++
-			}
-		}
-		prevWasCR = (b == '\r')
-	}
-
-	info.Style = determineStyle(info.CRLFCount, info.LFCount)
-	return info, nil
-}
-
-// DetectLineEndingsFromFile detects line endings by streaming from a file.
-func DetectLineEndingsFromFile(path string) (LineEndingInfo, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return LineEndingInfo{}, err
-	}
-	defer f.Close()
-
-	return DetectLineEndingsFromReader(f)
-}
-
 // determineStyle returns the line ending style based on counts.
 func determineStyle(crlfCount, lfCount int) string {
 	switch {

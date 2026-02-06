@@ -8,13 +8,11 @@ import (
 	"strings"
 )
 
-// IsPathWithinAllowedDirectories checks if the given absolute path is within any of the allowed directories.
 func IsPathWithinAllowedDirectories(absolutePath string, allowedDirs []string) bool {
 	if absolutePath == "" || len(allowedDirs) == 0 {
 		return false
 	}
 
-	// Prevent null byte injection
 	if strings.Contains(absolutePath, "\x00") {
 		return false
 	}
@@ -33,7 +31,6 @@ func IsPathWithinAllowedDirectories(absolutePath string, allowedDirs []string) b
 			return true
 		}
 
-		// Prevent prefix attacks: /project vs /project2
 		sep := string(filepath.Separator)
 		if strings.HasPrefix(normalized, cleanAllowed+sep) {
 			return true
@@ -43,8 +40,7 @@ func IsPathWithinAllowedDirectories(absolutePath string, allowedDirs []string) b
 	return false
 }
 
-// ValidatePath validates and resolves a path, ensuring it's within allowed directories.
-// Returns the validated absolute path or an error if access is denied.
+// ValidatePath resolves a path and ensures it's within allowed directories.
 func ValidatePath(requestedPath string, allowedDirs []string) (string, error) {
 	if len(allowedDirs) == 0 {
 		return "", ErrNoAllowedDirs
@@ -69,7 +65,6 @@ func ValidatePath(requestedPath string, allowedDirs []string) (string, error) {
 		return "", fmt.Errorf("%w: %s", ErrPathDenied, absolute)
 	}
 
-	// Resolve allowed directories for symlink comparison
 	resolvedAllowedDirs := make([]string, 0, len(allowedDirs))
 	for _, dir := range allowedDirs {
 		resolvedDir, err := filepath.EvalSymlinks(dir)
@@ -83,12 +78,10 @@ func ValidatePath(requestedPath string, allowedDirs []string) (string, error) {
 	realPath, err := filepath.EvalSymlinks(absolute)
 	if err != nil {
 		if os.IsNotExist(err) {
-			// File doesn't exist - validate parent directory
 			parentDir := filepath.Dir(absolute)
 			realParent, err := filepath.EvalSymlinks(parentDir)
 			if err != nil {
 				if os.IsNotExist(err) {
-					// Parent also doesn't exist - check if path would be valid
 					if IsPathWithinAllowedDirectories(normalized, resolvedAllowedDirs) {
 						return absolute, nil
 					}
@@ -105,7 +98,6 @@ func ValidatePath(requestedPath string, allowedDirs []string) (string, error) {
 		return "", fmt.Errorf("failed to resolve path: %w", err)
 	}
 
-	// Validate symlink target
 	normalizedReal := normalizePath(realPath)
 	if !IsPathWithinAllowedDirectories(normalizedReal, resolvedAllowedDirs) {
 		return "", fmt.Errorf("%w: %s", ErrSymlinkDenied, realPath)
@@ -114,15 +106,9 @@ func ValidatePath(requestedPath string, allowedDirs []string) (string, error) {
 	return realPath, nil
 }
 
-// normalizePath normalizes a path for cross-platform comparison.
 func normalizePath(p string) string {
-	// Remove quotes and trim
 	p = strings.Trim(p, "\"' \t\n")
-
-	// Normalize separators
 	p = filepath.Clean(p)
-
-	// On Windows: uppercase drive letter for consistent comparison
 	if runtime.GOOS == "windows" && len(p) >= 2 && p[1] == ':' {
 		p = strings.ToUpper(p[:1]) + p[1:]
 	}
@@ -130,9 +116,23 @@ func normalizePath(p string) string {
 	return p
 }
 
-// IsPathSafe checks if a path (resolving symlinks) is within allowed directories.
-func IsPathSafe(path string, allowedDirs []string) bool {
-	if path == "" || len(allowedDirs) == 0 {
+// ResolveAllowedDirs resolves symlinks in allowed directories once.
+func ResolveAllowedDirs(allowedDirs []string) []string {
+	resolved := make([]string, 0, len(allowedDirs))
+	for _, dir := range allowedDirs {
+		resolvedDir, err := filepath.EvalSymlinks(dir)
+		if err == nil {
+			resolved = append(resolved, normalizePath(resolvedDir))
+		} else {
+			resolved = append(resolved, normalizePath(dir))
+		}
+	}
+	return resolved
+}
+
+// IsPathSafeResolved checks if a path (after resolving symlinks) is within pre-resolved allowed dirs.
+func IsPathSafeResolved(path string, resolvedAllowedDirs []string) bool {
+	if path == "" || len(resolvedAllowedDirs) == 0 {
 		return false
 	}
 
@@ -141,25 +141,14 @@ func IsPathSafe(path string, allowedDirs []string) bool {
 		return false
 	}
 
-	resolvedAllowedDirs := make([]string, 0, len(allowedDirs))
-	for _, dir := range allowedDirs {
-		resolvedDir, err := filepath.EvalSymlinks(dir)
-		if err == nil {
-			resolvedAllowedDirs = append(resolvedAllowedDirs, normalizePath(resolvedDir))
-		} else {
-			resolvedAllowedDirs = append(resolvedAllowedDirs, normalizePath(dir))
-		}
-	}
-
 	return IsPathWithinAllowedDirectories(resolved, resolvedAllowedDirs)
 }
 
-// ExpandHome expands the ~ prefix to the user's home directory.
 func ExpandHome(path string) string {
 	if strings.HasPrefix(path, "~/") || path == "~" {
 		home, err := os.UserHomeDir()
 		if err != nil {
-			return path // Return unchanged if home dir cannot be determined
+			return path
 		}
 		if path == "~" {
 			return home
@@ -169,7 +158,6 @@ func ExpandHome(path string) string {
 	return path
 }
 
-// NormalizeAllowedDirs normalizes and validates a list of allowed directories.
 func NormalizeAllowedDirs(dirs []string) ([]string, error) {
 	var normalized []string
 	for _, dir := range dirs {

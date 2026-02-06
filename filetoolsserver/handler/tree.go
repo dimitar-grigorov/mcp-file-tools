@@ -36,7 +36,7 @@ func (h *Handler) HandleTree(ctx context.Context, req *mcp.CallToolRequest, inpu
 		maxDepth:    input.MaxDepth,
 		dirsOnly:    input.DirsOnly,
 		exclude:     input.Exclude,
-		allowedDirs: h.GetAllowedDirectories(),
+		allowedDirs: h.ResolvedAllowedDirs(),
 		fileCount:   0,
 		dirCount:    0,
 		truncated:   false,
@@ -95,7 +95,7 @@ func buildCompactTree(ctx context.Context, sb *strings.Builder, dirPath string, 
 		}
 		if entry.IsDir() {
 			subPath := filepath.Join(dirPath, name)
-			if !security.IsPathSafe(subPath, state.allowedDirs) {
+			if !security.IsPathSafeResolved(subPath, state.allowedDirs) {
 				continue
 			}
 			state.dirCount++

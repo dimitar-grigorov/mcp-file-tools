@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
@@ -122,44 +121,6 @@ func TestConvertLineEndings(t *testing.T) {
 				t.Errorf("ConvertLineEndings(%q, %q) = %q, want %q", tt.input, tt.target, got, tt.want)
 			}
 		})
-	}
-}
-
-func TestDetectLineEndingsFromReader(t *testing.T) {
-	// Test reader wrapper works - detection logic is tested in TestDetectLineEndings
-	r := bytes.NewReader([]byte("line1\r\nline2\r\n"))
-	got, err := DetectLineEndingsFromReader(r)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if got.Style != LineEndingCRLF {
-		t.Errorf("Style = %q, want %q", got.Style, LineEndingCRLF)
-	}
-	if got.CRLFCount != 2 {
-		t.Errorf("CRLFCount = %d, want 2", got.CRLFCount)
-	}
-}
-
-func TestDetectLineEndingsFromFile(t *testing.T) {
-	tempDir := t.TempDir()
-	path := filepath.Join(tempDir, "test.txt")
-	if err := os.WriteFile(path, []byte("line1\r\nline2\r\n"), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	got, err := DetectLineEndingsFromFile(path)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if got.Style != LineEndingCRLF {
-		t.Errorf("Style = %q, want %q", got.Style, LineEndingCRLF)
-	}
-}
-
-func TestDetectLineEndingsFromFile_NotFound(t *testing.T) {
-	_, err := DetectLineEndingsFromFile("/nonexistent/file.txt")
-	if err == nil {
-		t.Error("expected error for nonexistent file")
 	}
 }
 

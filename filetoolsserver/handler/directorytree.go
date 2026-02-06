@@ -25,7 +25,8 @@ func (h *Handler) HandleDirectoryTree(ctx context.Context, req *mcp.CallToolRequ
 	if !stat.IsDir() {
 		return errorResult(ErrPathMustBeDirectory.Error()), DirectoryTreeOutput{}, nil
 	}
-	tree, err := buildTree(ctx, v.Path, input.ExcludePatterns, h.GetAllowedDirectories())
+	resolvedDirs := h.ResolvedAllowedDirs()
+	tree, err := buildTree(ctx, v.Path, input.ExcludePatterns, resolvedDirs)
 	if err != nil {
 		if err == context.Canceled || err == context.DeadlineExceeded {
 			return errorResult("operation cancelled"), DirectoryTreeOutput{}, nil
@@ -61,7 +62,7 @@ func buildTree(ctx context.Context, dirPath string, excludePatterns []string, al
 		if entry.IsDir() {
 			treeEntry.Type = "directory"
 			childPath := filepath.Join(dirPath, name)
-			if !security.IsPathSafe(childPath, allowedDirs) {
+			if !security.IsPathSafeResolved(childPath, allowedDirs) {
 				continue
 			}
 			children, err := buildTree(ctx, childPath, excludePatterns, allowedDirs)

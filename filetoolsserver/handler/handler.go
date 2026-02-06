@@ -48,13 +48,18 @@ func NewHandler(allowedDirs []string, opts ...Option) *Handler {
 	return h
 }
 
-// GetAllowedDirectories returns a copy of the allowed directories
+// GetAllowedDirectories returns a copy of the allowed directories.
 func (h *Handler) GetAllowedDirectories() []string {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	dirs := make([]string, len(h.allowedDirs))
 	copy(dirs, h.allowedDirs)
 	return dirs
+}
+
+// ResolvedAllowedDirs returns allowed directories with symlinks resolved.
+func (h *Handler) ResolvedAllowedDirs() []string {
+	return security.ResolveAllowedDirs(h.GetAllowedDirectories())
 }
 
 // UpdateAllowedDirectories updates the allowed directories (for MCP Roots protocol)

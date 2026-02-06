@@ -35,7 +35,7 @@ func (h *Handler) HandleSearchFiles(ctx context.Context, req *mcp.CallToolReques
 	if maxResults <= 0 {
 		maxResults = defaultMaxResults
 	}
-	results, truncated, err := searchFiles(ctx, v.Path, input.Pattern, input.ExcludePatterns, h.GetAllowedDirectories(), maxResults)
+	results, truncated, err := searchFiles(ctx, v.Path, input.Pattern, input.ExcludePatterns, h.ResolvedAllowedDirs(), maxResults)
 	if err != nil {
 		if err == context.Canceled || err == context.DeadlineExceeded {
 			return errorResult("search cancelled"), SearchFilesOutput{}, nil
@@ -62,7 +62,7 @@ func searchFiles(ctx context.Context, rootPath, pattern string, excludePatterns,
 			return nil
 		}
 		if d.IsDir() && fullPath != rootPath {
-			if !security.IsPathSafe(fullPath, allowedDirs) {
+			if !security.IsPathSafeResolved(fullPath, allowedDirs) {
 				return filepath.SkipDir
 			}
 		}

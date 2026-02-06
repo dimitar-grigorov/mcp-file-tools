@@ -64,7 +64,7 @@ func compilePattern(pattern string, caseSensitive *bool) (*regexp.Regexp, error)
 func (h *Handler) collectFiles(ctx context.Context, paths []string, include, exclude string) []string {
 	var files []string
 	seen := make(map[string]bool)
-	allowedDirs := h.GetAllowedDirectories()
+	allowedDirs := h.ResolvedAllowedDirs()
 	for _, path := range paths {
 		// Check for cancellation between paths
 		select {
@@ -93,7 +93,7 @@ func (h *Handler) collectFiles(ctx context.Context, paths []string, include, exc
 					return nil
 				}
 				if d.IsDir() {
-					if !security.IsPathSafe(p, allowedDirs) {
+					if !security.IsPathSafeResolved(p, allowedDirs) {
 						return filepath.SkipDir
 					}
 					return nil
