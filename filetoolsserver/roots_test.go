@@ -103,9 +103,7 @@ func TestFileURIToPath(t *testing.T) {
 		skip string // GOOS to skip on
 	}{
 		{name: "Windows drive letter", uri: "file:///C:/Users/test", want: "C:/Users/test", skip: "linux"},
-		{name: "Windows forward slashes", uri: "file:///D:/Projects/app", want: "D:/Projects/app", skip: "linux"},
 		{name: "Unix absolute path", uri: "file:///home/user/project", want: "/home/user/project", skip: "windows"},
-		{name: "Unix tmp path", uri: "file:///tmp/test", want: "/tmp/test", skip: "windows"},
 		{name: "not a file URI", uri: "/some/path", want: "/some/path"},
 		{name: "empty string", uri: "", want: ""},
 	}

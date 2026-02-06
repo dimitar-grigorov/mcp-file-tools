@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestHandleCopyFile_Success(t *testing.T) {
@@ -15,6 +16,10 @@ func TestHandleCopyFile_Success(t *testing.T) {
 	dst := filepath.Join(tempDir, "dest.txt")
 	os.WriteFile(src, []byte("content"), 0644)
 
+	// Set a specific mod time on source to verify preservation
+	fixedTime := time.Date(2020, 6, 15, 12, 0, 0, 0, time.UTC)
+	os.Chtimes(src, fixedTime, fixedTime)
+
 	result, _, err := h.HandleCopyFile(context.Background(), nil, CopyFileInput{Source: src, Destination: dst})
 	if err != nil {
 		t.Fatal(err)
@@ -23,18 +28,22 @@ func TestHandleCopyFile_Success(t *testing.T) {
 		t.Error("expected success")
 	}
 
-	// Source should still exist
 	if _, err := os.Stat(src); err != nil {
 		t.Error("source should still exist")
 	}
 
-	// Destination should exist with same content
 	content, err := os.ReadFile(dst)
 	if err != nil {
 		t.Error("destination should exist")
 	}
 	if string(content) != "content" {
 		t.Errorf("wrong content: %s", content)
+	}
+
+	// Verify mod time is preserved
+	dstInfo, _ := os.Stat(dst)
+	if !dstInfo.ModTime().Equal(fixedTime) {
+		t.Errorf("mod time not preserved: got %v, want %v", dstInfo.ModTime(), fixedTime)
 	}
 }
 

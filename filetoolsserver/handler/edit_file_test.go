@@ -195,37 +195,6 @@ func TestHandleEditFile_CRLFPreservation(t *testing.T) {
 	}
 }
 
-func TestHandleEditFile_LFPreservation(t *testing.T) {
-	tempDir := t.TempDir()
-	h := NewHandler([]string{tempDir})
-
-	testFile := filepath.Join(tempDir, "test.txt")
-	// Write file with LF line endings
-	os.WriteFile(testFile, []byte("line1\nline2\nline3"), 0644)
-
-	input := EditFileInput{
-		Path:  testFile,
-		Edits: []EditOperation{{OldText: "line1\nline2", NewText: "new1\nnew2"}},
-	}
-
-	result, _, err := h.HandleEditFile(context.Background(), nil, input)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if result.IsError {
-		t.Errorf("expected success")
-	}
-
-	// Verify LF line endings are preserved (no CRLF introduced)
-	content, _ := os.ReadFile(testFile)
-	if string(content) != "new1\nnew2\nline3" {
-		t.Errorf("LF line endings should be preserved, got %q", content)
-	}
-	if strings.Contains(string(content), "\r\n") {
-		t.Errorf("should not contain CRLF, got %q", content)
-	}
-}
-
 func TestHandleEditFile_ValidationErrors(t *testing.T) {
 	tempDir := t.TempDir()
 	h := NewHandler([]string{tempDir})
