@@ -45,26 +45,45 @@ func (h *Handler) HandleCopyFile(ctx context.Context, req *mcp.CallToolRequest, 
 	return &mcp.CallToolResult{}, CopyFileOutput{Message: message}, nil
 }
 
-func copyFile(src, dst string, mode os.FileMode, modTime time.Time) error {
+func copyFile(src, dst string, mode os.FileMode, modTime time.Time) (err error) {
+	tempPath, err := generateTempPath(dst)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err != nil {
+			os.Remove(tempPath)
+		}
+	}()
+
 	srcFile, err := os.Open(src)
 	if err != nil {
 		return err
 	}
 	defer srcFile.Close()
 
-	dstFile, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, mode)
+	tmpFile, err := os.OpenFile(tempPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, mode)
 	if err != nil {
 		return err
 	}
-	defer dstFile.Close()
+	defer tmpFile.Close()
 
-	if _, err := io.Copy(dstFile, srcFile); err != nil {
+	if _, err = io.Copy(tmpFile, srcFile); err != nil {
 		return err
 	}
 
-	if err := dstFile.Sync(); err != nil {
+	if err = tmpFile.Sync(); err != nil {
 		return err
 	}
 
-	return os.Chtimes(dst, modTime, modTime)
+	if err = tmpFile.Close(); err != nil {
+		return err
+	}
+
+	if err = os.Chtimes(tempPath, modTime, modTime); err != nil {
+		return err
+	}
+
+	return os.Rename(tempPath, dst)
 }
