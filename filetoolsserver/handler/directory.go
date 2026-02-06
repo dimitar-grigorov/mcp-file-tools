@@ -26,7 +26,7 @@ func (h *Handler) HandleListDirectory(ctx context.Context, req *mcp.CallToolRequ
 		return errorResult(fmt.Sprintf("failed to read directory: %v", err)), ListDirectoryOutput{}, nil
 	}
 
-	var files []string
+	files := make([]string, 0, len(entries))
 	for _, entry := range entries {
 		matched, err := filepath.Match(pattern, entry.Name())
 		if err != nil {
