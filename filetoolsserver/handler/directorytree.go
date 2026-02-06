@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/dimitar-grigorov/mcp-file-tools/internal/security"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -24,7 +25,7 @@ func (h *Handler) HandleDirectoryTree(ctx context.Context, req *mcp.CallToolRequ
 	if !stat.IsDir() {
 		return errorResult(ErrPathMustBeDirectory.Error()), DirectoryTreeOutput{}, nil
 	}
-	tree, err := buildTree(ctx, v.Path, input.ExcludePatterns)
+	tree, err := buildTree(ctx, v.Path, input.ExcludePatterns, h.GetAllowedDirectories())
 	if err != nil {
 		if err == context.Canceled || err == context.DeadlineExceeded {
 			return errorResult("operation cancelled"), DirectoryTreeOutput{}, nil
@@ -40,7 +41,7 @@ func (h *Handler) HandleDirectoryTree(ctx context.Context, req *mcp.CallToolRequ
 }
 
 // buildTree recursively builds a tree of directory entries
-func buildTree(ctx context.Context, dirPath string, excludePatterns []string) ([]TreeEntry, error) {
+func buildTree(ctx context.Context, dirPath string, excludePatterns []string, allowedDirs []string) ([]TreeEntry, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -60,7 +61,10 @@ func buildTree(ctx context.Context, dirPath string, excludePatterns []string) ([
 		if entry.IsDir() {
 			treeEntry.Type = "directory"
 			childPath := filepath.Join(dirPath, name)
-			children, err := buildTree(ctx, childPath, excludePatterns)
+			if !security.IsPathSafe(childPath, allowedDirs) {
+				continue
+			}
+			children, err := buildTree(ctx, childPath, excludePatterns, allowedDirs)
 			if err != nil {
 				if err == context.Canceled || err == context.DeadlineExceeded {
 					return nil, err
