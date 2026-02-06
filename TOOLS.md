@@ -410,7 +410,7 @@ Detect line ending style (CRLF/LF/mixed) and find lines with inconsistent ending
 
 ### list_encodings
 
-Returns all 20 supported encodings with name, aliases, and description.
+Returns all 22 supported encodings with name, aliases, and description.
 
 ### list_allowed_directories
 
@@ -421,6 +421,8 @@ Returns directories the server is allowed to access. If empty, add paths as args
 | Name | Aliases | Description |
 |------|---------|-------------|
 | utf-8 | utf8, ascii | Unicode, no conversion |
+| utf-16-le | utf16le, utf-16le | Unicode UTF-16 Little Endian |
+| utf-16-be | utf16be, utf-16be | Unicode UTF-16 Big Endian |
 | windows-1251 | cp1251 | Windows Cyrillic |
 | koi8-r | koi8r | Russian Cyrillic (Unix/Linux) |
 | koi8-u | koi8u | Ukrainian Cyrillic (Unix/Linux) |

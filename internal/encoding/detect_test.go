@@ -12,19 +12,31 @@ func isASCIICompatible(charset string) bool {
 	return charset == "utf-8" || charset == "ascii"
 }
 
-func TestDetect_UTF8BOM(t *testing.T) {
-	// UTF-8 BOM: EF BB BF
-	data := []byte{0xEF, 0xBB, 0xBF, 'H', 'e', 'l', 'l', 'o'}
-	result := Detect(data)
-
-	if result.Charset != "utf-8" {
-		t.Errorf("Charset = %q, want utf-8", result.Charset)
+func TestDetect_BOMs(t *testing.T) {
+	tests := []struct {
+		name        string
+		data        []byte
+		wantCharset string
+	}{
+		{"UTF-8 BOM", []byte{0xEF, 0xBB, 0xBF, 'H', 'i'}, "utf-8"},
+		{"UTF-16 LE BOM", []byte{0xFF, 0xFE, 'H', 0x00}, "utf-16-le"},
+		{"UTF-16 BE BOM", []byte{0xFE, 0xFF, 0x00, 'H'}, "utf-16-be"},
+		{"UTF-32 LE BOM", []byte{0xFF, 0xFE, 0x00, 0x00, 'H', 0x00, 0x00, 0x00}, "utf-32-le"},
+		{"UTF-32 BE BOM", []byte{0x00, 0x00, 0xFE, 0xFF, 0x00, 0x00, 0x00, 'H'}, "utf-32-be"},
 	}
-	if result.Confidence != 100 {
-		t.Errorf("Confidence = %d, want 100", result.Confidence)
-	}
-	if !result.HasBOM {
-		t.Error("HasBOM = false, want true")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := Detect(tt.data)
+			if result.Charset != tt.wantCharset {
+				t.Errorf("Charset = %q, want %q", result.Charset, tt.wantCharset)
+			}
+			if result.Confidence != 100 {
+				t.Errorf("Confidence = %d, want 100", result.Confidence)
+			}
+			if !result.HasBOM {
+				t.Error("HasBOM = false, want true")
+			}
+		})
 	}
 }
 
@@ -278,6 +290,52 @@ func TestDetectFromFile_SampleMode_LargeFileWithBOM(t *testing.T) {
 	}
 	if result.Charset != "utf-8" {
 		t.Errorf("Charset = %q, want utf-8", result.Charset)
+	}
+	if !result.HasBOM {
+		t.Error("HasBOM = false, want true")
+	}
+}
+
+func TestDetectFromFile_UTF16LE_WithBOM(t *testing.T) {
+	tempDir := t.TempDir()
+	path := filepath.Join(tempDir, "utf16le.txt")
+	// UTF-16 LE BOM + "Hi" encoded as UTF-16 LE
+	content := []byte{0xFF, 0xFE, 'H', 0x00, 'i', 0x00}
+	if err := os.WriteFile(path, content, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, mode := range []string{"sample", "chunked", "full"} {
+		t.Run(mode, func(t *testing.T) {
+			result, err := DetectFromFile(path, mode)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if result.Charset != "utf-16-le" {
+				t.Errorf("Charset = %q, want utf-16-le", result.Charset)
+			}
+			if !result.HasBOM {
+				t.Error("HasBOM = false, want true")
+			}
+		})
+	}
+}
+
+func TestDetectFromFile_UTF16BE_WithBOM(t *testing.T) {
+	tempDir := t.TempDir()
+	path := filepath.Join(tempDir, "utf16be.txt")
+	// UTF-16 BE BOM + "Hi" encoded as UTF-16 BE
+	content := []byte{0xFE, 0xFF, 0x00, 'H', 0x00, 'i'}
+	if err := os.WriteFile(path, content, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := DetectFromFile(path, "sample")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Charset != "utf-16-be" {
+		t.Errorf("Charset = %q, want utf-16-be", result.Charset)
 	}
 	if !result.HasBOM {
 		t.Error("HasBOM = false, want true")

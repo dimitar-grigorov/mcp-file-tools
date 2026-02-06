@@ -17,6 +17,10 @@ func TestGet(t *testing.T) {
 		{"cp1251", true, false},
 		{"CP1251", true, false},
 		{"koi8-r", true, false},
+		{"utf-16-le", true, false},
+		{"utf-16-be", true, false},
+		{"utf16le", true, false},
+		{"utf16be", true, false},
 		{"invalid", false, false},
 	}
 
@@ -71,8 +75,8 @@ func TestListEncodings(t *testing.T) {
 		}
 	}
 
-	// Verify we have the expected number of encodings (20)
-	if len(items) != 20 {
-		t.Errorf("ListEncodings() returned %d items, want 20", len(items))
+	// Verify we have the expected number of encodings (22)
+	if len(items) != 22 {
+		t.Errorf("ListEncodings() returned %d items, want 22", len(items))
 	}
 }

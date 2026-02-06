@@ -27,7 +27,8 @@ Provides 19 tools for file operations with automatic encoding conversion:
 - [`move_file`](TOOLS.md#move_file) - Move or rename files and directories
 - [`list_allowed_directories`](TOOLS.md#list_allowed_directories) - Show accessible directories
 
-**Supported encodings (20 total):**
+**Supported encodings (22 total):**
+- **Unicode:** UTF-8, UTF-16 LE, UTF-16 BE (with BOM detection for UTF-16 and UTF-32)
 - **Cyrillic:** Windows-1251, KOI8-R, KOI8-U, CP866, ISO-8859-5
 - **Western European:** Windows-1252, ISO-8859-1, ISO-8859-15
 - **Central European:** Windows-1250, ISO-8859-2

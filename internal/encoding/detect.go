@@ -25,6 +25,38 @@ type DetectionResult struct {
 	HasBOM     bool
 }
 
+// detectBOM checks for Unicode BOMs and returns a result if found.
+// Order matters: UTF-32 BOMs must be checked before UTF-16 since they share prefixes.
+func detectBOM(data []byte) (DetectionResult, bool) {
+	if len(data) >= 4 {
+		// UTF-32 BE: 00 00 FE FF
+		if data[0] == 0x00 && data[1] == 0x00 && data[2] == 0xFE && data[3] == 0xFF {
+			return DetectionResult{Charset: "utf-32-be", Confidence: 100, HasBOM: true}, true
+		}
+		// UTF-32 LE: FF FE 00 00
+		if data[0] == 0xFF && data[1] == 0xFE && data[2] == 0x00 && data[3] == 0x00 {
+			return DetectionResult{Charset: "utf-32-le", Confidence: 100, HasBOM: true}, true
+		}
+	}
+	if len(data) >= 3 {
+		// UTF-8 BOM: EF BB BF
+		if data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF {
+			return DetectionResult{Charset: "utf-8", Confidence: 100, HasBOM: true}, true
+		}
+	}
+	if len(data) >= 2 {
+		// UTF-16 BE: FE FF
+		if data[0] == 0xFE && data[1] == 0xFF {
+			return DetectionResult{Charset: "utf-16-be", Confidence: 100, HasBOM: true}, true
+		}
+		// UTF-16 LE: FF FE
+		if data[0] == 0xFF && data[1] == 0xFE {
+			return DetectionResult{Charset: "utf-16-le", Confidence: 100, HasBOM: true}, true
+		}
+	}
+	return DetectionResult{}, false
+}
+
 // --- Primary API (file-based, streaming) ---
 
 // DetectFromFile detects encoding from a file path using streaming I/O.
@@ -46,9 +78,8 @@ func DetectFromFile(path string, mode string) (DetectionResult, error) {
 
 // Detect detects encoding from a byte slice.
 func Detect(data []byte) DetectionResult {
-	// Check UTF-8 BOM
-	if len(data) >= 3 && data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF {
-		return DetectionResult{Charset: "utf-8", Confidence: 100, HasBOM: true}
+	if result, ok := detectBOM(data); ok {
+		return result
 	}
 
 	detected := chardet.Detect(data)
@@ -138,9 +169,8 @@ func detectSampleFromReader(r io.ReaderAt, size int64) (DetectionResult, error) 
 	}
 	beginChunk = beginChunk[:n]
 
-	// Check for BOM
-	if len(beginChunk) >= 3 && beginChunk[0] == 0xEF && beginChunk[1] == 0xBB && beginChunk[2] == 0xBF {
-		return DetectionResult{Charset: "utf-8", Confidence: 100, HasBOM: true}, nil
+	if result, ok := detectBOM(beginChunk); ok {
+		return result, nil
 	}
 
 	// Check beginning chunk - if high confidence, return early
@@ -187,11 +217,11 @@ func detectChunkedFromReader(r io.ReaderAt, size int64) (DetectionResult, error)
 		return Detect(data), nil
 	}
 
-	// Check for BOM
-	bomCheck := make([]byte, 3)
-	if n, _ := r.ReadAt(bomCheck, 0); n >= 3 {
-		if bomCheck[0] == 0xEF && bomCheck[1] == 0xBB && bomCheck[2] == 0xBF {
-			return DetectionResult{Charset: "utf-8", Confidence: 100, HasBOM: true}, nil
+	// Check for BOM (need 4 bytes for UTF-32)
+	bomCheck := make([]byte, 4)
+	if n, _ := r.ReadAt(bomCheck, 0); n >= 2 {
+		if result, ok := detectBOM(bomCheck[:n]); ok {
+			return result, nil
 		}
 	}
 
