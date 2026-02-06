@@ -252,6 +252,100 @@ func TestHandleEditFile_ValidationErrors(t *testing.T) {
 	}
 }
 
+func TestAdjustRelativeIndent(t *testing.T) {
+	tests := []struct {
+		name      string
+		oldLines  []string
+		newLine   string
+		lineIndex int
+		baseIndent string
+		want      string
+	}{
+		{
+			name:       "zero relative indent",
+			oldLines:   []string{"    old content"},
+			newLine:    "    new content",
+			lineIndex:  0,
+			baseIndent: "        ",
+			want:       "        new content",
+		},
+		{
+			name:       "positive relative indent",
+			oldLines:   []string{"    old content"},
+			newLine:    "        new content",
+			lineIndex:  0,
+			baseIndent: "    ",
+			want:       "        new content",
+		},
+		{
+			name:       "negative relative indent",
+			oldLines:   []string{"        old content"},
+			newLine:    "    new content",
+			lineIndex:  0,
+			baseIndent: "        ",
+			want:       "    new content",
+		},
+		{
+			name:       "negative indent exceeds base",
+			oldLines:   []string{"        old content"},
+			newLine:    "new content",
+			lineIndex:  0,
+			baseIndent: "    ",
+			want:       "new content",
+		},
+		{
+			name:       "line index out of range",
+			oldLines:   []string{},
+			newLine:    "    new content",
+			lineIndex:  0,
+			baseIndent: "        ",
+			want:       "    new content",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := adjustRelativeIndent(tt.oldLines, tt.newLine, tt.lineIndex, tt.baseIndent)
+			if got != tt.want {
+				t.Errorf("adjustRelativeIndent() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestHandleEditFile_NegativeRelativeIndent(t *testing.T) {
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+
+	// File has a block indented at 8 spaces
+	original := "func main() {\n        if true {\n            fmt.Println(\"hello\")\n        }\n}\n"
+	testFile := filepath.Join(tempDir, "test.go")
+	os.WriteFile(testFile, []byte(original), 0644)
+
+	// oldText has 8-space if block, newText dedents the body to match the if level
+	input := EditFileInput{
+		Path: testFile,
+		Edits: []EditOperation{{
+			OldText: "        if true {\n            fmt.Println(\"hello\")\n        }",
+			NewText: "        if true {\n        fmt.Println(\"hello\")\n        }",
+		}},
+	}
+
+	result, _, err := h.HandleEditFile(context.Background(), nil, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.IsError {
+		t.Error("expected success")
+	}
+
+	content, _ := os.ReadFile(testFile)
+	expected := "func main() {\n        if true {\n        fmt.Println(\"hello\")\n        }\n}\n"
+	if string(content) != expected {
+		t.Errorf("negative indent not applied.\ngot:  %q\nwant: %q", string(content), expected)
+	}
+}
+
 func TestEditFile_CP1251Encoding(t *testing.T) {
 	tempDir := t.TempDir()
 	h := NewHandler([]string{tempDir})

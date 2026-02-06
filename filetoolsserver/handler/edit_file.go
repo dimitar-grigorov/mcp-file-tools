@@ -209,10 +209,20 @@ func adjustRelativeIndent(oldLines []string, newLine string, lineIndex int, base
 	relativeIndent := len(newIndent) - len(oldIndent)
 
 	// Apply base indentation + relative change
-	if relativeIndent > 0 {
-		return baseIndent + strings.Repeat(" ", relativeIndent) + strings.TrimLeft(newLine, " \t")
+	trimmedContent := strings.TrimLeft(newLine, " \t")
+	switch {
+	case relativeIndent > 0:
+		return baseIndent + strings.Repeat(" ", relativeIndent) + trimmedContent
+	case relativeIndent < 0:
+		// Negative indent: trim characters from the end of baseIndent
+		trim := -relativeIndent
+		if trim >= len(baseIndent) {
+			return trimmedContent
+		}
+		return baseIndent[:len(baseIndent)-trim] + trimmedContent
+	default:
+		return baseIndent + trimmedContent
 	}
-	return baseIndent + strings.TrimLeft(newLine, " \t")
 }
 
 // getLeadingWhitespace extracts leading spaces and tabs from a string
