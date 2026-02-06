@@ -161,7 +161,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "search_files",
-		Description: "Recursively search for files matching a glob pattern (*.ext or **/*.ext). Returns full paths. Parameters: path (required), pattern (required), excludePatterns.",
+		Description: "Recursively search for files matching a glob pattern (*.ext or **/*.ext). Returns full paths. Parameters: path (required), pattern (required), excludePatterns, maxResults (default 10000).",
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "Search Files",
 			ReadOnlyHint:  true,

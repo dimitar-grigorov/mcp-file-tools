@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"io/fs"
 	"log/slog"
 	"os"
@@ -11,6 +12,8 @@ import (
 	"github.com/dimitar-grigorov/mcp-file-tools/internal/security"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
+
+const defaultMaxResults = 10000
 
 // HandleSearchFiles recursively searches for files matching a glob pattern.
 func (h *Handler) HandleSearchFiles(ctx context.Context, req *mcp.CallToolRequest, input SearchFilesInput) (*mcp.CallToolResult, SearchFilesOutput, error) {
@@ -28,19 +31,26 @@ func (h *Handler) HandleSearchFiles(ctx context.Context, req *mcp.CallToolReques
 	if !stat.IsDir() {
 		return errorResult(ErrPathMustBeDirectory.Error()), SearchFilesOutput{}, nil
 	}
-	results, err := searchFiles(ctx, v.Path, input.Pattern, input.ExcludePatterns, h.GetAllowedDirectories())
+	maxResults := input.MaxResults
+	if maxResults <= 0 {
+		maxResults = defaultMaxResults
+	}
+	results, truncated, err := searchFiles(ctx, v.Path, input.Pattern, input.ExcludePatterns, h.GetAllowedDirectories(), maxResults)
 	if err != nil {
 		if err == context.Canceled || err == context.DeadlineExceeded {
 			return errorResult("search cancelled"), SearchFilesOutput{}, nil
 		}
 		return errorResult("search failed: " + err.Error()), SearchFilesOutput{}, nil
 	}
-	return &mcp.CallToolResult{}, SearchFilesOutput{Files: results}, nil
+	return &mcp.CallToolResult{}, SearchFilesOutput{Files: results, Truncated: truncated}, nil
 }
 
+var errMaxResultsReached = errors.New("max results reached")
+
 // searchFiles recursively searches for files matching the pattern
-func searchFiles(ctx context.Context, rootPath, pattern string, excludePatterns, allowedDirs []string) ([]string, error) {
+func searchFiles(ctx context.Context, rootPath, pattern string, excludePatterns, allowedDirs []string, maxResults int) ([]string, bool, error) {
 	var results []string
+	truncated := false
 	err := filepath.WalkDir(rootPath, func(fullPath string, d fs.DirEntry, err error) error {
 		select {
 		case <-ctx.Done():
@@ -72,16 +82,20 @@ func searchFiles(ctx context.Context, rootPath, pattern string, excludePatterns,
 		}
 		if matchGlobPattern(relativePathNorm, pattern) {
 			results = append(results, fullPath)
+			if len(results) >= maxResults {
+				truncated = true
+				return errMaxResultsReached
+			}
 		}
 		return nil
 	})
-	if err != nil {
-		return nil, err
+	if err != nil && err != errMaxResultsReached {
+		return nil, false, err
 	}
 	if results == nil {
 		results = []string{}
 	}
-	return results, nil
+	return results, truncated, nil
 }
 
 // matchGlobPattern matches a path against a glob pattern, supporting ** for recursive matching

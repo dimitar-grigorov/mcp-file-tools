@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -130,5 +131,32 @@ func TestHandleSearchFiles_ValidationErrors(t *testing.T) {
 				t.Errorf("expected error for %s", tt.name)
 			}
 		})
+	}
+}
+
+func TestHandleSearchFiles_MaxResults(t *testing.T) {
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+
+	for i := 0; i < 20; i++ {
+		os.WriteFile(filepath.Join(tempDir, fmt.Sprintf("file%03d.txt", i)), []byte("test"), 0644)
+	}
+
+	result, output, err := h.HandleSearchFiles(context.Background(), nil, SearchFilesInput{
+		Path:       tempDir,
+		Pattern:    "*.txt",
+		MaxResults: 5,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.IsError {
+		t.Error("expected success")
+	}
+	if len(output.Files) != 5 {
+		t.Errorf("expected 5 files (max), got %d", len(output.Files))
+	}
+	if !output.Truncated {
+		t.Error("expected truncated to be true")
 	}
 }

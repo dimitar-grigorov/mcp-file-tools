@@ -122,10 +122,12 @@ type SearchFilesInput struct {
 	Path            string   `json:"path"`
 	Pattern         string   `json:"pattern"`
 	ExcludePatterns []string `json:"excludePatterns,omitempty"`
+	MaxResults      int      `json:"maxResults,omitempty"`
 }
 
 type SearchFilesOutput struct {
-	Files []string `json:"files"`
+	Files     []string `json:"files"`
+	Truncated bool     `json:"truncated,omitempty"`
 }
 
 type EditOperation struct {
