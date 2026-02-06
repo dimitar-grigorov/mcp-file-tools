@@ -3,8 +3,10 @@ package filetoolsserver
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
-	"path/filepath"
+	"runtime"
+	"strings"
 	"time"
 
 	"github.com/dimitar-grigorov/mcp-file-tools/filetoolsserver/handler"
@@ -62,19 +64,31 @@ func createRootsListChangedHandler(h *handler.Handler) func(context.Context, *mc
 	}
 }
 
+// fileURIToPath converts a file:// URI to a local filesystem path.
+func fileURIToPath(uri string) string {
+	if !strings.HasPrefix(uri, "file://") {
+		return uri
+	}
+
+	parsed, err := url.Parse(uri)
+	if err != nil {
+		return uri
+	}
+
+	path := parsed.Path
+	// Windows: url.Parse turns file:///C:/path into /C:/path — strip the leading slash
+	if runtime.GOOS == "windows" && len(path) >= 3 && path[0] == '/' && path[2] == ':' {
+		path = path[1:]
+	}
+
+	return path
+}
+
 func updateAllowedDirectoriesFromRoots(h *handler.Handler, roots []*mcp.Root) {
 	validatedDirs := make([]string, 0, len(roots))
 
 	for _, root := range roots {
-		// Extract path from file:// URI
-		rootPath := root.URI
-		if len(rootPath) > 8 && rootPath[:8] == "file:///" {
-			rootPath = rootPath[8:]
-			// Windows: file:///C:/path -> C:/path
-			if len(rootPath) > 2 && rootPath[1] == ':' {
-				rootPath = filepath.FromSlash(rootPath)
-			}
-		}
+		rootPath := fileURIToPath(root.URI)
 
 		normalized, err := security.NormalizeAllowedDirs([]string{rootPath})
 		if err != nil {
