@@ -2,6 +2,7 @@
 package config
 
 import (
+	"log/slog"
 	"os"
 	"strconv"
 
@@ -43,11 +44,11 @@ func Load() *Config {
 
 	// Load default encoding from environment
 	if enc := os.Getenv(EnvDefaultEncoding); enc != "" {
-		// Validate encoding exists
 		if _, ok := encoding.Get(enc); ok {
 			cfg.DefaultEncoding = enc
+		} else {
+			slog.Warn("invalid MCP_DEFAULT_ENCODING, using default", "value", enc, "fallback", DefaultEncoding)
 		}
-		// If invalid encoding, silently use default (cp1251)
 	}
 
 	// Load memory threshold from environment

@@ -1,5 +1,7 @@
 package handler
 
+import "github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
+
 // ReadTextFileInput for reading files with encoding support.
 // Offset/Limit are 1-indexed line numbers for partial reads.
 type ReadTextFileInput struct {
@@ -40,15 +42,8 @@ type ListDirectoryOutput struct {
 
 type ListEncodingsInput struct{}
 
-type EncodingItem struct {
-	Name        string   `json:"name"`
-	DisplayName string   `json:"displayName"`
-	Aliases     []string `json:"aliases"`
-	Description string   `json:"description"`
-}
-
 type ListEncodingsOutput struct {
-	Encodings []EncodingItem `json:"encodings"`
+	Encodings []encoding.EncodingListItem `json:"encodings"`
 }
 
 // DetectEncodingInput supports three modes: "sample" (default), "chunked", "full"
