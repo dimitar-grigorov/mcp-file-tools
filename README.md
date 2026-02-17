@@ -1,6 +1,13 @@
 # MCP File Tools
 
-Non-UTF-8 file encoding server: Cyrillic (CP1251, KOI8), Windows-1250-1258, ISO-8859 with auto-detection and Unicode conversion. Lets AI assistants read and write files in legacy encodings that would otherwise corrupt data.
+[![Go Report Card](https://goreportcard.com/badge/github.com/dimitar-grigorov/mcp-file-tools)](https://goreportcard.com/report/github.com/dimitar-grigorov/mcp-file-tools)
+[![Release](https://img.shields.io/github/v/release/dimitar-grigorov/mcp-file-tools)](https://github.com/dimitar-grigorov/mcp-file-tools/releases/latest)
+[![License: GPL-3.0](https://img.shields.io/github/license/dimitar-grigorov/mcp-file-tools)](LICENSE)
+[![MCP Registry](https://img.shields.io/badge/MCP-Registry-blue)](https://registry.modelcontextprotocol.io/?search=mcp-file-tools)
+
+Claude sees `Настройки` — not `????` or `Íàñòðîéêè`.
+
+MCP server for file operations with non-UTF-8 encoding support. Auto-detects and converts 22 encodings (Cyrillic, Windows-125x, ISO-8859, KOI8, UTF-16) so AI assistants can read and write legacy files without corrupting data.
 
 **Perfect for:** Delphi/Pascal projects, legacy VB6 apps, old PHP/HTML sites, config files with non-UTF-8 text.
 
