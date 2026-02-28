@@ -43,7 +43,7 @@ jobs:
           GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o dist/mcp-file-tools-darwin-arm64 ./cmd/mcp-file-tools
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: binaries
           path: dist/
