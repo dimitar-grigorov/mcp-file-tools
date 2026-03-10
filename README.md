@@ -171,6 +171,50 @@ Or manually edit `%USERPROFILE%\.claude.json`:
 
 **Note:** The `type: "stdio"` field is required. The `args` array specifies allowed directories - the VSCode extension does not automatically add the workspace directory, so you must list all directories you want to access.
 
+### Auto-approve All Tools (Claude Code)
+
+To skip permission prompts for all file-tools commands, create `.claude/settings.local.json` in your project root:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls *)",
+      "Bash(grep *)",
+      "Bash(sort *)",
+      "Bash(wc *)",
+      "Bash(find *)",
+      "Bash(echo *)",
+      "Grep",
+      "Glob",
+      "WebSearch",
+      "WebFetch",
+      "mcp__file-tools__read_text_file",
+      "mcp__file-tools__read_multiple_files",
+      "mcp__file-tools__write_file",
+      "mcp__file-tools__edit_file",
+      "mcp__file-tools__copy_file",
+      "mcp__file-tools__delete_file",
+      "mcp__file-tools__move_file",
+      "mcp__file-tools__list_directory",
+      "mcp__file-tools__tree",
+      "mcp__file-tools__directory_tree",
+      "mcp__file-tools__search_files",
+      "mcp__file-tools__grep_text_files",
+      "mcp__file-tools__detect_encoding",
+      "mcp__file-tools__convert_encoding",
+      "mcp__file-tools__detect_line_endings",
+      "mcp__file-tools__list_encodings",
+      "mcp__file-tools__get_file_info",
+      "mcp__file-tools__create_directory",
+      "mcp__file-tools__list_allowed_directories"
+    ]
+  }
+}
+```
+
+This auto-approves all 19 file-tools operations plus common safe shell commands and web search. Adjust to your needs — remove any permissions you'd rather approve manually.
+
 ## How to Use
 
 Once installed, just ask Claude:
