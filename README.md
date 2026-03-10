@@ -54,6 +54,7 @@ See [TOOLS.md](TOOLS.md) for detailed parameters and examples.
 This server is listed in the [Official MCP Registry](https://registry.modelcontextprotocol.io/?search=mcp-file-tools) for discovery.
 
 ### Windows x64
+**Note:** Run these commands in **PowerShell**, not in CMD.
 
 ```powershell
 # Download
