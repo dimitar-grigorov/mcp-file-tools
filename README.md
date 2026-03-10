@@ -60,8 +60,8 @@ This server is listed in the [Official MCP Registry](https://registry.modelconte
 # Download
 mkdir -Force "$env:LOCALAPPDATA\Programs\mcp-file-tools"
 iwr "https://github.com/dimitar-grigorov/mcp-file-tools/releases/latest/download/mcp-file-tools_windows_amd64.exe" -OutFile "$env:LOCALAPPDATA\Programs\mcp-file-tools\mcp-file-tools.exe"
-# Install with Claude Code (allows access to D:\Projects)
-claude mcp add file-tools -- "$env:LOCALAPPDATA\Programs\mcp-file-tools\mcp-file-tools.exe" "D:\Projects"
+# Install with Claude Code + VSCode (allows access to D:\Projects)
+claude mcp add --scope user file-tools -- "$env:LOCALAPPDATA\Programs\mcp-file-tools\mcp-file-tools.exe" "D:\Projects"
 ```
 
 ### Linux x64
@@ -71,8 +71,8 @@ claude mcp add file-tools -- "$env:LOCALAPPDATA\Programs\mcp-file-tools\mcp-file
 mkdir -p ~/.local/bin
 curl -L "https://github.com/dimitar-grigorov/mcp-file-tools/releases/latest/download/mcp-file-tools_linux_amd64" -o ~/.local/bin/mcp-file-tools
 chmod +x ~/.local/bin/mcp-file-tools
-# Install with Claude Code
-claude mcp add file-tools ~/.local/bin/mcp-file-tools
+# Install with Claude Code + VSCode (allows access to ~/Projects)
+claude mcp add --scope user file-tools -- ~/.local/bin/mcp-file-tools ~/Projects
 ```
 
 ### macOS ARM64
@@ -82,8 +82,8 @@ claude mcp add file-tools ~/.local/bin/mcp-file-tools
 mkdir -p ~/.local/bin
 curl -L "https://github.com/dimitar-grigorov/mcp-file-tools/releases/latest/download/mcp-file-tools_darwin_arm64" -o ~/.local/bin/mcp-file-tools
 chmod +x ~/.local/bin/mcp-file-tools
-# Install with Claude Code
-claude mcp add file-tools ~/.local/bin/mcp-file-tools
+# Install with Claude Code + VSCode (allows access to ~/Projects)
+claude mcp add --scope user file-tools -- ~/.local/bin/mcp-file-tools ~/Projects
 ```
 
 ### Go Install (All Platforms)
@@ -91,13 +91,13 @@ claude mcp add file-tools ~/.local/bin/mcp-file-tools
 ```bash
 # Install with Go (requires Go 1.23+)
 go install github.com/dimitar-grigorov/mcp-file-tools/cmd/mcp-file-tools@latest
-# Add to Claude Code (Linux/macOS)
-claude mcp add file-tools $(go env GOPATH)/bin/mcp-file-tools
+# Add to Claude Code + VSCode (Linux/macOS)
+claude mcp add --scope user file-tools -- $(go env GOPATH)/bin/mcp-file-tools ~/Projects
 ```
 
 ```powershell
-# Add to Claude Code (Windows PowerShell)
-claude mcp add file-tools "$(go env GOPATH)\bin\mcp-file-tools.exe"
+# Add to Claude Code + VSCode (Windows PowerShell)
+claude mcp add --scope user file-tools -- "$(go env GOPATH)\bin\mcp-file-tools.exe" "D:\Projects"
 ```
 
 ### Other Clients
