@@ -60,8 +60,8 @@ This server is listed in the [Official MCP Registry](https://registry.modelconte
 # Download
 mkdir -Force "$env:LOCALAPPDATA\Programs\mcp-file-tools"
 iwr "https://github.com/dimitar-grigorov/mcp-file-tools/releases/latest/download/mcp-file-tools_windows_amd64.exe" -OutFile "$env:LOCALAPPDATA\Programs\mcp-file-tools\mcp-file-tools.exe"
-# Install with Claude Code
-claude mcp add file-tools "$env:LOCALAPPDATA\Programs\mcp-file-tools\mcp-file-tools.exe"
+# Install with Claude Code (allows access to D:\Projects)
+claude mcp add file-tools -- "$env:LOCALAPPDATA\Programs\mcp-file-tools\mcp-file-tools.exe" "D:\Projects"
 ```
 
 ### Linux x64
@@ -105,15 +105,32 @@ claude mcp add file-tools "$(go env GOPATH)\bin\mcp-file-tools.exe"
 For Claude Desktop, VSCode, or Cursor, use the downloaded binary path in your config:
 
 **Claude Desktop** (`%APPDATA%\Claude\claude_desktop_config.json` on Windows, `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
+
+Windows:
 ```json
 {
   "mcpServers": {
     "file-tools": {
-      "command": "/path/to/mcp-file-tools"
+      "command": "C:\\Users\\YOUR_NAME\\AppData\\Local\\Programs\\mcp-file-tools\\mcp-file-tools.exe",
+      "args": ["D:\\Projects", "C:\\Users\\YOUR_NAME\\Documents"]
     }
   }
 }
 ```
+
+macOS / Linux:
+```json
+{
+  "mcpServers": {
+    "file-tools": {
+      "command": "/Users/YOUR_NAME/.local/bin/mcp-file-tools",
+      "args": ["/Users/YOUR_NAME/Projects", "/Users/YOUR_NAME/Documents"]
+    }
+  }
+}
+```
+
+The `args` array specifies allowed directories the server can access. Add as many directories as you need.
 
 **VSCode / Cursor** - Two options:
 
@@ -121,8 +138,10 @@ For Claude Desktop, VSCode, or Cursor, use the downloaded binary path in your co
 
 CLI command (easiest):
 ```powershell
-claude mcp add --scope user file-tools -- "%LOCALAPPDATA%\Programs\mcp-file-tools\mcp-file-tools.exe" "D:\Projects"
+claude mcp add --scope user file-tools -- "%LOCALAPPDATA%\Programs\mcp-file-tools\mcp-file-tools.exe" "D:\Projects" "C:\Users\YOUR_NAME\Documents"
 ```
+
+To add more directories later, re-run the command with all directories listed (it overwrites the previous config).
 
 Or manually edit `%USERPROFILE%\.claude.json`:
 ```json
@@ -131,7 +150,7 @@ Or manually edit `%USERPROFILE%\.claude.json`:
     "file-tools": {
       "type": "stdio",
       "command": "C:\\Users\\YOUR_NAME\\AppData\\Local\\Programs\\mcp-file-tools\\mcp-file-tools.exe",
-      "args": ["D:\\Projects"]
+      "args": ["D:\\Projects", "C:\\Users\\YOUR_NAME\\Documents"]
     }
   }
 }
