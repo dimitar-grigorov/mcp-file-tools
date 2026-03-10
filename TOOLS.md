@@ -251,6 +251,7 @@ Recursively search for files and directories matching a glob pattern.
 - `path` (required): Root directory to search from
 - `pattern` (required): Glob pattern (`*.txt` for current dir, `**/*.txt` for recursive)
 - `excludePatterns` (optional): Array of patterns to exclude
+- `maxResults` (optional): Maximum number of results to return (default: 10000)
 
 **Example:**
 ```json
