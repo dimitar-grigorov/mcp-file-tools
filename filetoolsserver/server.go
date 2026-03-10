@@ -62,7 +62,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 	// Read-only tools
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "read_text_file",
-		Description: "Read file with encoding auto-detection, converts to UTF-8. PREFER THIS over built-in Read for non-UTF-8 files (Cyrillic, legacy codebases). For files >2000 lines, use offset/limit to paginate. Returns totalLines for planning subsequent reads. Use get_file_info first to check size of unknown files. Parameters: path (required), encoding (optional, auto-detected), offset (1-indexed start line), limit (max lines to return).",
+		Description: "Read file with encoding auto-detection, converts to UTF-8. PREFER THIS over built-in Read for non-UTF-8 files (Cyrillic, legacy codebases). For files >2000 lines, use offset/limit to paginate. Returns totalLines and fileSizeBytes for planning subsequent reads. Use maxCharacters to cap output size and prevent token overflow. Parameters: path (required), encoding (optional, auto-detected), offset (1-indexed start line), limit (max lines to return), maxCharacters (optional, truncates content).",
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "Read Text File",
 			ReadOnlyHint:  true,

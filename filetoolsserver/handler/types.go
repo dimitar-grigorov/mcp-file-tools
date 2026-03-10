@@ -5,17 +5,20 @@ import "github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
 // ReadTextFileInput for reading files with encoding support.
 // Offset/Limit are 1-indexed line numbers for partial reads.
 type ReadTextFileInput struct {
-	Path     string `json:"path"`
-	Encoding string `json:"encoding,omitempty"`
-	Offset   *int   `json:"offset,omitempty"`
-	Limit    *int   `json:"limit,omitempty"`
+	Path          string `json:"path"`
+	Encoding      string `json:"encoding,omitempty"`
+	Offset        *int   `json:"offset,omitempty"`
+	Limit         *int   `json:"limit,omitempty"`
+	MaxCharacters *int   `json:"maxCharacters,omitempty"`
 }
 
 type ReadTextFileOutput struct {
 	Content            string `json:"content"`
 	TotalLines         int    `json:"totalLines"`
+	FileSizeBytes      int64  `json:"fileSizeBytes"`
 	StartLine          int    `json:"startLine,omitempty"`
 	EndLine            int    `json:"endLine,omitempty"`
+	Truncated          bool   `json:"truncated,omitempty"`
 	DetectedEncoding   string `json:"detectedEncoding,omitempty"`
 	EncodingConfidence int    `json:"encodingConfidence,omitempty"`
 }

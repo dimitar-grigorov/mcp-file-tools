@@ -11,6 +11,7 @@ Read file contents with automatic encoding detection and optional partial readin
 - `encoding` (optional): Encoding name (auto-detects if omitted)
 - `offset` (optional): Start reading from this line number (1-indexed)
 - `limit` (optional): Maximum number of lines to read
+- `maxCharacters` (optional): Truncate content at this character count to prevent token overflow
 
 **Example:**
 ```json
@@ -26,8 +27,10 @@ Read file contents with automatic encoding detection and optional partial readin
 {
   "content": "line 100\nline 101\n...",
   "totalLines": 500,
+  "fileSizeBytes": 15234,
   "startLine": 100,
   "endLine": 149,
+  "truncated": false,
   "detectedEncoding": "windows-1251",
   "encodingConfidence": 95
 }

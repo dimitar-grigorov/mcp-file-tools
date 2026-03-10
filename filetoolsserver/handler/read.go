@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -26,6 +27,13 @@ func (h *Handler) HandleReadTextFile(ctx context.Context, req *mcp.CallToolReque
 	if !v.Ok() {
 		return v.Result, ReadTextFileOutput{}, nil
 	}
+
+	// Get file size early for the output
+	fileInfo, err := os.Stat(v.Path)
+	if err != nil {
+		return errorResult(fmt.Sprintf("failed to stat file: %v", err)), ReadTextFileOutput{}, nil
+	}
+	fileSizeBytes := fileInfo.Size()
 
 	if loadToMemory, size := h.shouldLoadEntireFile(v.Path); !loadToMemory {
 		slog.Warn("loading large file into memory", "path", input.Path, "size", size, "threshold", h.config.MemoryThreshold)
@@ -57,11 +65,30 @@ func (h *Handler) HandleReadTextFile(ctx context.Context, req *mcp.CallToolReque
 		endLine = totalLines
 	}
 
+	// Apply maxCharacters truncation (counts Unicode runes, not bytes)
+	truncated := false
+	if input.MaxCharacters != nil && *input.MaxCharacters > 0 && utf8.RuneCountInString(content) > *input.MaxCharacters {
+		// Truncate at rune boundary
+		runeCount := 0
+		byteIdx := 0
+		for byteIdx < len(content) && runeCount < *input.MaxCharacters {
+			_, size := utf8.DecodeRuneInString(content[byteIdx:])
+			byteIdx += size
+			runeCount++
+		}
+		content = content[:byteIdx]
+		content += fmt.Sprintf("\n\n[TRUNCATED at %d characters. File has %d lines, %d bytes. Use offset/limit for specific ranges.]",
+			*input.MaxCharacters, totalLines, fileSizeBytes)
+		truncated = true
+	}
+
 	output := ReadTextFileOutput{
-		Content:    content,
-		TotalLines: totalLines,
-		StartLine:  startLine,
-		EndLine:    endLine,
+		Content:       content,
+		TotalLines:    totalLines,
+		FileSizeBytes: fileSizeBytes,
+		StartLine:     startLine,
+		EndLine:       endLine,
+		Truncated:     truncated,
 	}
 	if encResult.autoDetected {
 		output.DetectedEncoding = encResult.detectedEncoding

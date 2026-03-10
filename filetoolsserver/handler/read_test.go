@@ -411,6 +411,198 @@ func TestHandleReadTextFile_LimitOnly(t *testing.T) {
 	}
 }
 
+func TestHandleReadTextFile_FileSizeBytes(t *testing.T) {
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+	testFile := filepath.Join(tempDir, "test.txt")
+	content := "Hello, World!"
+
+	if err := os.WriteFile(testFile, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	input := ReadTextFileInput{Path: testFile}
+	result, output, err := h.HandleReadTextFile(context.Background(), nil, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.IsError {
+		t.Errorf("expected success, got error")
+	}
+
+	if output.FileSizeBytes != int64(len(content)) {
+		t.Errorf("expected FileSizeBytes=%d, got %d", len(content), output.FileSizeBytes)
+	}
+	if output.Truncated {
+		t.Errorf("expected Truncated=false")
+	}
+}
+
+func TestHandleReadTextFile_MaxCharacters(t *testing.T) {
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+	testFile := filepath.Join(tempDir, "test.txt")
+
+	// Create a file with known content
+	content := "line1\nline2\nline3\nline4\nline5\nline6\nline7\nline8\nline9\nline10"
+	if err := os.WriteFile(testFile, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	maxChars := 20
+	input := ReadTextFileInput{
+		Path:          testFile,
+		MaxCharacters: &maxChars,
+	}
+
+	result, output, err := h.HandleReadTextFile(context.Background(), nil, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.IsError {
+		t.Errorf("expected success, got error")
+	}
+
+	if !output.Truncated {
+		t.Errorf("expected Truncated=true")
+	}
+
+	// Content should start with the first 20 chars of original content
+	if !strings.HasPrefix(output.Content, content[:maxChars]) {
+		t.Errorf("expected content to start with first %d chars, got %q", maxChars, output.Content[:50])
+	}
+
+	// Should contain truncation notice
+	if !strings.Contains(output.Content, "[TRUNCATED") {
+		t.Errorf("expected truncation notice in content")
+	}
+
+	// FileSizeBytes should still be the full file size
+	if output.FileSizeBytes != int64(len(content)) {
+		t.Errorf("expected FileSizeBytes=%d, got %d", len(content), output.FileSizeBytes)
+	}
+
+	// TotalLines should reflect the full file
+	if output.TotalLines != 10 {
+		t.Errorf("expected TotalLines=10, got %d", output.TotalLines)
+	}
+}
+
+func TestHandleReadTextFile_MaxCharactersNoTruncation(t *testing.T) {
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+	testFile := filepath.Join(tempDir, "test.txt")
+	content := "short"
+
+	if err := os.WriteFile(testFile, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	maxChars := 1000
+	input := ReadTextFileInput{
+		Path:          testFile,
+		MaxCharacters: &maxChars,
+	}
+
+	result, output, err := h.HandleReadTextFile(context.Background(), nil, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.IsError {
+		t.Errorf("expected success, got error")
+	}
+
+	if output.Truncated {
+		t.Errorf("expected Truncated=false when content fits within maxCharacters")
+	}
+	if output.Content != content {
+		t.Errorf("expected %q, got %q", content, output.Content)
+	}
+}
+
+func TestHandleReadTextFile_MaxCharactersCyrillic(t *testing.T) {
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+	testFile := filepath.Join(tempDir, "test.txt")
+
+	// UTF-8 Cyrillic: each char is 2 bytes. 10 runes = 20 bytes.
+	content := "Здравейте!" // 10 Cyrillic/punctuation characters
+	if err := os.WriteFile(testFile, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Truncate at 5 characters (runes), not 5 bytes
+	maxChars := 5
+	input := ReadTextFileInput{
+		Path:          testFile,
+		MaxCharacters: &maxChars,
+	}
+
+	result, output, err := h.HandleReadTextFile(context.Background(), nil, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.IsError {
+		t.Errorf("expected success, got error")
+	}
+
+	if !output.Truncated {
+		t.Errorf("expected Truncated=true")
+	}
+
+	// The truncated content should start with exactly 5 Cyrillic runes
+	if !strings.HasPrefix(output.Content, "Здрав") {
+		t.Errorf("expected content to start with 'Здрав' (5 runes), got %q", output.Content)
+	}
+
+	// Should NOT start with only 5 bytes (which would be 2.5 Cyrillic chars = corrupted)
+	if strings.HasPrefix(output.Content, string([]byte(content)[:5])) && !strings.HasPrefix(output.Content, "Здрав") {
+		t.Errorf("truncation used bytes instead of runes")
+	}
+}
+
+func TestHandleReadTextFile_MaxCharactersWithOffsetLimit(t *testing.T) {
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+	testFile := filepath.Join(tempDir, "test.txt")
+
+	// Create a file with many lines
+	lines := make([]string, 100)
+	for i := range lines {
+		lines[i] = strings.Repeat("x", 50) // 50 chars per line
+	}
+	content := strings.Join(lines, "\n")
+	if err := os.WriteFile(testFile, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	offset := 10
+	limit := 20
+	maxChars := 100
+	input := ReadTextFileInput{
+		Path:          testFile,
+		Offset:        &offset,
+		Limit:         &limit,
+		MaxCharacters: &maxChars,
+	}
+
+	result, output, err := h.HandleReadTextFile(context.Background(), nil, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.IsError {
+		t.Errorf("expected success, got error")
+	}
+
+	if !output.Truncated {
+		t.Errorf("expected Truncated=true when offset/limit content exceeds maxCharacters")
+	}
+
+	if !strings.Contains(output.Content, "[TRUNCATED") {
+		t.Errorf("expected truncation notice")
+	}
+}
+
 func TestHandleReadTextFile_TotalLinesReturned(t *testing.T) {
 	tempDir := t.TempDir()
 	h := NewHandler([]string{tempDir})
