@@ -132,31 +132,16 @@ macOS / Linux:
 
 The `args` array specifies allowed directories the server can access. Add as many directories as you need.
 
-**VSCode / Cursor** - Two options:
+**VSCode / Cursor (Claude Code extension)**
 
-**Option 1: Global config (recommended)** - Available in all projects
+If you already ran `claude mcp add --scope user` from the installation steps above, the server is already available in VSCode — no extra config needed.
 
-CLI command (easiest):
+To configure separately for VSCode only:
 ```powershell
-claude mcp add --scope user file-tools -- "%LOCALAPPDATA%\Programs\mcp-file-tools\mcp-file-tools.exe" "D:\Projects" "C:\Users\YOUR_NAME\Documents"
+claude mcp add --scope user file-tools -- "%LOCALAPPDATA%\Programs\mcp-file-tools\mcp-file-tools.exe" "D:\Projects"
 ```
 
-To add more directories later, re-run the command with all directories listed (it overwrites the previous config).
-
-Or manually edit `%USERPROFILE%\.claude.json`:
-```json
-{
-  "mcpServers": {
-    "file-tools": {
-      "type": "stdio",
-      "command": "C:\\Users\\YOUR_NAME\\AppData\\Local\\Programs\\mcp-file-tools\\mcp-file-tools.exe",
-      "args": ["D:\\Projects", "C:\\Users\\YOUR_NAME\\Documents"]
-    }
-  }
-}
-```
-
-**Option 2: Per-project config** - Create `.mcp.json` in project root:
+Alternatively, create a **per-project config** by adding `.mcp.json` to your project root:
 ```json
 {
   "mcpServers": {
@@ -169,7 +154,7 @@ Or manually edit `%USERPROFILE%\.claude.json`:
 }
 ```
 
-**Note:** The `type: "stdio"` field is required. The `args` array specifies allowed directories - the VSCode extension does not automatically add the workspace directory, so you must list all directories you want to access.
+**Note:** The `type: "stdio"` field is required. The `args` array specifies allowed directories — the VSCode extension does not automatically add the workspace directory, so you must list all directories you want to access. To add more directories later, re-run the `claude mcp add` command with all directories listed (it overwrites the previous config).
 
 ### Auto-approve All Tools (Claude Code)
 
@@ -188,14 +173,11 @@ To skip permission prompts for all file-tools commands, create `.claude/settings
       "Grep",
       "Glob",
       "WebSearch",
-      "WebFetch",
       "mcp__file-tools__read_text_file",
       "mcp__file-tools__read_multiple_files",
       "mcp__file-tools__write_file",
       "mcp__file-tools__edit_file",
       "mcp__file-tools__copy_file",
-      "mcp__file-tools__delete_file",
-      "mcp__file-tools__move_file",
       "mcp__file-tools__list_directory",
       "mcp__file-tools__tree",
       "mcp__file-tools__directory_tree",
@@ -213,7 +195,17 @@ To skip permission prompts for all file-tools commands, create `.claude/settings
 }
 ```
 
-This auto-approves all 19 file-tools operations plus common safe shell commands and web search. Adjust to your needs — remove any permissions you'd rather approve manually.
+This auto-approves safe read-only and editing file-tools operations plus common shell commands and web search. Destructive operations (`delete_file`, `move_file`) and `WebFetch` are intentionally excluded — Claude will ask before using them. Adjust to your needs.
+
+### Verify & Uninstall
+
+```bash
+# Check if the server is configured
+claude mcp list
+
+# Remove the server
+claude mcp remove file-tools
+```
 
 ## How to Use
 
@@ -236,12 +228,13 @@ The server can be configured via environment variables:
 | `MCP_DEFAULT_ENCODING` | Default encoding for `write_file` when none specified | `cp1251` |
 | `MCP_MEMORY_THRESHOLD` | Memory threshold in bytes. Files smaller are loaded into memory for faster I/O; larger files use streaming. Also affects encoding detection mode. | `67108864` (64MB) |
 
-**Example (Claude Desktop config):**
+To override, set environment variables in your config (Claude Desktop example):
 ```json
 {
   "mcpServers": {
     "file-tools": {
-      "command": "/path/to/mcp-file-tools",
+      "command": "C:\\Users\\YOUR_NAME\\AppData\\Local\\Programs\\mcp-file-tools\\mcp-file-tools.exe",
+      "args": ["D:\\Projects"],
       "env": {
         "MCP_DEFAULT_ENCODING": "utf-8"
       }
