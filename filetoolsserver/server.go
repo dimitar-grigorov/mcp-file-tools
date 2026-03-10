@@ -152,7 +152,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "tree",
-		Description: "Compact indented tree view of directory structure. Uses 85% fewer tokens than directory_tree — PREFER THIS for directory visualization. Parameters: path (required), maxDepth (0=unlimited), maxFiles (default 1000), dirsOnly (bool), exclude (array of patterns).",
+		Description: "Compact indented tree view of directory structure. Uses 85% fewer tokens than directory_tree — PREFER THIS for directory visualization. Set showEncoding=true to detect and display file encodings (e.g., for auditing legacy codebases). Parameters: path (required), maxDepth (0=unlimited), maxFiles (default 1000), dirsOnly (bool), exclude (array of patterns), showEncoding (bool, shows detected encoding per file).",
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "Tree (Compact)",
 			ReadOnlyHint:  true,
@@ -181,6 +181,18 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 	}, handler.Wrap(logger, "detect_line_endings", h.HandleDetectLineEndings))
 
 	// Write tools
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "change_line_endings",
+		Description: "Convert line endings in a file to LF or CRLF. Use after detect_line_endings to fix mixed or wrong line endings. Returns original style, new style, and number of lines changed. No-op if file already uses the target style. Parameters: path (required), style (required: \"lf\" or \"crlf\").",
+		Annotations: &mcp.ToolAnnotations{
+			Title:           "Change Line Endings",
+			ReadOnlyHint:    false,
+			IdempotentHint:  true,
+			DestructiveHint: boolPtr(true),
+			OpenWorldHint:   boolPtr(false),
+		},
+	}, handler.Wrap(logger, "change_line_endings", h.HandleChangeLineEndings))
+
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "create_directory",
 		Description: "Create a directory recursively (mkdir -p). Succeeds silently if already exists. Parameter: path (required).",

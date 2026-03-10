@@ -185,11 +185,12 @@ type ReadMultipleFilesOutput struct {
 
 // TreeInput for compact tree view. MaxFiles defaults to 1000.
 type TreeInput struct {
-	Path     string   `json:"path"`
-	MaxDepth int      `json:"maxDepth,omitempty"`
-	MaxFiles int      `json:"maxFiles,omitempty"`
-	DirsOnly bool     `json:"dirsOnly,omitempty"`
-	Exclude  []string `json:"exclude,omitempty"`
+	Path         string   `json:"path"`
+	MaxDepth     int      `json:"maxDepth,omitempty"`
+	MaxFiles     int      `json:"maxFiles,omitempty"`
+	DirsOnly     bool     `json:"dirsOnly,omitempty"`
+	Exclude      []string `json:"exclude,omitempty"`
+	ShowEncoding bool     `json:"showEncoding,omitempty"`
 }
 
 type TreeOutput struct {
@@ -264,6 +265,20 @@ type GrepOutput struct {
 
 type DetectLineEndingsInput struct {
 	Path string `json:"path"`
+}
+
+// ChangeLineEndingsInput converts line endings in a file.
+// Style must be "lf" or "crlf".
+type ChangeLineEndingsInput struct {
+	Path  string `json:"path"`
+	Style string `json:"style"`
+}
+
+type ChangeLineEndingsOutput struct {
+	Message       string `json:"message"`
+	OriginalStyle string `json:"originalStyle"`
+	NewStyle      string `json:"newStyle"`
+	LinesChanged  int    `json:"linesChanged"`
 }
 
 // DetectLineEndingsOutput - Style is "crlf", "lf", "mixed", or "none"
