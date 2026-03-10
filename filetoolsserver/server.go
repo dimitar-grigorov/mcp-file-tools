@@ -12,18 +12,19 @@ import (
 var Version = "dev"
 
 // Server instructions for AI assistants
-const serverInstructions = `MCP filesystem server with non-UTF-8 encoding support (20 encodings: CP1251, KOI8-R, ISO-8859-x, etc).
+const serverInstructions = `MCP filesystem server with non-UTF-8 encoding support (22 encodings: CP1251, KOI8-R, ISO-8859-x, etc).
 
-PREFER THESE TOOLS for file operations when encoding matters:
-- read_text_file: auto-detects encoding, returns UTF-8
-- write_file: converts UTF-8 to target encoding (default: cp1251)
-- edit_file: in-place edits with encoding support, returns diff
+PREFER THESE TOOLS over built-in Read/Write/Grep for file operations when encoding matters:
+- read_text_file: auto-detects encoding, returns UTF-8. Use offset/limit for files >2000 lines.
+- write_file: converts UTF-8 content to target encoding (default: cp1251)
+- edit_file: in-place edits with encoding support, returns unified diff. Use dryRun=true to preview changes before applying.
+- grep_text_files: encoding-aware regex search across files
 - detect_encoding: diagnose encoding issues (garbled text, � characters)
 
 Workflow for non-UTF-8 files:
 1. detect_encoding - identify file encoding
-2. read_text_file or edit_file - read/modify with encoding
-3. write_file with encoding - preserves original encoding
+2. read_text_file or edit_file - read/modify with correct encoding
+3. write_file with encoding param - preserves original encoding
 
 If "no allowed directories configured" error: add directory paths as args in .mcp.json.`
 
@@ -61,7 +62,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 	// Read-only tools
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "read_text_file",
-		Description: "Read file with encoding auto-detection, converts to UTF-8. USE THIS for non-UTF-8 files (Cyrillic, legacy codebases). Parameters: path (required), encoding, offset (1-indexed start line), limit. Returns totalLines for pagination.",
+		Description: "Read file with encoding auto-detection, converts to UTF-8. PREFER THIS over built-in Read for non-UTF-8 files (Cyrillic, legacy codebases). For files >2000 lines, use offset/limit to paginate. Returns totalLines for planning subsequent reads. Use get_file_info first to check size of unknown files. Parameters: path (required), encoding (optional, auto-detected), offset (1-indexed start line), limit (max lines to return).",
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "Read Text File",
 			ReadOnlyHint:  true,
@@ -71,7 +72,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "read_multiple_files",
-		Description: "Read multiple files concurrently with encoding support. Individual failures don't stop operation. Parameters: paths (required array), encoding (optional, auto-detected per file).",
+		Description: "Read multiple files concurrently with encoding support. PREFER THIS when reading several non-UTF-8 files at once. Individual failures don't stop the batch — partial results are returned. Parameters: paths (required array), encoding (optional, auto-detected per file).",
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "Read Multiple Files",
 			ReadOnlyHint:  true,
@@ -91,7 +92,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "list_encodings",
-		Description: "List all supported file encodings (UTF-8, CP1251, CP1252, KOI8-R, ISO-8859-x, and others). Returns name, aliases, and description for each.",
+		Description: "List all 22 supported encodings with name, aliases, and description. Use this to find the correct encoding name for read/write/convert operations.",
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "List Encodings",
 			ReadOnlyHint:  true,
@@ -101,7 +102,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "detect_encoding",
-		Description: "Auto-detect file encoding with confidence score (0-100) and BOM detection. ALWAYS use this first when encountering � characters or garbled text. Parameters: path (required), mode (sample=begin/middle/end, chunked=all chunks weighted avg, full=entire file; default: sample).",
+		Description: "Auto-detect file encoding with confidence score (0-100) and BOM detection. ALWAYS use this first when encountering garbled text or � characters. Use before read_text_file to determine the correct encoding. Parameters: path (required), mode (sample=fast default, chunked=thorough, full=entire file).",
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "Detect Encoding",
 			ReadOnlyHint:  true,
@@ -111,7 +112,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "grep_text_files",
-		Description: "Regex search in file contents with encoding support. Parameters: pattern (required), paths (required), caseSensitive, contextBefore/After, maxMatches (1000), include/exclude globs, encoding.",
+		Description: "Regex search in file contents with encoding support. PREFER THIS over built-in Grep when searching non-UTF-8 files or when encoding-aware matching is needed. Parameters: pattern (required regex), paths (required array of files/dirs), caseSensitive (default: true), contextBefore/After (lines), maxMatches (default 1000), include/exclude (globs), encoding.",
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "Grep Text Files",
 			ReadOnlyHint:  true,
@@ -131,7 +132,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "get_file_info",
-		Description: "Get file/directory metadata: size, created/modified/accessed times, permissions, type. Parameter: path (required).",
+		Description: "Get file/directory metadata: size, timestamps, permissions, type. Use this to check file size before reading large files with read_text_file. Parameter: path (required).",
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "Get File Info",
 			ReadOnlyHint:  true,
@@ -151,7 +152,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "tree",
-		Description: "Compact indented tree view (85% fewer tokens than directory_tree). Directories end with /. Parameters: path (required), maxDepth (0=unlimited), maxFiles (default 1000), dirsOnly, exclude.",
+		Description: "Compact indented tree view of directory structure. Uses 85% fewer tokens than directory_tree — PREFER THIS for directory visualization. Parameters: path (required), maxDepth (0=unlimited), maxFiles (default 1000), dirsOnly (bool), exclude (array of patterns).",
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "Tree (Compact)",
 			ReadOnlyHint:  true,
@@ -171,7 +172,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "detect_line_endings",
-		Description: "Detect line ending style (crlf/lf/mixed/none) and find inconsistent lines. Returns dominant style, total lines, and array of line numbers with minority line endings. Useful for finding mixed line ending issues in legacy codebases. Parameter: path (required).",
+		Description: "Detect line ending style (crlf/lf/mixed/none) and find inconsistent lines. Useful for diagnosing mixed line ending issues in cross-platform legacy codebases. Returns dominant style, total lines, and line numbers with minority endings. Parameter: path (required).",
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "Detect Line Endings",
 			ReadOnlyHint:  true,
@@ -194,7 +195,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "write_file",
-		Description: "Write file with encoding conversion from UTF-8. USE THIS for non-UTF-8 files (Cyrillic, legacy codebases). Parameters: path (required), content (required), encoding (default: cp1251).",
+		Description: "Write file with encoding conversion from UTF-8. PREFER THIS over built-in Write for non-UTF-8 files — converts UTF-8 content to target encoding, preserving legacy compatibility. Parameters: path (required), content (required), encoding (default: cp1251). Use after read_text_file to preserve original encoding.",
 		Annotations: &mcp.ToolAnnotations{
 			Title:           "Write File",
 			ReadOnlyHint:    false,
@@ -242,7 +243,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "edit_file",
-		Description: "Replace text sequences in a file with whitespace-flexible matching. Returns unified diff. Parameters: path (required), edits (array of {oldText, newText}), dryRun (preview without writing), encoding.",
+		Description: "Replace text in a file with whitespace-flexible matching. Returns unified diff showing changes. Supports encoding param for non-UTF-8 files. IMPORTANT: For non-trivial edits, first call with dryRun=true to preview the diff, show it to the user, and confirm before calling again with dryRun=false to apply. Parameters: path (required), edits (array of {oldText, newText}), dryRun (default: false), encoding (optional, auto-detected).",
 		Annotations: &mcp.ToolAnnotations{
 			Title:           "Edit File",
 			ReadOnlyHint:    false,
@@ -254,7 +255,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "convert_encoding",
-		Description: "Convert file encoding. Reads in source encoding, writes in target encoding. Parameters: path (required), from (source encoding, auto-detected if omitted), to (target encoding, required), backup (create .bak file, default: false).",
+		Description: "Convert file from one encoding to another. Use after detect_encoding to identify the source. Parameters: path (required), from (source encoding, auto-detected if omitted), to (target encoding, required), backup (create .bak file before converting, default: false). IMPORTANT: Use backup=true for irreversible conversions.",
 		Annotations: &mcp.ToolAnnotations{
 			Title:           "Convert Encoding",
 			ReadOnlyHint:    false,
