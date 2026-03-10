@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
 )
 
 func TestHandleTree_BasicOutput(t *testing.T) {
@@ -115,5 +117,38 @@ func TestHandleTree_Exclude(t *testing.T) {
 	}
 	if !strings.Contains(output.Tree, "src/") {
 		t.Error("expected src/ to be present")
+	}
+}
+
+func TestHandleTree_ShowEncoding(t *testing.T) {
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+
+	// Create a UTF-8 file
+	os.WriteFile(filepath.Join(tempDir, "readme.txt"), []byte("Hello, this is plain ASCII content for testing."), 0644)
+
+	// Create a CP1251 file with enough Cyrillic for detection
+	enc, _ := encoding.Get("cp1251")
+	encoder := enc.NewEncoder()
+	cyrillic := "Здравей свят! Това е тест за автоматично разпознаване на кодирането."
+	cp1251Bytes, _ := encoder.Bytes([]byte(cyrillic))
+	os.WriteFile(filepath.Join(tempDir, "data.pas"), cp1251Bytes, 0644)
+
+	input := TreeInput{Path: tempDir, ShowEncoding: true}
+	_, output, err := h.HandleTree(context.Background(), nil, input)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Files should have encoding annotations like "data.pas  [windows-1251]"
+	if !strings.Contains(output.Tree, "[") {
+		t.Error("expected encoding annotations in tree output when showEncoding=true")
+	}
+
+	// Without showEncoding, no annotations
+	input2 := TreeInput{Path: tempDir, ShowEncoding: false}
+	_, output2, _ := h.HandleTree(context.Background(), nil, input2)
+	if strings.Contains(output2.Tree, "[") {
+		t.Error("expected no encoding annotations when showEncoding=false")
 	}
 }

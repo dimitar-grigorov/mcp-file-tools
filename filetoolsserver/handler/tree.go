@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
 	"github.com/dimitar-grigorov/mcp-file-tools/internal/security"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -32,14 +33,15 @@ func (h *Handler) HandleTree(ctx context.Context, req *mcp.CallToolRequest, inpu
 		maxFiles = defaultMaxFiles
 	}
 	state := &treeState{
-		maxFiles:    maxFiles,
-		maxDepth:    input.MaxDepth,
-		dirsOnly:    input.DirsOnly,
-		exclude:     input.Exclude,
-		allowedDirs: h.ResolvedAllowedDirs(),
-		fileCount:   0,
-		dirCount:    0,
-		truncated:   false,
+		maxFiles:     maxFiles,
+		maxDepth:     input.MaxDepth,
+		dirsOnly:     input.DirsOnly,
+		exclude:      input.Exclude,
+		showEncoding: input.ShowEncoding,
+		allowedDirs:  h.ResolvedAllowedDirs(),
+		fileCount:    0,
+		dirCount:     0,
+		truncated:    false,
 	}
 	var sb strings.Builder
 	buildCompactTree(ctx, &sb, v.Path, 0, state)
@@ -52,14 +54,15 @@ func (h *Handler) HandleTree(ctx context.Context, req *mcp.CallToolRequest, inpu
 }
 
 type treeState struct {
-	maxFiles    int
-	maxDepth    int
-	dirsOnly    bool
-	exclude     []string
-	allowedDirs []string
-	fileCount   int
-	dirCount    int
-	truncated   bool
+	maxFiles     int
+	maxDepth     int
+	dirsOnly     bool
+	exclude      []string
+	showEncoding bool
+	allowedDirs  []string
+	fileCount    int
+	dirCount     int
+	truncated    bool
 }
 
 func (s *treeState) totalCount() int {
@@ -107,9 +110,27 @@ func buildCompactTree(ctx context.Context, sb *strings.Builder, dirPath string, 
 			state.fileCount++
 			sb.WriteString(indent)
 			sb.WriteString(name)
+			if state.showEncoding {
+				filePath := filepath.Join(dirPath, name)
+				if enc := detectFileEncoding(filePath); enc != "" {
+					sb.WriteString("  [")
+					sb.WriteString(enc)
+					sb.WriteString("]")
+				}
+			}
 			sb.WriteString("\n")
 		}
 	}
+}
+
+// detectFileEncoding returns the detected encoding name for a file, or "" on error.
+// Uses sample mode for speed since this is called per-file in tree traversal.
+func detectFileEncoding(path string) string {
+	result, err := encoding.DetectFromFile(path, "sample")
+	if err != nil || result.Confidence < encoding.MinConfidenceThreshold {
+		return ""
+	}
+	return result.Charset
 }
 
 func shouldExcludeTree(name string, patterns []string) bool {

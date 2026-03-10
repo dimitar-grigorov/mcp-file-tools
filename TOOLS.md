@@ -175,6 +175,7 @@ Compact indented tree view optimized for AI/LLM consumption. Uses ~85% fewer tok
 - `maxFiles` (optional): Maximum entries to return (default: 1000)
 - `dirsOnly` (optional): Only show directories, not files
 - `exclude` (optional): Array of patterns to exclude
+- `showEncoding` (optional): Detect and display encoding per file (useful for auditing legacy codebases)
 
 **Example:**
 ```json
@@ -182,6 +183,25 @@ Compact indented tree view optimized for AI/LLM consumption. Uses ~85% fewer tok
   "path": "/path/to/project",
   "maxDepth": 3,
   "exclude": ["node_modules", ".git"]
+}
+```
+
+**Example with encoding:**
+```json
+{
+  "path": "/path/to/legacy-project",
+  "showEncoding": true,
+  "exclude": [".git"]
+}
+```
+
+**Response (with showEncoding):**
+```json
+{
+  "tree": "src/\n  main.pas  [windows-1251]\n  utils.pas  [windows-1251]\nREADME.md  [utf-8]",
+  "fileCount": 3,
+  "dirCount": 1,
+  "truncated": false
 }
 ```
 
@@ -411,6 +431,32 @@ Detect line ending style (CRLF/LF/mixed) and find lines with inconsistent ending
 - `lf`: All lines use Unix line endings (\\n)
 - `mixed`: File has both CRLF and LF endings - `inconsistentLines` lists lines with minority style
 - `none`: File has no line endings (single line or empty)
+
+### change_line_endings
+
+Convert line endings in a file to LF or CRLF. Use after `detect_line_endings` to fix mixed or wrong line endings. No-op if the file already uses the target style.
+
+**Parameters:**
+- `path` (required): Path to the file
+- `style` (required): Target line ending style (`"lf"` or `"crlf"`)
+
+**Example:**
+```json
+{
+  "path": "/path/to/file.pas",
+  "style": "lf"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Converted /path/to/file.pas from crlf to lf (3 lines changed)",
+  "originalStyle": "crlf",
+  "newStyle": "lf",
+  "linesChanged": 3
+}
+```
 
 ### list_encodings
 
