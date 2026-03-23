@@ -281,6 +281,23 @@ type ChangeLineEndingsOutput struct {
 	LinesChanged  int    `json:"linesChanged"`
 }
 
+// ManageBomInput manages Unicode BOM (Byte Order Mark) in files.
+// Action: "detect" (check for BOM), "strip" (remove BOM), "add" (prepend BOM).
+// Encoding is required for "add" action: utf-8, utf-16-le, utf-16-be, utf-32-le, utf-32-be.
+type ManageBomInput struct {
+	Path     string `json:"path"`
+	Action   string `json:"action"`
+	Encoding string `json:"encoding,omitempty"`
+}
+
+type ManageBomOutput struct {
+	Message  string `json:"message"`
+	HasBOM   bool   `json:"hasBom"`
+	BOMType  string `json:"bomType,omitempty"`  // e.g. "utf-8", "utf-16-le"
+	BOMBytes int    `json:"bomBytes,omitempty"` // size of BOM in bytes (2, 3, or 4)
+	Changed  bool   `json:"changed"`
+}
+
 // DetectLineEndingsOutput - Style is "crlf", "lf", "mixed", or "none"
 type DetectLineEndingsOutput struct {
 	Style             string `json:"style"`

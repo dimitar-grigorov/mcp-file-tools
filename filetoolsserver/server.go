@@ -182,6 +182,18 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	// Write tools
 	mcp.AddTool(server, &mcp.Tool{
+		Name:        "manage_bom",
+		Description: "Detect, strip, or add Unicode BOM (Byte Order Mark). UTF-8 BOM breaks PHP/shell scripts; UTF-16 files need BOMs. Parameters: path (required), action (required: \"detect\"|\"strip\"|\"add\"), encoding (required for \"add\": utf-8, utf-16-le, utf-16-be, utf-32-le, utf-32-be).",
+		Annotations: &mcp.ToolAnnotations{
+			Title:           "Manage BOM",
+			ReadOnlyHint:    false,
+			IdempotentHint:  true,
+			DestructiveHint: boolPtr(true),
+			OpenWorldHint:   boolPtr(false),
+		},
+	}, handler.Wrap(logger, "manage_bom", h.HandleManageBom))
+
+	mcp.AddTool(server, &mcp.Tool{
 		Name:        "change_line_endings",
 		Description: "Convert line endings in a file to LF or CRLF. Use after detect_line_endings to fix mixed or wrong line endings. Returns original style, new style, and number of lines changed. No-op if file already uses the target style. Parameters: path (required), style (required: \"lf\" or \"crlf\").",
 		Annotations: &mcp.ToolAnnotations{

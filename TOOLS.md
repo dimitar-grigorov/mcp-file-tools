@@ -458,6 +458,73 @@ Convert line endings in a file to LF or CRLF. Use after `detect_line_endings` to
 }
 ```
 
+### manage_bom
+
+Detect, strip, or add Unicode BOM (Byte Order Mark). UTF-8 BOM breaks PHP/shell scripts. UTF-16 files need BOMs for proper detection.
+
+**Parameters:**
+- `path` (required): Path to the file
+- `action` (required): `"detect"`, `"strip"`, or `"add"`
+- `encoding` (required for "add"): BOM encoding — `utf-8`, `utf-16-le`, `utf-16-be`, `utf-32-le`, `utf-32-be`
+
+**Example (detect):**
+```json
+{
+  "path": "/path/to/file.php",
+  "action": "detect"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "BOM detected: utf-8 (3 bytes)",
+  "hasBom": true,
+  "bomType": "utf-8",
+  "bomBytes": 3,
+  "changed": false
+}
+```
+
+**Example (strip):**
+```json
+{
+  "path": "/path/to/file.php",
+  "action": "strip"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Stripped utf-8 BOM (3 bytes) from /path/to/file.php",
+  "hasBom": false,
+  "bomType": "utf-8",
+  "bomBytes": 3,
+  "changed": true
+}
+```
+
+**Example (add):**
+```json
+{
+  "path": "/path/to/file.txt",
+  "action": "add",
+  "encoding": "utf-16-le"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Added utf-16-le BOM (2 bytes) to /path/to/file.txt",
+  "hasBom": true,
+  "bomType": "utf-16-le",
+  "bomBytes": 2,
+  "changed": true
+}
+```
+
 ### list_encodings
 
 Returns all 22 supported encodings with name, aliases, and description.

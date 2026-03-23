@@ -25,9 +25,9 @@ type DetectionResult struct {
 	HasBOM     bool
 }
 
-// detectBOM checks for Unicode BOMs and returns a result if found.
+// DetectBOM checks for Unicode BOMs and returns a result if found.
 // Order matters: UTF-32 BOMs must be checked before UTF-16 since they share prefixes.
-func detectBOM(data []byte) (DetectionResult, bool) {
+func DetectBOM(data []byte) (DetectionResult, bool) {
 	if len(data) >= 4 {
 		// UTF-32 BE: 00 00 FE FF
 		if data[0] == 0x00 && data[1] == 0x00 && data[2] == 0xFE && data[3] == 0xFF {
@@ -57,6 +57,31 @@ func detectBOM(data []byte) (DetectionResult, bool) {
 	return DetectionResult{}, false
 }
 
+// BOMBytesFor returns the BOM byte sequence for a given encoding name, or nil if unsupported.
+// Supported: utf-8, utf-16-le, utf-16-be, utf-32-le, utf-32-be.
+func BOMBytesFor(charset string) []byte {
+	switch strings.ToLower(charset) {
+	case "utf-8":
+		return []byte{0xEF, 0xBB, 0xBF}
+	case "utf-16-be":
+		return []byte{0xFE, 0xFF}
+	case "utf-16-le":
+		return []byte{0xFF, 0xFE}
+	case "utf-32-be":
+		return []byte{0x00, 0x00, 0xFE, 0xFF}
+	case "utf-32-le":
+		return []byte{0xFF, 0xFE, 0x00, 0x00}
+	default:
+		return nil
+	}
+}
+
+// BOMSize returns the byte length of a BOM for the given charset, or 0 if unknown.
+func BOMSize(charset string) int {
+	b := BOMBytesFor(charset)
+	return len(b)
+}
+
 // --- Primary API (file-based, streaming) ---
 
 // DetectFromFile detects encoding from a file path using streaming I/O.
@@ -78,7 +103,7 @@ func DetectFromFile(path string, mode string) (DetectionResult, error) {
 
 // Detect detects encoding from a byte slice.
 func Detect(data []byte) DetectionResult {
-	if result, ok := detectBOM(data); ok {
+	if result, ok := DetectBOM(data); ok {
 		return result
 	}
 
@@ -169,7 +194,7 @@ func detectSampleFromReader(r io.ReaderAt, size int64) (DetectionResult, error) 
 	}
 	beginChunk = beginChunk[:n]
 
-	if result, ok := detectBOM(beginChunk); ok {
+	if result, ok := DetectBOM(beginChunk); ok {
 		return result, nil
 	}
 
@@ -220,7 +245,7 @@ func detectChunkedFromReader(r io.ReaderAt, size int64) (DetectionResult, error)
 	// Check for BOM (need 4 bytes for UTF-32)
 	bomCheck := make([]byte, 4)
 	if n, _ := r.ReadAt(bomCheck, 0); n >= 2 {
-		if result, ok := detectBOM(bomCheck[:n]); ok {
+		if result, ok := DetectBOM(bomCheck[:n]); ok {
 			return result, nil
 		}
 	}
