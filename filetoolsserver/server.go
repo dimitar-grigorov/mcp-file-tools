@@ -267,6 +267,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 		},
 	}, handler.Wrap(logger, "delete_file", h.HandleDeleteFile))
 
+	// WrapContentOnly: returns readable diff text instead of StructuredContent JSON.
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "edit_file",
 		Description: "Replace text in a file with whitespace-flexible matching. Returns unified diff. Supports non-UTF-8 via encoding param. " +
@@ -281,7 +282,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 			DestructiveHint: boolPtr(true),
 			OpenWorldHint:   boolPtr(false),
 		},
-	}, handler.Wrap(logger, "edit_file", h.HandleEditFile))
+	}, handler.WrapContentOnly(logger, "edit_file", h.HandleEditFile))
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "convert_encoding",

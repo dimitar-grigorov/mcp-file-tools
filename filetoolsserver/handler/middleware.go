@@ -63,3 +63,13 @@ func Wrap[In, Out any](logger *slog.Logger, toolName string, handler mcp.ToolHan
 	}
 	return wrapped
 }
+
+// WrapContentOnly wraps a handler so the SDK skips StructuredContent,
+// returning only the handler's Content text (e.g. a readable diff).
+func WrapContentOnly[In, Out any](logger *slog.Logger, toolName string, handler mcp.ToolHandlerFor[In, Out]) mcp.ToolHandlerFor[In, any] {
+	wrapped := Wrap(logger, toolName, handler)
+	return func(ctx context.Context, req *mcp.CallToolRequest, input In) (*mcp.CallToolResult, any, error) {
+		result, _, err := wrapped(ctx, req, input)
+		return result, nil, err
+	}
+}

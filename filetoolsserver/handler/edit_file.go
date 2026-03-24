@@ -81,7 +81,6 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 	}
 
 	diff := createUnifiedDiff(content, modifiedContent, input.Path)
-	formattedDiff := formatDiffOutput(diff)
 
 	if !input.DryRun {
 		if err := atomicWriteFileWithEncoding(v.Path, modifiedContent, encodingName, lineEndings.Style, originalMode); err != nil {
@@ -89,16 +88,15 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 		}
 	}
 
-	// Build human-readable text for Content so clients (e.g. Claude Code VSCode)
-	// render the diff directly instead of showing raw JSON.
-	displayText := formattedDiff
+	text := diff
 	if readOnlyCleared {
-		displayText = "Read-only flag was cleared.\n\n" + displayText
+		text += "\nRead-only flag was cleared."
 	}
 
+	output := EditFileOutput{Diff: diff, ReadOnlyCleared: readOnlyCleared}
 	return &mcp.CallToolResult{
-		Content: []mcp.Content{&mcp.TextContent{Text: displayText}},
-	}, EditFileOutput{Diff: formattedDiff, ReadOnlyCleared: readOnlyCleared}, nil
+		Content: []mcp.Content{&mcp.TextContent{Text: text}},
+	}, output, nil
 }
 
 // applyEdits applies edits sequentially, trying exact match then whitespace-flexible match.
