@@ -210,7 +210,8 @@ The server checks for updates automatically and notifies you through tool respon
 2. Re-download the binary:
 
 ```powershell
-iwr "https://github.com/dimitar-grigorov/mcp-file-tools/releases/latest/download/mcp-file-tools_windows_amd64.exe" -OutFile "$env:LOCALAPPDATA\Programs\mcp-file-tools\mcp-file-tools.exe"
+iwr "https://github.com/dimitar-grigorov/mcp-file-tools/releases/latest/download/mcp-file-tools_windows_amd64.exe" `
+    -OutFile "$env:LOCALAPPDATA\Programs\mcp-file-tools\mcp-file-tools.exe"
 ```
 
 To disable update checks, set the environment variable `MCP_NO_UPDATE_CHECK=1`.
