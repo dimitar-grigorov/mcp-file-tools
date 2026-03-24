@@ -7,16 +7,17 @@ import (
 	"os"
 	"runtime"
 	"strings"
-	"time"
 
 	"github.com/dimitar-grigorov/mcp-file-tools/filetoolsserver/handler"
 	"github.com/dimitar-grigorov/mcp-file-tools/internal/security"
-	"github.com/dimitar-grigorov/mcp-file-tools/internal/updater"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func createInitializedHandler(h *handler.Handler) func(context.Context, *mcp.InitializedRequest) {
 	return func(ctx context.Context, req *mcp.InitializedRequest) {
+		// Async update check — runs regardless of roots support.
+		go handler.CheckForUpdatesAsync(req.Session, Version)
+
 		result, err := req.Session.ListRoots(ctx, &mcp.ListRootsParams{})
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to request roots from client: %v\n", err)
@@ -32,23 +33,6 @@ func createInitializedHandler(h *handler.Handler) func(context.Context, *mcp.Ini
 				fmt.Fprintf(os.Stderr, "Provide directories via CLI arguments or ensure MCP client supports roots protocol.\n")
 			}
 		}
-
-		// Async update check - doesn't block initialization
-		go checkForUpdatesAsync(req.Session)
-	}
-}
-
-// checkForUpdatesAsync checks for updates in the background and notifies the client
-func checkForUpdatesAsync(session *mcp.ServerSession) {
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-
-	if msg := updater.Check(ctx, Version); msg != "" {
-		_ = session.Log(ctx, &mcp.LoggingMessageParams{
-			Level:  "notice",
-			Logger: "update-checker",
-			Data:   msg,
-		})
 	}
 }
 

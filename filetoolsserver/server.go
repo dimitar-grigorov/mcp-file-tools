@@ -26,7 +26,9 @@ Workflow for non-UTF-8 files:
 2. read_text_file or edit_file - read/modify with correct encoding
 3. write_file with encoding param - preserves original encoding
 
-If "no allowed directories configured" error: add directory paths as args in .mcp.json.`
+If "no allowed directories configured" error: add directory paths as args in .mcp.json.
+
+IMPORTANT: Call check_for_updates once at the start of each session. If an update is available, inform the user before proceeding.`
 
 // Helper for bool pointers (DestructiveHint defaults to true, so we need explicit false)
 func boolPtr(b bool) *bool {
@@ -292,6 +294,15 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 			OpenWorldHint:   boolPtr(false),
 		},
 	}, handler.Wrap(logger, "convert_encoding", h.HandleConvertEncoding))
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "check_for_updates",
+		Description: "Check if a newer version of mcp-file-tools is available. Returns current version, latest version, and update instructions if outdated. Uses cached result (max 1 GitHub API call per 2h). Call once at the start of each session.",
+		Annotations: &mcp.ToolAnnotations{
+			Title:        "Check for Updates",
+			ReadOnlyHint: true,
+		},
+	}, handler.Wrap(logger, "check_for_updates", handler.NewCheckUpdateHandler(Version)))
 
 	return server
 }

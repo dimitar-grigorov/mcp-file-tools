@@ -193,13 +193,27 @@ To skip permission prompts for all file-tools commands, create `.claude/settings
       "mcp__file-tools__list_encodings",
       "mcp__file-tools__get_file_info",
       "mcp__file-tools__create_directory",
-      "mcp__file-tools__list_allowed_directories"
+      "mcp__file-tools__list_allowed_directories",
+      "mcp__file-tools__check_for_updates"
     ]
   }
 }
 ```
 
 This auto-approves safe read-only and editing file-tools operations plus common shell commands and web search. Destructive operations (`delete_file`, `move_file`) and `WebFetch` are intentionally excluded — Claude will ask before using them. Adjust to your needs.
+
+### Update
+
+The server checks for updates automatically and notifies you through tool responses when a newer version is available. To update:
+
+1. Close all Claude Code sessions (the binary is locked while running)
+2. Re-download the binary:
+
+```powershell
+iwr "https://github.com/dimitar-grigorov/mcp-file-tools/releases/latest/download/mcp-file-tools_windows_amd64.exe" -OutFile "$env:LOCALAPPDATA\Programs\mcp-file-tools\mcp-file-tools.exe"
+```
+
+To disable update checks, set the environment variable `MCP_NO_UPDATE_CHECK=1`.
 
 ### Verify & Uninstall
 

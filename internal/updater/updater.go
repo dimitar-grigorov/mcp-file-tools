@@ -17,11 +17,11 @@ const (
 	// UpdateCheckURL is the GitHub API endpoint for latest release
 	UpdateCheckURL = "https://api.github.com/repos/dimitar-grigorov/mcp-file-tools/releases/latest"
 
-	// UpdateDownloadURL is the releases page for users to download binaries
-	UpdateDownloadURL = "https://github.com/dimitar-grigorov/mcp-file-tools/releases/latest"
+	// RepoURL is the GitHub repository URL
+	RepoURL = "https://github.com/dimitar-grigorov/mcp-file-tools"
 
 	// CheckInterval is the minimum time between API calls (respects GitHub rate limits)
-	CheckInterval = 2 * time.Hour
+	CheckInterval = 30 * time.Minute
 
 	// httpTimeout is the timeout for HTTP requests to GitHub API
 	httpTimeout = 10 * time.Second
@@ -35,7 +35,8 @@ type cache struct {
 
 // Check checks for updates and returns a notification message if available.
 // Returns empty string if: no update, disabled via MCP_NO_UPDATE_CHECK=1, dev version, or error.
-func Check(ctx context.Context, currentVersion string) string {
+// If force is true, the cache is bypassed and a fresh check is performed.
+func Check(ctx context.Context, currentVersion string, force bool) string {
 	// Skip if disabled or running dev build
 	if os.Getenv("MCP_NO_UPDATE_CHECK") == "1" || currentVersion == "dev" || currentVersion == "" {
 		return ""
@@ -44,22 +45,31 @@ func Check(ctx context.Context, currentVersion string) string {
 	cacheFile := getCacheFile()
 	latestVersion := ""
 
-	// Use cached result if within check interval
-	if c := readCache(cacheFile); c != nil && time.Since(c.LastCheck) < CheckInterval {
-		latestVersion = c.LatestVersion
-	} else {
-		// Fetch fresh version from GitHub
+	// Use cached result if within check interval (unless forced)
+	if !force {
+		if c := readCache(cacheFile); c != nil && time.Since(c.LastCheck) < CheckInterval {
+			latestVersion = c.LatestVersion
+		}
+	}
+
+	if latestVersion == "" {
 		var err error
 		latestVersion, err = fetchLatestVersion(ctx)
 		if err != nil {
-			return "" // Fail silently - don't block on network issues
+			// Cache the failure so we don't hammer GitHub when offline.
+			// The empty version means "unknown" — next check after CheckInterval.
+			writeCache(cacheFile, "")
+			return ""
 		}
 		writeCache(cacheFile, latestVersion)
 	}
 
 	if isNewerVersion(latestVersion, currentVersion) {
-		return fmt.Sprintf("Update available: %s → %s\nDownload: %s",
-			currentVersion, latestVersion, UpdateDownloadURL)
+		return fmt.Sprintf(
+			"mcp-file-tools update available: %s → %s\n"+
+				"To update, close all Claude Code sessions, then re-download the binary.\n"+
+				"Instructions: %s#update",
+			currentVersion, latestVersion, RepoURL)
 	}
 	return ""
 }
@@ -114,6 +124,14 @@ func readCache(path string) *cache {
 		return nil
 	}
 	return &c
+}
+
+// CachedLatestVersion returns the latest version from the cache file, if available.
+func CachedLatestVersion() string {
+	if c := readCache(getCacheFile()); c != nil {
+		return c.LatestVersion
+	}
+	return ""
 }
 
 func writeCache(path, version string) {

@@ -17,6 +17,12 @@ func main() {
 	// Set version from build
 	filetoolsserver.Version = version
 
+	// Handle --version flag
+	if len(os.Args) == 2 && (os.Args[1] == "--version" || os.Args[1] == "-v") {
+		fmt.Println(version)
+		return
+	}
+
 	// Parse allowed directories from CLI arguments (optional)
 	allowedDirs := os.Args[1:]
 
