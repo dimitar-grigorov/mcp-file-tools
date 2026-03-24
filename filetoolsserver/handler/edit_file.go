@@ -89,7 +89,16 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 		}
 	}
 
-	return &mcp.CallToolResult{}, EditFileOutput{Diff: formattedDiff, ReadOnlyCleared: readOnlyCleared}, nil
+	// Build human-readable text for Content so clients (e.g. Claude Code VSCode)
+	// render the diff directly instead of showing raw JSON.
+	displayText := formattedDiff
+	if readOnlyCleared {
+		displayText = "Read-only flag was cleared.\n\n" + displayText
+	}
+
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{&mcp.TextContent{Text: displayText}},
+	}, EditFileOutput{Diff: formattedDiff, ReadOnlyCleared: readOnlyCleared}, nil
 }
 
 // applyEdits applies edits sequentially, trying exact match then whitespace-flexible match.
