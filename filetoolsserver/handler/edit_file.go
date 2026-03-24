@@ -30,10 +30,10 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 	originalMode := getFileMode(v.Path)
 
 	readOnlyCleared := false
-	forceWritable := input.ForceWritable == nil || *input.ForceWritable // default: true
+	forceWritable := input.ForceWritable != nil && *input.ForceWritable // default: false
 	if isReadOnly(originalMode) {
 		if !forceWritable {
-			return errorResult("file is read-only; set forceWritable: true to clear the read-only flag"), EditFileOutput{}, nil
+			return errorResult("file is read-only — do NOT retry. Ask the user whether to proceed with forceWritable: true to remove the read-only flag, or skip this file"), EditFileOutput{}, nil
 		}
 		if !input.DryRun {
 			if err := clearReadOnly(v.Path, originalMode); err != nil {

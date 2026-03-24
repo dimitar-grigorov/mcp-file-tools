@@ -106,7 +106,7 @@ Make line-based edits to a text file. Supports exact matching and whitespace-fle
 - `edits` (required): Array of edit operations, each with `oldText` and `newText`
 - `dryRun` (optional): If true, returns diff without writing changes (default: false)
 - `encoding` (optional): File encoding (auto-detected if not specified)
-- `forceWritable` (optional): If true, clears read-only flag before editing (default: true)
+- `forceWritable` (optional): If true, clears read-only flag before editing (default: false — fails on read-only files)
 
 **Features:**
 - Exact text matching (first occurrence)
@@ -114,7 +114,7 @@ Make line-based edits to a text file. Supports exact matching and whitespace-fle
 - Preserves original indentation
 - CRLF line endings normalized to LF
 - Atomic write (temp file + rename)
-- Automatically clears read-only flag (disable with `forceWritable: false`)
+- Fails on read-only files by default (set `forceWritable: true` only when user explicitly requests it)
 
 **Example:**
 ```json

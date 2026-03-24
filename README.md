@@ -13,7 +13,7 @@ MCP server for file operations with non-UTF-8 encoding support. Auto-detects and
 
 ## What It Does
 
-Provides 19 tools for file operations with automatic encoding conversion:
+Provides 21 tools for file operations with automatic encoding conversion:
 - [`read_text_file`](TOOLS.md#read_text_file) - Read files with encoding auto-detection and conversion
 - [`read_multiple_files`](TOOLS.md#read_multiple_files) - Read multiple files concurrently with encoding support
 - [`write_file`](TOOLS.md#write_file) - Write files in specific encodings
@@ -28,6 +28,8 @@ Provides 19 tools for file operations with automatic encoding conversion:
 - [`detect_encoding`](TOOLS.md#detect_encoding) - Auto-detect file encoding with confidence score
 - [`convert_encoding`](TOOLS.md#convert_encoding) - Convert file between encodings
 - [`detect_line_endings`](TOOLS.md#detect_line_endings) - Detect line ending style (CRLF/LF/mixed)
+- [`change_line_endings`](TOOLS.md#change_line_endings) - Convert line endings to LF or CRLF
+- [`manage_bom`](TOOLS.md#manage_bom) - Detect, strip, or add Unicode BOM
 - [`list_encodings`](TOOLS.md#list_encodings) - Show all supported encodings
 - [`get_file_info`](TOOLS.md#get_file_info) - Get file/directory metadata
 - [`create_directory`](TOOLS.md#create_directory) - Create directories recursively (mkdir -p)
@@ -186,6 +188,8 @@ To skip permission prompts for all file-tools commands, create `.claude/settings
       "mcp__file-tools__detect_encoding",
       "mcp__file-tools__convert_encoding",
       "mcp__file-tools__detect_line_endings",
+      "mcp__file-tools__change_line_endings",
+      "mcp__file-tools__manage_bom",
       "mcp__file-tools__list_encodings",
       "mcp__file-tools__get_file_info",
       "mcp__file-tools__create_directory",

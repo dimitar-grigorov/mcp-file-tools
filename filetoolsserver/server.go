@@ -267,7 +267,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "edit_file",
-		Description: "Replace text in a file with whitespace-flexible matching. Returns unified diff showing changes. Supports encoding param for non-UTF-8 files. IMPORTANT: For non-trivial edits, first call with dryRun=true to preview the diff, show it to the user, and confirm before calling again with dryRun=false to apply. Parameters: path (required), edits (array of {oldText, newText}), dryRun (default: false), encoding (optional, auto-detected).",
+		Description: "Replace text in a file with whitespace-flexible matching. Returns unified diff showing changes. Supports encoding param for non-UTF-8 files. IMPORTANT: For non-trivial edits, first call with dryRun=true to preview the diff, show it to the user, and confirm before calling again with dryRun=false to apply. If the file is read-only, do NOT retry — ask the user whether to force-write or skip. Parameters: path (required), edits (array of {oldText, newText}), dryRun (default: false), encoding (optional, auto-detected), forceWritable (default: false, set true only if user explicitly requests removing the read-only flag).",
 		Annotations: &mcp.ToolAnnotations{
 			Title:           "Edit File",
 			ReadOnlyHint:    false,
