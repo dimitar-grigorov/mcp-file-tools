@@ -135,7 +135,6 @@ type EditOperation struct {
 
 // EditFileInput applies text replacements with whitespace-flexible matching.
 // Set DryRun to preview changes without writing.
-// Set ForceWritable to true to clear the read-only flag before editing. Default: false (fails on read-only files).
 type EditFileInput struct {
 	Path          string          `json:"path"`
 	Edits         []EditOperation `json:"edits"`
