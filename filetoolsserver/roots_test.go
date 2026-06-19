@@ -121,44 +121,59 @@ func TestFileURIToPath(t *testing.T) {
 	}
 }
 
-func TestUpdateAllowedDirectoriesFromRoots_ReplacesExisting(t *testing.T) {
+func TestUpdateAllowedDirectoriesFromRoots_MergesWithCLIBaseline(t *testing.T) {
 	tempDir1 := t.TempDir()
 	tempDir2 := t.TempDir()
 
-	// Start with one directory
+	// Start with one CLI directory (baseline).
 	h := handler.NewHandler([]string{tempDir1})
 
-	// Verify initial state
 	initialDirs := h.GetAllowedDirectories()
 	if len(initialDirs) != 1 {
 		t.Fatalf("expected 1 initial directory, got %d", len(initialDirs))
 	}
-	initialDir := initialDirs[0]
 
-	// Update with different directory - should replace, not append
+	// Update with a different root - should augment the CLI baseline, not replace it.
 	roots := []*mcp.Root{
 		{URI: "file:///" + filepath.ToSlash(tempDir2)},
 	}
 
 	updateAllowedDirectoriesFromRoots(h, roots)
 
-	// After update, should have exactly 1 directory (replaced, not appended)
+	// After update, both the CLI baseline and the root should be present.
 	updatedDirs := h.GetAllowedDirectories()
-	if len(updatedDirs) != 1 {
-		t.Errorf("expected 1 directory after update (replacement), got %d", len(updatedDirs))
+	if len(updatedDirs) != 2 {
+		t.Fatalf("expected 2 directories after merge, got %d: %v", len(updatedDirs), updatedDirs)
 	}
 
-	// Verify the directory changed (it's not the same as initial)
-	if len(updatedDirs) > 0 {
-		updatedDir := updatedDirs[0]
+	want := map[string]bool{}
+	for _, d := range []string{tempDir1, tempDir2} {
+		resolved, _ := filepath.EvalSymlinks(d)
+		want[resolved] = true
+	}
+	for _, d := range updatedDirs {
+		resolved, _ := filepath.EvalSymlinks(d)
+		delete(want, resolved)
+	}
+	if len(want) != 0 {
+		t.Errorf("merged dirs missing expected entries: %v (got %v)", want, updatedDirs)
+	}
+}
 
-		// The updated directory should NOT be the same as the initial directory
-		// (Compare resolved paths to handle symlinks)
-		initialResolved, _ := filepath.EvalSymlinks(initialDir)
-		updatedResolved, _ := filepath.EvalSymlinks(updatedDir)
+func TestUpdateAllowedDirectoriesFromRoots_DedupsBaseline(t *testing.T) {
+	tempDir1 := t.TempDir()
 
-		if initialResolved == updatedResolved {
-			t.Errorf("directory was not replaced: still have %s", initialResolved)
-		}
+	h := handler.NewHandler([]string{tempDir1})
+
+	// Root identical to the CLI baseline must not produce a duplicate.
+	roots := []*mcp.Root{
+		{URI: "file:///" + filepath.ToSlash(tempDir1)},
+	}
+
+	updateAllowedDirectoriesFromRoots(h, roots)
+
+	updatedDirs := h.GetAllowedDirectories()
+	if len(updatedDirs) != 1 {
+		t.Errorf("expected 1 directory after dedup, got %d: %v", len(updatedDirs), updatedDirs)
 	}
 }
