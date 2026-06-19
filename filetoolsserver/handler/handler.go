@@ -17,6 +17,7 @@ const (
 // Handler handles all file tool operations
 type Handler struct {
 	config      *config.Config
+	cliDirs     []string // immutable baseline from CLI args; always allowed
 	allowedDirs []string
 	mu          sync.RWMutex
 }
@@ -36,8 +37,18 @@ func WithConfig(cfg *config.Config) Option {
 // NewHandler creates a new Handler with allowed directories and optional configuration.
 // If no config is provided via WithConfig, default configuration is used.
 func NewHandler(allowedDirs []string, opts ...Option) *Handler {
+	// Normalize the CLI baseline so dedup against (already-normalized) MCP roots
+	// is reliable regardless of how the caller passed the paths. Best-effort:
+	// fall back to the raw paths if normalization fails.
+	cliDirs, err := security.NormalizeAllowedDirs(allowedDirs)
+	if err != nil {
+		cliDirs = make([]string, len(allowedDirs))
+		copy(cliDirs, allowedDirs)
+	}
+
 	h := &Handler{
 		config:      config.Load(), // Load defaults from environment
+		cliDirs:     cliDirs,
 		allowedDirs: allowedDirs,
 	}
 
@@ -67,6 +78,30 @@ func (h *Handler) UpdateAllowedDirectories(newDirs []string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.allowedDirs = newDirs
+}
+
+// MergeAllowedDirectories sets allowed directories to the union of the immutable
+// CLI baseline and newDirs (deduped, baseline first). Used for the MCP Roots
+// protocol so client-provided roots augment, rather than replace, CLI args.
+func (h *Handler) MergeAllowedDirectories(newDirs []string) []string {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	seen := make(map[string]struct{}, len(h.cliDirs)+len(newDirs))
+	merged := make([]string, 0, len(h.cliDirs)+len(newDirs))
+	for _, dir := range append(append([]string{}, h.cliDirs...), newDirs...) {
+		if _, ok := seen[dir]; ok {
+			continue
+		}
+		seen[dir] = struct{}{}
+		merged = append(merged, dir)
+	}
+
+	h.allowedDirs = merged
+
+	result := make([]string, len(merged))
+	copy(result, merged)
+	return result
 }
 
 // validatePath validates a path against allowed directories

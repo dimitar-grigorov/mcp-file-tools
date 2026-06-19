@@ -3,6 +3,7 @@ package filetoolsserver
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"os"
 	"runtime"
@@ -86,12 +87,10 @@ func updateAllowedDirectoriesFromRoots(h *handler.Handler, roots []*mcp.Root) {
 	}
 
 	if len(validatedDirs) > 0 {
-		h.UpdateAllowedDirectories(validatedDirs)
-		fmt.Fprintf(os.Stderr, "Updated allowed directories from MCP roots: %d directories\n", len(validatedDirs))
-		for _, dir := range validatedDirs {
-			fmt.Fprintf(os.Stderr, "  - %s\n", dir)
-		}
+		merged := h.MergeAllowedDirectories(validatedDirs)
+		slog.Debug("merged allowed directories from MCP roots",
+			"roots", validatedDirs, "merged", merged)
 	} else {
-		fmt.Fprintf(os.Stderr, "No valid root directories provided by client\n")
+		slog.Debug("no valid root directories provided by client")
 	}
 }
