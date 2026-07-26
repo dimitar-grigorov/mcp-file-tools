@@ -8,15 +8,24 @@
 
 Claude sees `Настройки` — not `????` or `Íàñòðîéêè`.
 
-MCP server for file operations with non-UTF-8 encoding support. Auto-detects and converts 24 encodings (Cyrillic, Windows-125x, ISO-8859, KOI8, UTF-16, GBK/GB18030) so AI assistants can read and write legacy files without corrupting data.
+MCP server for file operations on text that isn't UTF-8. It detects the encoding from the
+file's bytes rather than its extension, hands the model UTF-8, and writes back in the
+original encoding — BOM and CRLF/LF intact, still byte-compatible with whatever legacy
+tool owns the file.
 
-**Perfect for:** Delphi/Pascal projects, legacy VB6 apps, old PHP/HTML sites, config files with non-UTF-8 text.
+- **24 encodings, read and write** — Cyrillic (CP1251, KOI8-R/U, CP866), Windows-125x, ISO-8859-x, UTF-16 LE/BE, GBK/GB18030 ([full list](#supported-encodings))
+- **Encoding-aware across the whole tool set** — not just read and write: `edit_file`, `grep_text_files` and `search_files` decode the same way
+- **Detection you can inspect** — `detect_encoding` reports the charset, a confidence score and any BOM, so garbled text becomes diagnosable instead of mysterious
+- **BOM and line endings are first-class** — add or strip a BOM, convert CRLF↔LF, and do it correctly on UTF-16, where a naive byte-level rewrite corrupts the file
+- **Sandboxed** — every path, including symlink and junction targets, is resolved and checked against the directories you allowed
+
+**Perfect for:** Delphi/Pascal projects, legacy VB6 apps, old PHP/HTML sites, config and data files whose encoding you can't tell from the filename.
 
 > **PRs welcome and merged fast** — no CLA, no style review, one-line fixes count. Forked this to fix something? Please [send it back](#contributing) instead.
 
 ## What It Does
 
-Provides 21 tools for file operations with automatic encoding conversion:
+Provides 22 tools for file operations with automatic encoding conversion:
 - [`read_text_file`](TOOLS.md#read_text_file) - Read files with encoding auto-detection and conversion
 - [`read_multiple_files`](TOOLS.md#read_multiple_files) - Read multiple files concurrently with encoding support
 - [`write_file`](TOOLS.md#write_file) - Write files in specific encodings
@@ -38,19 +47,37 @@ Provides 21 tools for file operations with automatic encoding conversion:
 - [`create_directory`](TOOLS.md#create_directory) - Create directories recursively (mkdir -p)
 - [`move_file`](TOOLS.md#move_file) - Move or rename files and directories
 - [`list_allowed_directories`](TOOLS.md#list_allowed_directories) - Show accessible directories
-
-**Supported encodings (22 total):**
-- **Unicode:** UTF-8, UTF-16 LE, UTF-16 BE (with BOM detection for UTF-16 and UTF-32)
-- **Cyrillic:** Windows-1251, KOI8-R, KOI8-U, CP866, ISO-8859-5
-- **Western European:** Windows-1252, ISO-8859-1, ISO-8859-15
-- **Central European:** Windows-1250, ISO-8859-2
-- **Greek:** Windows-1253, ISO-8859-7
-- **Turkish:** Windows-1254, ISO-8859-9
-- **Other:** Hebrew (1255), Arabic (1256), Baltic (1257), Vietnamese (1258), Thai (874)
+- [`check_for_updates`](TOOLS.md#check_for_updates) - Check whether a newer release is available
 
 See [TOOLS.md](TOOLS.md) for detailed parameters and examples.
 
-**Security:** All operations restricted to allowed directories only.
+### Supported encodings
+
+24 encodings, each usable for both reading and writing. Any of them can be named
+explicitly via the `encoding` parameter, or left to auto-detection.
+
+| Script / region | Encodings |
+|---|---|
+| Unicode | UTF-8, UTF-16 LE, UTF-16 BE |
+| Cyrillic | Windows-1251, KOI8-R, KOI8-U, CP866, ISO-8859-5 |
+| Western European | Windows-1252, ISO-8859-1, ISO-8859-15 |
+| Central European | Windows-1250, ISO-8859-2 |
+| Greek | Windows-1253, ISO-8859-7 |
+| Turkish | Windows-1254, ISO-8859-9 |
+| Chinese Simplified | GBK, GB18030 |
+| Hebrew, Arabic, Baltic, Vietnamese, Thai | Windows-1255, 1256, 1257, 1258, 874 |
+
+Common aliases are accepted (`cp1251`, `latin1`, `gb2312`, `tis-620`, …) —
+[`list_encodings`](TOOLS.md#list_encodings) prints the whole table with aliases.
+
+UTF-32 is partially supported: LE and BE BOMs are detected, and
+[`manage_bom`](TOOLS.md#manage_bom) can add or strip them, but transcoding to or from
+UTF-32 is not implemented and [`change_line_endings`](TOOLS.md#change_line_endings)
+refuses UTF-32 files rather than corrupting their 4-byte alignment.
+
+**Security:** All operations restricted to allowed directories only. Paths are resolved
+before the check, so a symlink or Windows junction pointing outside an allowed directory
+is rejected rather than followed.
 
 > **Upgrading to 2.0.0?** `write_file` now defaults **new** files to `utf-8` instead of
 > `cp1251`. Existing files keep their detected encoding and are unaffected. See the

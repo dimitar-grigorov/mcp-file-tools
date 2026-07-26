@@ -543,6 +543,11 @@ Returns all 24 supported encodings with name, aliases, and description.
 
 Returns directories the server is allowed to access. If empty, add paths as args in config.
 
+### check_for_updates
+
+Checks whether a newer release is available. No parameters. Set `MCP_NO_UPDATE_CHECK=1` to
+disable the check.
+
 ## Supported Encodings
 
 | Name | Aliases | Description |
@@ -569,3 +574,11 @@ Returns directories the server is allowed to access. If empty, add paths as args
 | windows-1257 | cp1257 | Windows Baltic |
 | windows-1258 | cp1258 | Windows Vietnamese |
 | windows-874 | cp874, tis-620 | Windows Thai |
+| gbk | cp936, gb2312, gb-2312 | Chinese Simplified (GBK) |
+| gb18030 | gb-18030 | Chinese Simplified (GB18030, full Unicode) |
+
+UTF-32 LE/BE BOMs are detected by [`detect_encoding`](#detect_encoding) and can be added
+or stripped by [`manage_bom`](#manage_bom), but UTF-32 is not a transcoding target:
+`convert_encoding` and the `encoding` parameter do not accept it, and
+[`change_line_endings`](#change_line_endings) refuses UTF-32 files rather than breaking
+their 4-byte alignment.

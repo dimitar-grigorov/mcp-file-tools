@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.dimitar-grigorov/mcp-file-tools",
   "title": "MCP File Tools",
-  "description": "Non-UTF-8/Unicode encoding: CP1251, CP1252, KOI8-R, ISO-8859 with auto-detection",
+  "description": "Non-UTF-8 files: CP1251, CP1252, KOI8, ISO-8859, UTF-16, GBK auto-detected and preserved",
   "repository": {
     "url": "https://github.com/dimitar-grigorov/mcp-file-tools",
     "source": "github"
