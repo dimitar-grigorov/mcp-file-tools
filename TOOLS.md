@@ -36,6 +36,8 @@ Read file contents with automatic encoding detection and optional partial readin
 }
 ```
 
+`totalLines` counts newline-terminated lines: a trailing newline does not add an empty final line, and an empty file is `0`. (Matches `detect_line_endings`.)
+
 ### read_multiple_files
 
 Read multiple files concurrently with encoding support. Individual file failures don't stop the operation.
@@ -436,6 +438,8 @@ Detect line ending style (CRLF/LF/mixed) and find lines with inconsistent ending
 - `lf`: All lines use Unix line endings (\\n)
 - `mixed`: File has both CRLF and LF endings - `inconsistentLines` lists lines with minority style
 - `none`: File has no line endings (single line or empty)
+
+`totalLines` counts newline-terminated lines: a trailing newline does not add a phantom final line, and an empty file reports `0`. (Matches `read_text_file`.)
 
 ### change_line_endings
 

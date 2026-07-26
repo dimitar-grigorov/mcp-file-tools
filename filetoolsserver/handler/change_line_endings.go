@@ -70,6 +70,11 @@ func (h *Handler) HandleChangeLineEndings(ctx context.Context, req *mcp.CallTool
 		return errorResult(fmt.Sprintf("failed to read file: %v", err)), ChangeLineEndingsOutput{}, nil
 	}
 
+	// UTF-32 would corrupt in the byte-level default path; refuse it.
+	if bomRes, ok := encoding.DetectBOM(data); ok && (bomRes.Charset == "utf-32-le" || bomRes.Charset == "utf-32-be") {
+		return errorResult(fmt.Sprintf("changing line endings for %s is not supported; convert to UTF-8 first", bomRes.Charset)), ChangeLineEndingsOutput{}, nil
+	}
+
 	// Detect on decoded text: UTF-16 has a 00 between CR and LF.
 	content, err := decodeContent(data, encResult)
 	if err != nil {
