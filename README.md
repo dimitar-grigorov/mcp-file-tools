@@ -211,49 +211,16 @@ command = "C:\\Users\\YOUR_NAME\\AppData\\Local\\Programs\\mcp-file-tools\\mcp-f
 args = ["D:\\Projects"]
 ```
 
-### Auto-approve All Tools (Claude Code)
+### Auto-approve tools (Claude Code)
 
-To skip permission prompts for all file-tools commands, create `.claude/settings.local.json` in your project root:
+To skip the permission prompts, add to `.claude/settings.local.json` in your project root:
 
 ```json
-{
-  "permissions": {
-    "allow": [
-      "Bash(ls *)",
-      "Bash(grep *)",
-      "Bash(sort *)",
-      "Bash(wc *)",
-      "Bash(find *)",
-      "Bash(echo *)",
-      "Grep",
-      "Glob",
-      "WebSearch",
-      "mcp__file-tools__read_text_file",
-      "mcp__file-tools__read_multiple_files",
-      "mcp__file-tools__write_file",
-      "mcp__file-tools__edit_file",
-      "mcp__file-tools__copy_file",
-      "mcp__file-tools__list_directory",
-      "mcp__file-tools__tree",
-      "mcp__file-tools__directory_tree",
-      "mcp__file-tools__search_files",
-      "mcp__file-tools__grep_text_files",
-      "mcp__file-tools__detect_encoding",
-      "mcp__file-tools__convert_encoding",
-      "mcp__file-tools__detect_line_endings",
-      "mcp__file-tools__change_line_endings",
-      "mcp__file-tools__manage_bom",
-      "mcp__file-tools__list_encodings",
-      "mcp__file-tools__get_file_info",
-      "mcp__file-tools__create_directory",
-      "mcp__file-tools__list_allowed_directories",
-      "mcp__file-tools__check_for_updates"
-    ]
-  }
-}
+{ "permissions": { "allow": ["mcp__file-tools__*"] } }
 ```
 
-This auto-approves safe read-only and editing file-tools operations plus common shell commands and web search. Destructive operations (`delete_file`, `move_file`) and `WebFetch` are intentionally excluded — Claude will ask before using them. Adjust to your needs.
+The plugin install uses a different prefix, and keeping `delete_file` / `move_file` behind
+a prompt takes one more rule — see [docs/extra.md](docs/extra.md#auto-approving-tools-in-claude-code).
 
 ### Update
 
@@ -382,17 +349,19 @@ Details in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Forking
 
-Forking is fine — that's what GPL-3.0 is for. Two sets of asks:
+Forking is fine — that's what GPL-3.0 is for. Taking the project over is not.
 
-**Required by GPL-3.0** if you distribute your fork: keep GPL-3.0 with [LICENSE](LICENSE) and the copyright notice intact (§4, §5c), state prominently that you modified it and when (§5a), and ship the source (§6).
+**GPL-3.0 is a license, not a preference.** If you distribute your fork — a public repo, a release binary, a registry listing, a product you ship to customers — you must keep GPL-3.0 and [LICENSE](LICENSE) in place with the copyright notice intact (§4, §5c), state prominently that you changed the files and when (§5a), and make the source available to everyone you gave it to (§6). Deleting the license or the notice, relicensing it as MIT or proprietary, or shipping only a binary is a license violation, and §8 ends your rights the moment you do it.
 
-**Courtesy, not enforced:**
+**And it will be enforced.** In that order: a request to comply, then a DMCA takedown and a delisting request to whichever registry or marketplace carries it, then legal action as the copyright holder. Complying costs you a license file, a notice and a source link, so none of this needs to happen. Not sure whether what you're shipping complies? [Ask in an issue](https://github.com/dimitar-grigorov/mcp-file-tools/issues) — that's a normal question, and a cheaper one.
 
-- **Try upstream first.** A PR here beats carrying merge conflicts forever, and you get public credit.
-- **Say it's a fork, at the top.** One line near the start of your README: *"Fork of [dimitar-grigorov/mcp-file-tools](https://github.com/dimitar-grigorov/mcp-file-tools)"*.
-- **Don't ship it under the same identity.** A rebranded fork in public registries (MCP Registry, plugin marketplaces, Smithery) under the same product name with the author swapped reads as if the original project moved. Give it a distinguishable name.
+That's the enforceable part; the rest below is asked, not enforced.
 
-Maintaining a long-running fork? Open an issue about upstreaming the parts that fit — that's a welcome conversation.
+**Leave the credit in.** Keeping `Copyright (C) 2026 Dimitar Grigorov` in `LICENSE` and in the source headers is the legal minimum. One line near the top of your README — *"Fork of [dimitar-grigorov/mcp-file-tools](https://github.com/dimitar-grigorov/mcp-file-tools)"* — is what actually tells a reader where this came from, and costs you nothing.
+
+**Don't ship it under this project's identity.** A rebranded fork in a public registry (MCP Registry, plugin marketplaces, Smithery) carrying the same product name with the author swapped reads as if the original project moved — people install it believing it's this one, and file its bugs here. Give your fork a name of its own.
+
+**Try upstream first.** A PR here beats carrying merge conflicts forever, and it puts your name on the commit rather than in a credits list. Maintaining a long-running fork? Open an issue about upstreaming the parts that fit — that's a welcome conversation.
 
 ## Credits
 
