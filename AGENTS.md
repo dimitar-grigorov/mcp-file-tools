@@ -24,7 +24,7 @@ For AI agents working in this repo — Claude Code, Codex, Cursor, anything else
 
 ```bash
 make test    # go test -race ./...
-make lint    # go vet ./... && go fmt ./...
+make lint    # go vet, go fmt, staticcheck (same pin as CI)
 make build
 ```
 

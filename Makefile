@@ -3,6 +3,8 @@
 BINARY_NAME=mcp-file-tools
 VERSION?=$(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 LDFLAGS=-ldflags "-s -w -X main.version=$(VERSION)"
+# keep in sync with .github/workflows/test.yml
+STATICCHECK_VERSION=v0.7.0
 
 ## build: Build the binary
 build:
@@ -21,6 +23,7 @@ test-cover:
 lint:
 	go vet ./...
 	go fmt ./...
+	go run honnef.co/go/tools/cmd/staticcheck@$(STATICCHECK_VERSION) ./...
 
 ## clean: Remove build artifacts
 clean:
