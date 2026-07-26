@@ -27,12 +27,17 @@ func IsPathWithinAllowedDirectories(absolutePath string, allowedDirs []string) b
 	for _, allowedDir := range allowedDirs {
 		cleanAllowed := normalizePath(filepath.Clean(allowedDir))
 
-		if normalized == cleanAllowed {
+		if pathsEqual(normalized, cleanAllowed) {
 			return true
 		}
 
+		// A root ("C:\", "/") already ends in a separator.
 		sep := string(filepath.Separator)
-		if strings.HasPrefix(normalized, cleanAllowed+sep) {
+		allowedPrefix := cleanAllowed
+		if !strings.HasSuffix(allowedPrefix, sep) {
+			allowedPrefix += sep
+		}
+		if pathHasPrefix(normalized, allowedPrefix) {
 			return true
 		}
 	}
@@ -65,45 +70,61 @@ func ValidatePath(requestedPath string, allowedDirs []string) (string, error) {
 		return "", fmt.Errorf("%w: %s", ErrPathDenied, absolute)
 	}
 
-	resolvedAllowedDirs := make([]string, 0, len(allowedDirs))
-	for _, dir := range allowedDirs {
-		resolvedDir, err := filepath.EvalSymlinks(dir)
-		if err == nil {
-			resolvedAllowedDirs = append(resolvedAllowedDirs, normalizePath(resolvedDir))
-		} else {
-			resolvedAllowedDirs = append(resolvedAllowedDirs, normalizePath(dir))
-		}
-	}
+	resolvedAllowedDirs := ResolveAllowedDirs(allowedDirs)
 
-	realPath, err := filepath.EvalSymlinks(absolute)
+	resolvedPath, exists, err := resolvePathAllowMissing(absolute)
 	if err != nil {
 		if os.IsNotExist(err) {
-			parentDir := filepath.Dir(absolute)
-			realParent, err := filepath.EvalSymlinks(parentDir)
-			if err != nil {
-				if os.IsNotExist(err) {
-					if IsPathWithinAllowedDirectories(normalized, resolvedAllowedDirs) {
-						return absolute, nil
-					}
-					return "", fmt.Errorf("%w: %s", ErrParentNotExists, parentDir)
-				}
-				return "", fmt.Errorf("failed to resolve parent directory: %w", err)
-			}
-			normalizedParent := normalizePath(realParent)
-			if !IsPathWithinAllowedDirectories(normalizedParent, resolvedAllowedDirs) {
-				return "", fmt.Errorf("%w: %s", ErrParentDirDenied, realParent)
-			}
-			return absolute, nil
+			return "", fmt.Errorf("%w: %s", ErrParentNotExists, filepath.Dir(absolute))
 		}
 		return "", fmt.Errorf("failed to resolve path: %w", err)
 	}
 
-	normalizedReal := normalizePath(realPath)
-	if !IsPathWithinAllowedDirectories(normalizedReal, resolvedAllowedDirs) {
-		return "", fmt.Errorf("%w: %s", ErrSymlinkDenied, realPath)
+	if !IsPathWithinAllowedDirectories(normalizePath(resolvedPath), resolvedAllowedDirs) {
+		if exists {
+			return "", fmt.Errorf("%w: %s", ErrSymlinkDenied, resolvedPath)
+		}
+		return "", fmt.Errorf("%w: %s", ErrParentDirDenied, filepath.Dir(resolvedPath))
 	}
 
-	return realPath, nil
+	if !exists {
+		return absolute, nil
+	}
+	return resolvedPath, nil
+}
+
+// resolvePathAllowMissing resolves the nearest existing ancestor and re-projects the
+// missing suffix onto it. Existing but unresolvable paths fail closed.
+func resolvePathAllowMissing(path string) (resolved string, exists bool, err error) {
+	current := filepath.Clean(path)
+	var missing []string
+
+	for {
+		resolvedCurrent, resolveErr := resolveExistingPath(current)
+		if resolveErr == nil {
+			resolvedCurrent = filepath.Clean(resolvedCurrent)
+			for i := len(missing) - 1; i >= 0; i-- {
+				resolvedCurrent = filepath.Join(resolvedCurrent, missing[i])
+			}
+			return filepath.Clean(resolvedCurrent), len(missing) == 0, nil
+		}
+		if !os.IsNotExist(resolveErr) {
+			return "", false, resolveErr
+		}
+
+		if _, lstatErr := os.Lstat(current); lstatErr == nil {
+			return "", false, fmt.Errorf("existing path cannot be resolved: %s: %w", current, resolveErr)
+		} else if !os.IsNotExist(lstatErr) {
+			return "", false, lstatErr
+		}
+
+		parent := filepath.Dir(current)
+		if parent == current {
+			return "", false, resolveErr
+		}
+		missing = append(missing, filepath.Base(current))
+		current = parent
+	}
 }
 
 func normalizePath(p string) string {
@@ -116,32 +137,45 @@ func normalizePath(p string) string {
 	return p
 }
 
-// ResolveAllowedDirs resolves symlinks in allowed directories once.
+func pathsEqual(first, second string) bool {
+	if runtime.GOOS == "windows" {
+		return strings.EqualFold(first, second)
+	}
+	return first == second
+}
+
+func pathHasPrefix(path, prefix string) bool {
+	if runtime.GOOS == "windows" {
+		return len(path) >= len(prefix) && strings.EqualFold(path[:len(prefix)], prefix)
+	}
+	return strings.HasPrefix(path, prefix)
+}
+
+// ResolveAllowedDirs resolves links in allowed directories once; unresolvable ones are dropped.
 func ResolveAllowedDirs(allowedDirs []string) []string {
 	resolved := make([]string, 0, len(allowedDirs))
 	for _, dir := range allowedDirs {
-		resolvedDir, err := filepath.EvalSymlinks(dir)
-		if err == nil {
-			resolved = append(resolved, normalizePath(resolvedDir))
-		} else {
-			resolved = append(resolved, normalizePath(dir))
+		resolvedDir, _, err := resolvePathAllowMissing(dir)
+		if err != nil {
+			continue
 		}
+		resolved = append(resolved, normalizePath(resolvedDir))
 	}
 	return resolved
 }
 
-// IsPathSafeResolved checks if a path (after resolving symlinks) is within pre-resolved allowed dirs.
+// IsPathSafeResolved checks if a path (after resolving links) is within pre-resolved allowed dirs.
 func IsPathSafeResolved(path string, resolvedAllowedDirs []string) bool {
 	if path == "" || len(resolvedAllowedDirs) == 0 {
 		return false
 	}
 
-	resolved, err := filepath.EvalSymlinks(path)
+	resolved, err := resolveExistingPath(path)
 	if err != nil {
 		return false
 	}
 
-	return IsPathWithinAllowedDirectories(resolved, resolvedAllowedDirs)
+	return IsPathWithinAllowedDirectories(filepath.Clean(resolved), resolvedAllowedDirs)
 }
 
 func ExpandHome(path string) string {

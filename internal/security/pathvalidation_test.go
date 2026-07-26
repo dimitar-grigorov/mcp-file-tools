@@ -145,6 +145,16 @@ func TestIsPathWithinAllowedDirectories_SecurityVulnerabilities(t *testing.T) {
 	}
 }
 
+func TestIsPathWithinAllowedDirectories_RootDirectory(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows roots require a drive letter - see TestIsPathWithinAllowedDirectories_WindowsPaths")
+	}
+
+	if !IsPathWithinAllowedDirectories("/tmp/project/file.txt", []string{"/"}) {
+		t.Fatal("the filesystem root should allow an absolute descendant")
+	}
+}
+
 func TestIsPathWithinAllowedDirectories_WindowsPaths(t *testing.T) {
 	if runtime.GOOS != "windows" {
 		t.Skip("skipping Windows-specific tests")
@@ -177,6 +187,34 @@ func TestIsPathWithinAllowedDirectories_WindowsPaths(t *testing.T) {
 			allowedDirs: []string{"C:\\Users\\user\\project"},
 			expected:    true,
 			description: "drive letter case should be normalized",
+		},
+		{
+			name:        "Windows drive root descendant",
+			path:        "D:\\OpenAI-Tunnel\\start-tunnel.ps1",
+			allowedDirs: []string{"D:\\"},
+			expected:    true,
+			description: "a drive root should allow every descendant on that drive",
+		},
+		{
+			name:        "Windows different drive",
+			path:        "E:\\OpenAI-Tunnel\\start-tunnel.ps1",
+			allowedDirs: []string{"D:\\"},
+			expected:    false,
+			description: "a drive root must not allow another drive",
+		},
+		{
+			name:        "Windows case insensitive subdirectory",
+			path:        "C:\\USERS\\USER\\PROJECT\\file.txt",
+			allowedDirs: []string{"C:\\Users\\user\\project"},
+			expected:    true,
+			description: "NTFS is case-insensitive, so casing must not deny a contained path",
+		},
+		{
+			name:        "Windows case insensitive prefix attack",
+			path:        "C:\\USERS\\USER\\PROJECT2\\file.txt",
+			allowedDirs: []string{"C:\\Users\\user\\project"},
+			expected:    false,
+			description: "case-insensitive matching must still block prefix attacks",
 		},
 		{
 			name:        "UNC path",
@@ -343,6 +381,62 @@ func TestValidatePath_Symlinks(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestValidatePath_SymlinkEscapeWithMissingParents(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipping symlink tests on Windows - see pathvalidation_windows_test.go")
+	}
+
+	tempDir := t.TempDir()
+	allowedDir := filepath.Join(tempDir, "allowed")
+	outsideDir := filepath.Join(tempDir, "outside")
+	if err := os.MkdirAll(allowedDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(outsideDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	escape := filepath.Join(allowedDir, "escape")
+	if err := os.Symlink(outsideDir, escape); err != nil {
+		t.Fatal(err)
+	}
+
+	// Single and multi-level missing suffixes must both be denied.
+	for _, path := range []string{
+		filepath.Join(escape, "new.txt"),
+		filepath.Join(escape, "missing", "nested", "new.txt"),
+	} {
+		if _, err := ValidatePath(path, []string{allowedDir}); !errors.Is(err, ErrParentDirDenied) {
+			t.Errorf("ValidatePath(%q) error = %v, want ErrParentDirDenied", path, err)
+		}
+	}
+}
+
+func TestValidatePath_AllowsMissingPathThroughSafeSymlink(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipping symlink tests on Windows - see pathvalidation_windows_test.go")
+	}
+
+	allowedDir := t.TempDir()
+	target := filepath.Join(allowedDir, "target")
+	if err := os.Mkdir(target, 0755); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(allowedDir, "safe-link")
+	if err := os.Symlink(target, link); err != nil {
+		t.Fatal(err)
+	}
+
+	requested := filepath.Join(link, "missing", "nested", "new.txt")
+	validated, err := ValidatePath(requested, []string{allowedDir})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if validated != requested {
+		t.Fatalf("validated path = %q, want %q", validated, requested)
 	}
 }
 
