@@ -1,3 +1,9 @@
+// mcp-file-tools - MCP server for file operations with non-UTF-8 encoding support.
+// Copyright (C) 2026 Dimitar Grigorov <https://github.com/dimitar-grigorov/mcp-file-tools>
+//
+// Free software under the GNU General Public License version 3, distributed
+// WITHOUT ANY WARRANTY. See LICENSE or <https://www.gnu.org/licenses/>.
+
 package main
 
 import (
