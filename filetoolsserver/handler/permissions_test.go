@@ -128,15 +128,16 @@ func TestConvertEncoding_PreservesPermissions(t *testing.T) {
 
 	testFile := filepath.Join(tempDir, "test.txt")
 
-	// Create file with specific permissions
-	if err := os.WriteFile(testFile, []byte("hello"), 0640); err != nil {
+	// Create file with specific permissions; non-ASCII so the conversion really changes bytes
+	if err := os.WriteFile(testFile, []byte("Привет"), 0640); err != nil {
 		t.Fatal(err)
 	}
 
 	// Convert encoding
 	input := ConvertEncodingInput{
 		Path: testFile,
-		To:   "utf-8",
+		From: "utf-8",
+		To:   "cp1251",
 	}
 
 	result, _, err := h.HandleConvertEncoding(context.Background(), nil, input)
@@ -162,15 +163,16 @@ func TestConvertEncoding_BackupPreservesPermissions(t *testing.T) {
 
 	testFile := filepath.Join(tempDir, "test.txt")
 
-	// Create file with specific permissions
-	if err := os.WriteFile(testFile, []byte("hello"), 0600); err != nil {
+	// Create file with specific permissions; non-ASCII so the conversion really changes bytes
+	if err := os.WriteFile(testFile, []byte("Привет"), 0600); err != nil {
 		t.Fatal(err)
 	}
 
 	// Convert encoding with backup
 	input := ConvertEncodingInput{
 		Path:   testFile,
-		To:     "utf-8",
+		From:   "utf-8",
+		To:     "cp1251",
 		Backup: true,
 	}
 
