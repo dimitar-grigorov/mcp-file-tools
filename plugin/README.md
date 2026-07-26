@@ -25,9 +25,10 @@ MCP roots protocol and the server allows it automatically.
 
 ## Requirements
 
-None beyond Claude Code itself. The launcher runs on `node`, which Claude Code already
-requires, so it works the same on Windows, macOS, and Linux. The server binary is a
-standalone Go executable with no runtime dependencies.
+Node.js 18+ on your PATH — `bin/run.js` is a Node script, and Claude Code ships as a
+standalone binary that does not bundle Node. If the server shows as not connected,
+check `node --version` first. The server binary itself is a standalone Go executable
+with no runtime dependencies — see below to skip Node entirely.
 
 ## Alternative without the plugin
 

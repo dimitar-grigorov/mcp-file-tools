@@ -60,15 +60,18 @@ The simplest way to use this with Claude Code:
 /plugin install mcp-file-tools
 ```
 
+**Requires [Node.js](https://nodejs.org) 18+ on your PATH** — the launcher is a Node
+script. Claude Code ships as a standalone binary and does not bundle Node, so
+`node --version` can fail on an otherwise working install; the server then shows as
+*not connected* in `/mcp`.
+
 On first launch the plugin downloads the right binary for your OS, verifies its
 SHA-256, caches it, and keeps it pinned to a known version. The server is
 automatically scoped to the folder you have open (via the MCP roots protocol), so
-there is nothing to configure. It needs nothing beyond Claude Code itself; the
-launcher runs on Node, which Claude Code already uses, so it works the same on
-Windows, macOS, and Linux.
+there is nothing to configure.
 
-The plugin only accesses your current workspace. To grant access to directories
-outside it, use a manual install (below).
+The plugin only accesses your current workspace. Without Node, or to grant access to
+directories outside the workspace, use a manual install (below).
 
 **Already added the server the manual way?** Remove the old `claude mcp add` entry so
 you are not running two copies:
