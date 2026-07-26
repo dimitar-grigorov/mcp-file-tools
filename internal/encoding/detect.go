@@ -8,6 +8,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/wlynxg/chardet"
+	"golang.org/x/text/encoding/charmap"
 )
 
 // Detection constants
@@ -16,6 +17,7 @@ const (
 	SmallFileThreshold      = 128 * 1024 // Files smaller than this are read entirely
 	HighConfidenceThreshold = 80         // Confidence level to stop sampling early
 	MinConfidenceThreshold  = 50         // Minimum confidence to trust detection
+	utf8FallbackConfidence  = 80         // Confidence when UTF-8 is inferred from the bytes
 )
 
 // GBK two-byte ranges: lead 0x81–0xFE, trail 0x40–0xFE except 0x7F.
@@ -120,7 +122,7 @@ func Detect(data []byte) DetectionResult {
 	detected := chardet.Detect(data)
 	if detected.Encoding == "" {
 		if utf8.Valid(data) {
-			return DetectionResult{Charset: "utf-8", Confidence: 80}
+			return DetectionResult{Charset: "utf-8", Confidence: utf8FallbackConfidence}
 		}
 		return DetectionResult{}
 	}
@@ -138,7 +140,38 @@ func Detect(data []byte) DetectionResult {
 		}
 	}
 
+	// chardet guesses a single-byte charset for short or emoji-heavy UTF-8, which
+	// would decode valid UTF-8 into mojibake. Legacy text is virtually never valid
+	// UTF-8, so a well-formed multi-byte sequence outweighs the guess.
+	if isSingleByteCharset(charset) && hasMultiByteUTF8(data) {
+		return DetectionResult{Charset: "utf-8", Confidence: max(confidence, utf8FallbackConfidence)}
+	}
+
 	return DetectionResult{Charset: charset, Confidence: confidence}
+}
+
+// isSingleByteCharset reports whether name is a registered single-byte codec.
+func isSingleByteCharset(name string) bool {
+	canonical, ok := Canonical(name)
+	if !ok {
+		return false
+	}
+	_, isCharmap := encodings[canonical].Encoding.(*charmap.Charmap)
+	return isCharmap
+}
+
+// hasMultiByteUTF8 reports whether data is valid UTF-8 and holds at least one
+// multi-byte sequence. Pure ASCII returns false: every candidate agrees on it.
+func hasMultiByteUTF8(data []byte) bool {
+	if !utf8.Valid(data) {
+		return false
+	}
+	for _, b := range data {
+		if b >= utf8.RuneSelf {
+			return true
+		}
+	}
+	return false
 }
 
 // looksLikeGBK reports whether data holds enough valid GBK two-byte sequences,
