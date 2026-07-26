@@ -408,6 +408,16 @@ Forking is fine — that's what GPL-3.0 is for. Two sets of asks:
 
 Maintaining a long-running fork? Open an issue about upstreaming the parts that fit — that's a welcome conversation.
 
+## Credits
+
+Ideas that started in someone else's fork and were reimplemented here:
+
+- [@skyispainted](https://github.com/skyispainted) - GBK/GB18030, JSON-string array args, `edit_file` retry hint
+- [@haobiao](https://github.com/haobiao) - GBK/GB18030, independently
+- [Hugo Rosário](https://github.com/WTC-ZoneSoft) - merging MCP roots with CLI allowed dirs
+
+A PR gets your name on the commit instead of this list.
+
 ## License
 
 GPL-3.0 - see [LICENSE](LICENSE)
