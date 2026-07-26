@@ -11,6 +11,8 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
 	"github.com/dimitar-grigorov/mcp-file-tools/internal/security"
@@ -212,14 +214,15 @@ func searchSingleFile(path string, re *regexp.Regexp, input GrepInput, maxFileSi
 		slog.Warn("loading large file into memory", "path", path, "size", info.Size(), "threshold", maxFileSize)
 	}
 	data, err := os.ReadFile(path)
-	if err != nil || isBinaryFile(data) {
+	if err != nil {
 		return nil
 	}
+	// Decode first: UTF-16 text is full of NUL bytes, so classify the decoded text.
 	content, detectedEncoding := decodeFileContent(data, input.Encoding)
-	if content == "" {
+	if content == "" || isBinaryText(content) {
 		return nil
 	}
-	lines := strings.Split(content, "\n")
+	lines := splitGrepLines(content)
 	var matches []GrepMatch
 	for lineNum, line := range lines {
 		loc := re.FindStringIndex(line)
@@ -244,46 +247,81 @@ func searchSingleFile(path string, re *regexp.Regexp, input GrepInput, maxFileSi
 	return matches
 }
 
-// isBinaryFile checks if the data appears to be binary (contains null bytes).
-func isBinaryFile(data []byte) bool {
-	checkSize := binaryCheckSize
-	if len(data) < checkSize {
-		checkSize = len(data)
+// splitGrepLines splits on CRLF, lone CR and LF so no line keeps a trailing \r.
+func splitGrepLines(content string) []string {
+	if strings.ContainsRune(content, '\r') {
+		content = strings.ReplaceAll(content, "\r\n", "\n")
+		content = strings.ReplaceAll(content, "\r", "\n")
 	}
-	for i := 0; i < checkSize; i++ {
-		if data[i] == 0 {
+	return strings.Split(content, "\n")
+}
+
+// isBinaryText classifies decoded text: a NUL rune, or dense control characters.
+func isBinaryText(content string) bool {
+	if !utf8.ValidString(content) {
+		return true
+	}
+	controlCount, runeCount := 0, 0
+	for i, r := range content {
+		if i >= binaryCheckSize {
+			break
+		}
+		runeCount++
+		if r == 0 {
 			return true
 		}
+		if unicode.IsControl(r) && r != '\n' && r != '\r' && r != '\t' {
+			controlCount++
+		}
 	}
-	return false
+	return runeCount > 0 && controlCount*10 >= runeCount
+}
+
+// detectGrepEncoding resolves the encoding to search with. Valid UTF-8 bytes beat an
+// untrusted guess: chardet mislabels short mixed-script UTF-8 as a single-byte charset.
+func detectGrepEncoding(data []byte) string {
+	detection, trusted := encoding.DetectSample(data)
+	if detection.Charset == "" {
+		return "utf-8"
+	}
+	if trusted || !utf8.Valid(data) {
+		return detection.Charset
+	}
+	return "utf-8"
 }
 
 // decodeFileContent decodes file data to UTF-8 string.
 func decodeFileContent(data []byte, forcedEncoding string) (string, string) {
 	var encodingName string
 	if forcedEncoding != "" {
-		encodingName = strings.ToLower(forcedEncoding)
-	} else {
-		detection, _ := encoding.DetectSample(data)
-		if detection.Charset != "" {
-			encodingName = detection.Charset
-		} else {
-			encodingName = "utf-8"
+		encodingName, _ = encoding.Canonical(forcedEncoding)
+		if encodingName == "" {
+			encodingName = strings.ToLower(forcedEncoding)
 		}
+	} else {
+		encodingName = detectGrepEncoding(data)
 	}
 	if encoding.IsUTF8(encodingName) {
-		return string(data), encodingName
+		return trimBOM(string(data)), encodingName
 	}
 	enc, ok := encoding.Get(encodingName)
 	if !ok {
-		return string(data), "utf-8"
+		return trimBOM(string(data)), "utf-8"
 	}
 	decoder := enc.NewDecoder()
 	decoded, err := decoder.Bytes(data)
 	if err != nil {
-		return string(data), "utf-8"
+		return trimBOM(string(data)), "utf-8"
 	}
-	return string(decoded), encodingName
+	return trimBOM(string(decoded)), encodingName
+}
+
+// trimBOM drops a leading BOM so it doesn't shift line 1 columns or break ^ anchors.
+func trimBOM(content string) string {
+	if r, size := utf8.DecodeRuneInString(content); r == 0xFEFF {
+		return content[size:]
+	}
+	return content
 }
 
 // getContextBefore returns N lines before the given line index.

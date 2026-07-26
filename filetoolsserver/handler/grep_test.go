@@ -299,6 +299,62 @@ func TestHandleGrep_MissingPaths(t *testing.T) {
 	}
 }
 
+func TestHandleGrep_CRLFHasNoTrailingCR(t *testing.T) {
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+
+	testFile := filepath.Join(tempDir, "test.txt")
+	os.WriteFile(testFile, []byte("line one\r\nline two with pattern\r\nline three\r\n"), 0644)
+
+	_, output, err := h.HandleGrep(context.Background(), nil, GrepInput{
+		Pattern:       "pattern",
+		Paths:         []string{testFile},
+		ContextBefore: 1,
+		ContextAfter:  1,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(output.Matches) != 1 {
+		t.Fatalf("expected 1 match, got %d", len(output.Matches))
+	}
+	match := output.Matches[0]
+	if match.Text != "line two with pattern" {
+		t.Errorf("Text = %q, want %q", match.Text, "line two with pattern")
+	}
+	if len(match.Before) != 1 || match.Before[0] != "line one" {
+		t.Errorf("Before = %q, want [\"line one\"]", match.Before)
+	}
+	if len(match.After) != 1 || match.After[0] != "line three" {
+		t.Errorf("After = %q, want [\"line three\"]", match.After)
+	}
+}
+
+func TestHandleGrep_SplitsLoneCR(t *testing.T) {
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+
+	testFile := filepath.Join(tempDir, "test.txt")
+	os.WriteFile(testFile, []byte("line one\rline two with pattern\rline three"), 0644)
+
+	_, output, err := h.HandleGrep(context.Background(), nil, GrepInput{
+		Pattern: "pattern",
+		Paths:   []string{testFile},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(output.Matches) != 1 {
+		t.Fatalf("expected 1 match, got %d", len(output.Matches))
+	}
+	if output.Matches[0].Line != 2 {
+		t.Errorf("Line = %d, want 2", output.Matches[0].Line)
+	}
+	if output.Matches[0].Text != "line two with pattern" {
+		t.Errorf("Text = %q, want %q", output.Matches[0].Text, "line two with pattern")
+	}
+}
+
 func TestHandleGrep_SkipsBinaryFiles(t *testing.T) {
 	tempDir := t.TempDir()
 	h := NewHandler([]string{tempDir})
@@ -323,5 +379,29 @@ func TestHandleGrep_SkipsBinaryFiles(t *testing.T) {
 	// Should only find in text file, not binary
 	if output.TotalMatches != 1 {
 		t.Errorf("expected 1 match (skipping binary), got %d", output.TotalMatches)
+	}
+}
+
+func TestHandleGrep_SkipsControlHeavyFiles(t *testing.T) {
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+
+	// No NUL bytes, but dense control characters: still binary.
+	blob := []byte("findme")
+	for i := 0; i < 200; i++ {
+		blob = append(blob, byte(1+i%8))
+	}
+	os.WriteFile(filepath.Join(tempDir, "blob.bin"), blob, 0644)
+	os.WriteFile(filepath.Join(tempDir, "text.txt"), []byte("findme"), 0644)
+
+	_, output, err := h.HandleGrep(context.Background(), nil, GrepInput{
+		Pattern: "findme",
+		Paths:   []string{tempDir},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if output.TotalMatches != 1 {
+		t.Errorf("expected 1 match (skipping control-heavy file), got %d", output.TotalMatches)
 	}
 }
