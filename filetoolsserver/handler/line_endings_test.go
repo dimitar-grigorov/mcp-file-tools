@@ -237,3 +237,37 @@ func TestHandleDetectLineEndings_PathValidation(t *testing.T) {
 		t.Error("expected error for path outside allowed directory")
 	}
 }
+
+// detect_line_endings and read_text_file must report the same totalLines for a file,
+// so a newline-terminated file can't be counted one way by one tool and differently by the other.
+func TestDetectAndReadAgreeOnTotalLines(t *testing.T) {
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+
+	cases := map[string]string{
+		"newline terminated":     "a\nb\nc\n",
+		"unterminated last line": "a\nb\nc",
+		"crlf terminated":        "a\r\nb\r\n",
+		"single line":            "only",
+		"empty":                  "",
+	}
+	for name, content := range cases {
+		t.Run(name, func(t *testing.T) {
+			path := filepath.Join(tempDir, name+".txt")
+			if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+				t.Fatal(err)
+			}
+			_, det, err := h.HandleDetectLineEndings(context.Background(), nil, DetectLineEndingsInput{Path: path})
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, rd, err := h.HandleReadTextFile(context.Background(), nil, ReadTextFileInput{Path: path})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if det.TotalLines != rd.TotalLines {
+				t.Errorf("totalLines disagree for %q: detect=%d read=%d", content, det.TotalLines, rd.TotalLines)
+			}
+		})
+	}
+}
