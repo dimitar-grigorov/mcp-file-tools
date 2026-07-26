@@ -24,7 +24,7 @@ type Config struct {
 	// DefaultEncoding is the default encoding for write_file on NEW files only;
 	// existing files keep their detected encoding.
 	// Set via MCP_DEFAULT_ENCODING environment variable.
-	// Default: "utf-8". Legacy codebases can set "cp1251" to restore the pre-1.9.0 default.
+	// Default: "utf-8". Legacy codebases can set "cp1251" to restore the pre-2.0.0 default.
 	DefaultEncoding string
 
 	// MemoryThreshold is the threshold for loading files into memory vs streaming.

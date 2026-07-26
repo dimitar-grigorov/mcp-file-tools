@@ -51,6 +51,10 @@ See [TOOLS.md](TOOLS.md) for detailed parameters and examples.
 
 **Security:** All operations restricted to allowed directories only.
 
+> **Upgrading to 2.0.0?** `write_file` now defaults **new** files to `utf-8` instead of
+> `cp1251`. Existing files keep their detected encoding and are unaffected. See the
+> [CHANGELOG](CHANGELOG.md) for the migration path.
+
 ## Installation
 
 ### Claude Code plugin (recommended)
@@ -267,7 +271,7 @@ The server can be configured via environment variables:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `MCP_DEFAULT_ENCODING` | Default encoding for `write_file` on **new** files when none specified. Existing files keep their detected encoding. Set to `cp1251` to restore the pre-1.9.0 default. | `utf-8` |
+| `MCP_DEFAULT_ENCODING` | Default encoding for `write_file` on **new** files when none specified. Existing files keep their detected encoding. Set to `cp1251` to restore the pre-2.0.0 default. | `utf-8` |
 | `MCP_MEMORY_THRESHOLD` | Memory threshold in bytes. Files smaller are loaded into memory for faster I/O; larger files use streaming. Also affects encoding detection mode. | `67108864` (64MB) |
 
 To override, set environment variables in your config (Claude Desktop example):
@@ -285,9 +289,9 @@ To override, set environment variables in your config (Claude Desktop example):
 }
 ```
 
-### Legacy teams (pre-1.9.0 behaviour)
+### Legacy teams (pre-2.0.0 behaviour)
 
-Before 1.9.0 new files defaulted to `cp1251`. Existing files are unaffected by the
+Before 2.0.0 new files defaulted to `cp1251`. Existing files are unaffected by the
 change — their encoding is detected and preserved — so this only matters if your team
 **creates** new non-UTF-8 files (e.g. new Delphi units with Cyrillic literals). To keep
 the old behaviour everywhere, set it once per machine:

@@ -183,7 +183,7 @@ func TestHandleWriteFile_DefaultEncoding_NewFile(t *testing.T) {
 	}
 }
 
-// Regression: before 1.9.0 the cp1251 default made the first write of any
+// Regression: before 2.0.0 the cp1251 default made the first write of any
 // non-Cyrillic text fail outright ("rune not supported by encoding").
 func TestHandleWriteFile_DefaultEncoding_NewFile_NonCyrillic(t *testing.T) {
 	tests := []struct {
@@ -255,7 +255,7 @@ func TestHandleWriteFile_DefaultEncoding_NewFile_UmlautBytes(t *testing.T) {
 	}
 }
 
-// MCP_DEFAULT_ENCODING=cp1251 restores the pre-1.9.0 default for new files.
+// MCP_DEFAULT_ENCODING=cp1251 restores the pre-2.0.0 default for new files.
 func TestHandleWriteFile_DefaultEncoding_NewFile_EnvOverride(t *testing.T) {
 	t.Setenv("MCP_DEFAULT_ENCODING", "cp1251")
 

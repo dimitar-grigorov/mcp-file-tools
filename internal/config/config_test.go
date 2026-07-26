@@ -21,7 +21,7 @@ func TestLoad_Defaults(t *testing.T) {
 	}
 }
 
-// cp1251 doubles as the pre-1.9.0 default, so this also covers the migration path.
+// cp1251 doubles as the pre-2.0.0 default, so this also covers the migration path.
 func TestLoad_CustomEncoding(t *testing.T) {
 	os.Setenv(EnvDefaultEncoding, "cp1251")
 	defer os.Unsetenv(EnvDefaultEncoding)
