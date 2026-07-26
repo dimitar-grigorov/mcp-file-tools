@@ -18,6 +18,15 @@ const (
 	HighConfidenceThreshold = 80         // Confidence level to stop sampling early
 	MinConfidenceThreshold  = 50         // Minimum confidence to trust detection
 	utf8FallbackConfidence  = 80         // Confidence when UTF-8 is inferred from the bytes
+	utf16NoBOMConfidence    = 90         // Confidence when BOM-less UTF-16 is inferred structurally
+)
+
+// UTF-16 column-structure detection.
+const (
+	utf16ScanMax  = 64 * 1024 // bytes examined for the column test (< ChunkSize keeps offsets even)
+	utf16PageByte = 0x0F      // high bytes at or below this are plausible Unicode page bytes (Latin..Thai)
+	utf16HighFrac = 0.80      // the high-byte column must be at least this fraction page bytes
+	utf16LowFrac  = 0.40      // the low-byte column must be below this, so real text lives there
 )
 
 // GBK two-byte ranges: lead 0x81–0xFE, trail 0x40–0xFE except 0x7F.
@@ -119,6 +128,12 @@ func Detect(data []byte) DetectionResult {
 		return result
 	}
 
+	// BOM-less UTF-16 is structurally certain when it fires and gives the right
+	// endianness; chardet misses non-Latin scripts (reports "ascii"/single-byte).
+	if charset, ok := looksLikeUTF16(data); ok {
+		return DetectionResult{Charset: charset, Confidence: utf16NoBOMConfidence}
+	}
+
 	detected := chardet.Detect(data)
 	if detected.Encoding == "" {
 		if utf8.Valid(data) {
@@ -172,6 +187,43 @@ func hasMultiByteUTF8(data []byte) bool {
 		}
 	}
 	return false
+}
+
+// looksLikeUTF16 detects BOM-less UTF-16 from its column structure. Every code
+// unit is a (low, high) byte pair; for text the high-byte column is dominated by
+// small Unicode page bytes (0x00 for Latin, 0x04 for Cyrillic, 0x03 for Greek…)
+// while the low-byte column carries the letters. Real single-byte and UTF-8 text
+// never has a byte column that is 80%+ control-range bytes, so this is high
+// precision. Callers pass even-aligned data (offset 0); we scan only the first
+// 64KB so the parity holds. Returns the canonical charset when the signal fires.
+func looksLikeUTF16(data []byte) (string, bool) {
+	n := len(data) &^ 1 // even length; a stray final byte can't complete a unit
+	if n > utf16ScanMax {
+		n = utf16ScanMax
+	}
+	if n < 16 {
+		return "", false // too little to distinguish from noise
+	}
+	units := n / 2
+	var evenPage, oddPage int
+	for i := 0; i < n; i += 2 {
+		if data[i] <= utf16PageByte {
+			evenPage++
+		}
+		if data[i+1] <= utf16PageByte {
+			oddPage++
+		}
+	}
+	evenFrac := float64(evenPage) / float64(units)
+	oddFrac := float64(oddPage) / float64(units)
+	switch {
+	case oddFrac >= utf16HighFrac && evenFrac <= utf16LowFrac:
+		return "utf-16-le", true // high bytes land on odd offsets
+	case evenFrac >= utf16HighFrac && oddFrac <= utf16LowFrac:
+		return "utf-16-be", true // high bytes land on even offsets
+	default:
+		return "", false
+	}
 }
 
 // looksLikeGBK reports whether data holds enough valid GBK two-byte sequences,

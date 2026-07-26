@@ -179,7 +179,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "detect_line_endings",
-		Description: "Detect line ending style (crlf/lf/mixed/none) and find inconsistent lines. Useful for diagnosing mixed line ending issues in cross-platform legacy codebases. Returns dominant style, total lines, and line numbers with minority endings. Parameters: path (required), encoding (optional, auto-detected — pass utf-16-le or utf-16-be for UTF-16 files without a BOM, which cannot be auto-detected).",
+		Description: "Detect line ending style (crlf/lf/mixed/none) and find inconsistent lines. Useful for diagnosing mixed line ending issues in cross-platform legacy codebases. Returns dominant style, total lines, and line numbers with minority endings. Parameters: path (required), encoding (optional, auto-detected including most BOM-less UTF-16 text — pass utf-16-le or utf-16-be if a very short or unusual file is misread).",
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "Detect Line Endings",
 			ReadOnlyHint:  true,
@@ -202,7 +202,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "change_line_endings",
-		Description: "Convert line endings in a file to LF or CRLF. Use after detect_line_endings to fix mixed or wrong line endings. UTF-16 is converted per code unit and the BOM is preserved. Returns original style, new style, and number of lines changed. No-op if file already uses the target style. Parameters: path (required), style (required: \"lf\" or \"crlf\"), encoding (optional, auto-detected — pass utf-16-le or utf-16-be for UTF-16 files without a BOM, which cannot be auto-detected).",
+		Description: "Convert line endings in a file to LF or CRLF. Use after detect_line_endings to fix mixed or wrong line endings. UTF-16 is converted per code unit and the BOM is preserved. Returns original style, new style, and number of lines changed. No-op if file already uses the target style. Parameters: path (required), style (required: \"lf\" or \"crlf\"), encoding (optional, auto-detected including most BOM-less UTF-16 text — pass utf-16-le or utf-16-be if a very short or unusual file is misread).",
 		Annotations: &mcp.ToolAnnotations{
 			Title:           "Change Line Endings",
 			ReadOnlyHint:    false,
