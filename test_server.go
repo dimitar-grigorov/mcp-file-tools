@@ -1,7 +1,7 @@
 //go:build ignore
 
-// Manual test for all MCP server operations.
-// Run with: go run test_server.go
+// End-to-end smoke test over all MCP server operations. Run by CI, or locally
+// with: go run test_server.go
 
 package main
 

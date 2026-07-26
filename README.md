@@ -349,38 +349,24 @@ go test ./...
 go build -o mcp-file-tools ./cmd/mcp-file-tools
 ```
 
-### Debugging with MCP Inspector
-
-[MCP Inspector](https://github.com/modelcontextprotocol/inspector) provides a web UI for testing MCP servers.
-
-**Prerequisites:** Node.js v18+
+`test_server.go` is an end-to-end smoke test over every tool, run by CI on each push:
 
 ```bash
-# Run with allowed directory (required)
+go run test_server.go
+```
+
+### Debugging
+
+[MCP Inspector](https://github.com/modelcontextprotocol/inspector) gives a web UI for calling tools and inspecting responses (needs Node.js 18+):
+
+```bash
 npx @modelcontextprotocol/inspector go run ./cmd/mcp-file-tools -- /path/to/allowed/dir
-
-# Or with built binary
-npx @modelcontextprotocol/inspector ./mcp-file-tools.exe C:\Projects
 ```
 
-Opens a browser where you can view tools, call them with custom arguments, and inspect responses.
-
-### Manual Debugging
-
-Run the server with an allowed directory and send JSON-RPC commands via stdin:
+Or pipe JSON-RPC straight to stdin:
 
 ```bash
-# Specify allowed directory
-go run ./cmd/mcp-file-tools /path/to/project
-```
-
-Example commands (paste into terminal):
-
-```json
-{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}
-{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"list_directory","arguments":{"path":"/path/to/project","pattern":"*.go"}}}
-{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"read_text_file","arguments":{"path":"/path/to/project/main.pas","encoding":"cp1251"}}}
-{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"detect_encoding","arguments":{"path":"/path/to/project/file.txt"}}}
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | go run ./cmd/mcp-file-tools /path/to/project
 ```
 
 ## Contributing
