@@ -6,9 +6,9 @@ import (
 
 func TestGet(t *testing.T) {
 	tests := []struct {
-		name     string
-		wantOk   bool
-		wantNil  bool // true if encoding should be nil (UTF-8)
+		name    string
+		wantOk  bool
+		wantNil bool // true if encoding should be nil (UTF-8)
 	}{
 		{"utf-8", true, true},
 		{"UTF-8", true, true},

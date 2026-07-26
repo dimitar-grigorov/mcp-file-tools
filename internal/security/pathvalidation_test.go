@@ -16,11 +16,11 @@ func TestIsPathWithinAllowedDirectories_BasicCases(t *testing.T) {
 	}
 
 	tests := []struct {
-		name         string
-		path         string
-		allowedDirs  []string
-		expected     bool
-		description  string
+		name        string
+		path        string
+		allowedDirs []string
+		expected    bool
+		description string
 	}{
 		{
 			name:        "exact match",
@@ -624,4 +624,3 @@ func TestNormalizeAllowedDirs(t *testing.T) {
 		})
 	}
 }
-

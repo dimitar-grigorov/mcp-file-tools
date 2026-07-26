@@ -223,12 +223,12 @@ func TestHandleEditFile_ValidationErrors(t *testing.T) {
 
 func TestAdjustRelativeIndent(t *testing.T) {
 	tests := []struct {
-		name      string
-		oldLines  []string
-		newLine   string
-		lineIndex int
+		name       string
+		oldLines   []string
+		newLine    string
+		lineIndex  int
 		baseIndent string
-		want      string
+		want       string
 	}{
 		{
 			name:       "zero relative indent",
@@ -323,7 +323,7 @@ func TestEditFile_CP1251Encoding(t *testing.T) {
 	// In CP1251: Н=0xCD, е=0xE5, в=0xE2, а=0xE0, л=0xEB, и=0xE8, д=0xE4, н=0xED
 	cp1251Content := []byte{
 		0xCD, 0xE5, 0xE2, 0xE0, 0xEB, 0xE8, 0xE4, 0xE5, 0xED, // Невалиден
-		0x20,       // space
+		0x20,             // space
 		0xF2, 0xE8, 0xEF, // тип
 		0x2E, // .
 	}
@@ -354,9 +354,9 @@ func TestEditFile_CP1251Encoding(t *testing.T) {
 	// Expected CP1251: "Типът е невалиден." (The type is invalid.)
 	expectedCP1251 := []byte{
 		0xD2, 0xE8, 0xEF, 0xFA, 0xF2, // Типът
-		0x20,             // space
-		0xE5,             // е
-		0x20,             // space
+		0x20,                                                 // space
+		0xE5,                                                 // е
+		0x20,                                                 // space
 		0xED, 0xE5, 0xE2, 0xE0, 0xEB, 0xE8, 0xE4, 0xE5, 0xED, // невалиден
 		0x2E, // .
 	}

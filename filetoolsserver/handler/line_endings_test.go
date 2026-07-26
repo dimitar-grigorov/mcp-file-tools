@@ -130,11 +130,11 @@ func TestHandleDetectLineEndings(t *testing.T) {
 	h := NewHandler([]string{tempDir})
 
 	tests := []struct {
-		name               string
-		content            []byte
-		wantStyle          string
-		wantTotalLines     int
-		wantInconsistent   []int
+		name                string
+		content             []byte
+		wantStyle           string
+		wantTotalLines      int
+		wantInconsistent    []int
 		wantInconsistentNil bool
 	}{
 		{

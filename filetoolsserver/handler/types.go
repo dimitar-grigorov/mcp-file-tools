@@ -314,4 +314,3 @@ type DetectLineEndingsOutput struct {
 	TotalLines        int    `json:"totalLines"`
 	InconsistentLines []int  `json:"inconsistentLines"`
 }
-

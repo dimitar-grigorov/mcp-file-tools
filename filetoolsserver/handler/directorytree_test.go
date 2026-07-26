@@ -299,4 +299,3 @@ func TestHandleDirectoryTree_NotADirectory(t *testing.T) {
 		t.Errorf("expected 'must be a directory' message, got %q", text)
 	}
 }
-

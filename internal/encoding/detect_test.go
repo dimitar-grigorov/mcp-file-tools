@@ -447,4 +447,3 @@ func TestLooksLikeGBK(t *testing.T) {
 		})
 	}
 }
-

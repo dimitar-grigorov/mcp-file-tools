@@ -18,7 +18,7 @@ type EncodingInfo struct {
 }
 
 var encodings = map[string]EncodingInfo{
-	"utf-8":    {nil, "UTF-8", []string{"utf8", "ascii"}, "Unicode, no conversion"},
+	"utf-8":     {nil, "UTF-8", []string{"utf8", "ascii"}, "Unicode, no conversion"},
 	"utf-16-le": {unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM), "UTF-16 LE", []string{"utf16le", "utf-16le"}, "Unicode UTF-16 Little Endian"},
 	"utf-16-be": {unicode.UTF16(unicode.BigEndian, unicode.IgnoreBOM), "UTF-16 BE", []string{"utf16be", "utf-16be"}, "Unicode UTF-16 Big Endian"},
 
