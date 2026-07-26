@@ -4,6 +4,12 @@
 
 The most common way this project loses improvements: someone forks it, fixes a real bug in their copy, and never tells anyone. Please send it back.
 
+## Scope
+
+This is a filesystem and text-encoding server: read, write, edit, search, move, and inspect files, with correct handling of non-UTF-8 encodings, BOMs, and line endings. That is the whole remit.
+
+Anything that executes commands or scripts, spawns a shell, or fetches over the network is out of scope and will not be merged — not as a new tool, not off by default, not behind an env flag. It turns a file server into an arbitrary-execution surface, which is a different product with a different threat model. Build that separately.
+
 ## Merged
 
 Bug fixes of any size (one-liners with no test included), new encodings, new tools or parameters, platform fixes, docs and typos, half-finished features that are off by default.
@@ -14,7 +20,7 @@ Tool descriptions in `server.go` count as code — they're the prompt client mod
 
 Commented, not closed:
 
-- Out of scope — this is a filesystem + text-encoding server. Shell execution and network fetching belong elsewhere.
+- Out of scope — command/script execution, shells, and network fetching are non-goals and won't be merged (see [Scope](#scope)), even off by default.
 - Breaking a tool contract (renamed tool, removed parameter, changed return shape) with no compatibility path. Other people's agents are wired to these names.
 - Subsystem rewrites with no stated problem behind them.
 
