@@ -276,6 +276,10 @@ func TestHandleWriteFile_DefaultEncoding_NewFile_EnvOverride(t *testing.T) {
 	if !strings.Contains(output.Message, "cp1251") {
 		t.Errorf("expected cp1251 in message, got %q", output.Message)
 	}
+	// A deliberate choice needs no transition notice, and the notice would be wrong here.
+	if strings.Contains(output.Message, "new files now default to utf-8") {
+		t.Errorf("expected no transition notice when the default was set explicitly, got %q", output.Message)
+	}
 
 	written, err := os.ReadFile(testFile)
 	if err != nil {
@@ -285,6 +289,106 @@ func TestHandleWriteFile_DefaultEncoding_NewFile_EnvOverride(t *testing.T) {
 	if !bytes.Equal(written, expectedCP1251) {
 		t.Errorf("expected CP1251 bytes %v, got %v", expectedCP1251, written)
 	}
+}
+
+// Delete this test in 2.3.0 together with utf8DefaultNotice.
+func TestHandleWriteFile_UTF8TransitionNotice_RemoveIn230(t *testing.T) {
+	const marker = "new files now default to utf-8"
+
+	writeNew := func(t *testing.T, h *Handler, dir, name string, in WriteFileInput) string {
+		t.Helper()
+		in.Path = filepath.Join(dir, name)
+		result, output, err := h.HandleWriteFile(context.Background(), nil, in)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if result.IsError {
+			t.Fatalf("expected success, got error: %s", extractTextFromResultWrite(result.Content))
+		}
+		return output.Message
+	}
+
+	t.Run("new file without encoding", func(t *testing.T) {
+		dir := t.TempDir()
+		h := NewHandler([]string{dir})
+
+		msg := writeNew(t, h, dir, "a.txt", WriteFileInput{Content: "hello"})
+		if !strings.Contains(msg, marker) {
+			t.Errorf("expected the 2.0.0 transition notice, got %q", msg)
+		}
+		if !strings.Contains(msg, "MCP_DEFAULT_ENCODING=cp1251") {
+			t.Errorf("expected the notice to name the opt-out, got %q", msg)
+		}
+	})
+
+	t.Run("only once per handler", func(t *testing.T) {
+		dir := t.TempDir()
+		h := NewHandler([]string{dir})
+
+		if msg := writeNew(t, h, dir, "a.txt", WriteFileInput{Content: "hello"}); !strings.Contains(msg, marker) {
+			t.Fatalf("expected the notice on the first new file, got %q", msg)
+		}
+		if msg := writeNew(t, h, dir, "b.txt", WriteFileInput{Content: "hello"}); strings.Contains(msg, marker) {
+			t.Errorf("expected no notice on the second new file, got %q", msg)
+		}
+	})
+
+	t.Run("explicit encoding", func(t *testing.T) {
+		dir := t.TempDir()
+		h := NewHandler([]string{dir})
+
+		msg := writeNew(t, h, dir, "a.txt", WriteFileInput{Content: "hello", Encoding: "utf-8"})
+		if strings.Contains(msg, marker) {
+			t.Errorf("expected no notice when encoding was explicit, got %q", msg)
+		}
+	})
+
+	t.Run("existing cp1251 file", func(t *testing.T) {
+		dir := t.TempDir()
+		h := NewHandler([]string{dir})
+		testFile := filepath.Join(dir, "cyrillic.txt")
+
+		// "Привет мир" in cp1251
+		if err := os.WriteFile(testFile, []byte{0xCF, 0xF0, 0xE8, 0xE2, 0xE5, 0xF2, 0x20, 0xEC, 0xE8, 0xF0}, 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		_, output, err := h.HandleWriteFile(context.Background(), nil, WriteFileInput{Path: testFile, Content: "Пока"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(output.Message, marker) {
+			t.Errorf("expected no notice when an existing encoding was preserved, got %q", output.Message)
+		}
+		if !strings.Contains(output.Message, "cp1251") && !strings.Contains(output.Message, "windows-1251") {
+			t.Errorf("expected cp1251 to still be preserved, got %q", output.Message)
+		}
+
+		written, err := os.ReadFile(testFile)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(written, []byte{0xCF, 0xEE, 0xEA, 0xE0}) {
+			t.Errorf("expected cp1251 bytes for \"Пока\", got % x", written)
+		}
+	})
+
+	t.Run("keeps byte count and BOM detail intact", func(t *testing.T) {
+		dir := t.TempDir()
+		h := NewHandler([]string{dir})
+
+		msg := writeNew(t, h, dir, "a.txt", WriteFileInput{Content: "hello", BOM: "always"})
+		if !strings.Contains(msg, marker) {
+			t.Fatalf("expected the notice, got %q", msg)
+		}
+		// 5 content bytes + a 3-byte utf-8 BOM
+		if !strings.Contains(msg, "wrote 8 bytes") {
+			t.Errorf("expected the byte count to survive the notice, got %q", msg)
+		}
+		if !strings.Contains(msg, "encoding: utf-8, with utf-8 BOM") {
+			t.Errorf("expected the encoding/BOM detail to survive the notice, got %q", msg)
+		}
+	})
 }
 
 func TestHandleWriteFile_PreservesExistingEncoding(t *testing.T) {

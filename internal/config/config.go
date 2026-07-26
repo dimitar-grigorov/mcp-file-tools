@@ -27,6 +27,9 @@ type Config struct {
 	// Default: "utf-8". Legacy codebases can set "cp1251" to restore the pre-2.0.0 default.
 	DefaultEncoding string
 
+	// DefaultEncodingFromEnv reports whether MCP_DEFAULT_ENCODING set DefaultEncoding.
+	DefaultEncodingFromEnv bool
+
 	// MemoryThreshold is the threshold for loading files into memory vs streaming.
 	// Files smaller than this are loaded entirely into memory for better performance.
 	// Files larger use streaming I/O to reduce memory usage.
@@ -47,6 +50,7 @@ func Load() *Config {
 	if enc := os.Getenv(EnvDefaultEncoding); enc != "" {
 		if _, ok := encoding.Get(enc); ok {
 			cfg.DefaultEncoding = enc
+			cfg.DefaultEncodingFromEnv = true
 		} else {
 			slog.Warn("invalid MCP_DEFAULT_ENCODING, using default", "value", enc, "fallback", DefaultEncoding)
 		}

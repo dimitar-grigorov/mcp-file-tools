@@ -49,6 +49,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Transitional:** the first `write_file` in a session that creates a new file
+  under the built-in default appends a one-line notice about the utf-8 change to
+  its result, so upgrading users hear about it without reading this file. It is
+  silent when `encoding` was explicit, when an existing file's encoding was
+  preserved, when `MCP_DEFAULT_ENCODING` is set, and on every later write.
+  **This notice is removed in 2.3.0.**
 - `make lint` now runs `staticcheck` at the same pinned version as CI, so local
   lint no longer passes on code CI rejects.
 

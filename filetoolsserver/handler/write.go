@@ -21,7 +21,7 @@ func (h *Handler) HandleWriteFile(ctx context.Context, req *mcp.CallToolRequest,
 	}
 
 	// Resolve encoding: explicit > preserve existing > configured default
-	encodingName, err := h.resolveWriteEncoding(input.Encoding, v.Path)
+	encodingName, encodingFrom, err := h.resolveWriteEncoding(input.Encoding, v.Path)
 	if err != nil {
 		return errorResult(err.Error()), WriteFileOutput{}, nil
 	}
@@ -71,6 +71,9 @@ func (h *Handler) HandleWriteFile(ctx context.Context, req *mcp.CallToolRequest,
 		detail += ", with " + output.BOMType + " BOM"
 	}
 	output.Message = fmt.Sprintf("Successfully wrote %d bytes to %s (%s)", len(contentToWrite), input.Path, detail)
+	if encodingFrom == encodingFromDefault {
+		output.Message += h.utf8TransitionNotice()
+	}
 	return &mcp.CallToolResult{}, output, nil
 }
 

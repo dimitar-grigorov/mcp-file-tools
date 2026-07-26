@@ -20,6 +20,25 @@ type Handler struct {
 	cliDirs     []string // immutable baseline from CLI args; always allowed
 	allowedDirs []string
 	mu          sync.RWMutex
+
+	utf8NoticeOnce sync.Once // TODO(2.3.0): remove with the utf-8 default transition notice
+}
+
+// TODO(2.3.0): remove the utf-8 default transition notice.
+// Phrased as an instruction because models relay instructions and ignore trivia.
+const utf8DefaultNotice = " Tell the user once: new files now default to utf-8. " +
+	"Before 2.0.0 the default was cp1251. Existing files still keep their own encoding. " +
+	"To restore the old behaviour, set MCP_DEFAULT_ENCODING=cp1251."
+
+// utf8TransitionNotice returns the notice the first time a new file takes the
+// built-in default, and "" every time after. Silent if the user set the default.
+func (h *Handler) utf8TransitionNotice() string {
+	if h.config.DefaultEncodingFromEnv {
+		return ""
+	}
+	var notice string
+	h.utf8NoticeOnce.Do(func() { notice = utf8DefaultNotice })
+	return notice
 }
 
 // Option is a functional option for configuring Handler

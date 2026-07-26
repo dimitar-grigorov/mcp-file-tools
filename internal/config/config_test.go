@@ -19,6 +19,10 @@ func TestLoad_Defaults(t *testing.T) {
 	if cfg.MemoryThreshold != DefaultMaxSize {
 		t.Errorf("expected default memory threshold %d, got %d", DefaultMaxSize, cfg.MemoryThreshold)
 	}
+
+	if cfg.DefaultEncodingFromEnv {
+		t.Error("expected DefaultEncodingFromEnv false when the env var is unset")
+	}
 }
 
 // cp1251 doubles as the pre-2.0.0 default, so this also covers the migration path.
@@ -31,6 +35,10 @@ func TestLoad_CustomEncoding(t *testing.T) {
 	if cfg.DefaultEncoding != "cp1251" {
 		t.Errorf("expected encoding cp1251, got %q", cfg.DefaultEncoding)
 	}
+
+	if !cfg.DefaultEncodingFromEnv {
+		t.Error("expected DefaultEncodingFromEnv true when the env var supplied the encoding")
+	}
 }
 
 func TestLoad_InvalidEncoding(t *testing.T) {
@@ -42,6 +50,11 @@ func TestLoad_InvalidEncoding(t *testing.T) {
 	// Should fall back to default when invalid
 	if cfg.DefaultEncoding != DefaultEncoding {
 		t.Errorf("expected fallback to %q for invalid encoding, got %q", DefaultEncoding, cfg.DefaultEncoding)
+	}
+
+	// A rejected value did not set the default, so it does not count as a choice.
+	if cfg.DefaultEncodingFromEnv {
+		t.Error("expected DefaultEncodingFromEnv false when the env value was rejected")
 	}
 }
 

@@ -97,25 +97,37 @@ func (h *Handler) HandleReadTextFile(ctx context.Context, req *mcp.CallToolReque
 	return &mcp.CallToolResult{}, output, nil
 }
 
+// encodingSource says which branch of resolveWriteEncoding produced the name.
+type encodingSource int
+
+const (
+	encodingFromRequest  encodingSource = iota // explicit encoding parameter
+	encodingFromExisting                       // detected on the file being overwritten
+	encodingFromDefault                        // configured default, file did not exist
+	encodingFromFallback                       // configured default, existing file was inconclusive
+)
+
 // resolveWriteEncoding returns encoding for writes: explicit > existing file > config default.
-func (h *Handler) resolveWriteEncoding(inputEncoding string, filePath string) (string, error) {
+func (h *Handler) resolveWriteEncoding(inputEncoding string, filePath string) (string, encodingSource, error) {
 	// 1. Explicit encoding always wins
 	if inputEncoding != "" {
 		encodingName := strings.ToLower(inputEncoding)
 		if _, ok := encoding.Get(encodingName); !ok {
-			return "", fmt.Errorf("%w: %s. Use list_encodings to see available encodings", ErrEncodingUnsupported, encodingName)
+			return "", encodingFromRequest, fmt.Errorf("%w: %s. Use list_encodings to see available encodings", ErrEncodingUnsupported, encodingName)
 		}
-		return encodingName, nil
+		return encodingName, encodingFromRequest, nil
 	}
 
 	// 2. If file exists, detect and preserve its encoding
+	fileExists := false
 	if _, err := os.Stat(filePath); err == nil {
+		fileExists = true
 		detected, err := encoding.DetectFromFile(filePath, "sample")
 		if err == nil && detected.Confidence >= encoding.MinConfidenceThreshold {
 			// Validate the detected encoding is supported
 			if _, ok := encoding.Get(detected.Charset); ok {
 				slog.Debug("preserving existing file encoding", "path", filePath, "encoding", detected.Charset, "confidence", detected.Confidence)
-				return detected.Charset, nil
+				return detected.Charset, encodingFromExisting, nil
 			}
 		}
 		// Detection failed or low confidence - fall through to default
@@ -123,7 +135,10 @@ func (h *Handler) resolveWriteEncoding(inputEncoding string, filePath string) (s
 	}
 
 	// 3. New file or detection failed - use configured default
-	return h.config.DefaultEncoding, nil
+	if fileExists {
+		return h.config.DefaultEncoding, encodingFromFallback, nil
+	}
+	return h.config.DefaultEncoding, encodingFromDefault, nil
 }
 
 // resolveEncodingFromData returns encoding from loaded data: explicit > auto-detect.
