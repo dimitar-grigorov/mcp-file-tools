@@ -4,6 +4,7 @@
 [![Release](https://img.shields.io/github/v/release/dimitar-grigorov/mcp-file-tools)](https://github.com/dimitar-grigorov/mcp-file-tools/releases/latest)
 [![License: GPL-3.0](https://img.shields.io/github/license/dimitar-grigorov/mcp-file-tools)](LICENSE)
 [![MCP Registry](https://img.shields.io/badge/MCP-Registry-blue)](https://registry.modelcontextprotocol.io/?search=mcp-file-tools)
+[![Test](https://github.com/dimitar-grigorov/mcp-file-tools/actions/workflows/test.yml/badge.svg)](https://github.com/dimitar-grigorov/mcp-file-tools/actions/workflows/test.yml)
 
 Claude sees `Настройки` — not `????` or `Íàñòðîéêè`.
 
