@@ -2,14 +2,12 @@ package handler
 
 import (
 	"context"
-	"errors"
-	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/dimitar-grigorov/mcp-file-tools/internal/security"
+	"github.com/dimitar-grigorov/mcp-file-tools/internal/filesystem"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -45,51 +43,34 @@ func (h *Handler) HandleSearchFiles(ctx context.Context, req *mcp.CallToolReques
 	return &mcp.CallToolResult{}, SearchFilesOutput{Files: results, Truncated: truncated}, nil
 }
 
-var errMaxResultsReached = errors.New("max results reached")
-
 // searchFiles recursively searches for files matching the pattern
 func searchFiles(ctx context.Context, rootPath, pattern string, excludePatterns, allowedDirs []string, maxResults int) ([]string, bool, error) {
 	var results []string
 	truncated := false
-	err := filepath.WalkDir(rootPath, func(fullPath string, d fs.DirEntry, err error) error {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-		if err != nil {
-			slog.Debug("skipping path due to error", "path", fullPath, "error", err)
+	opts := filesystem.Options{
+		AllowedDirs: allowedDirs,
+		OnError: func(path string, _ int, err error) error {
+			slog.Debug("skipping path due to error", "path", path, "error", err)
 			return nil
-		}
-		if d.IsDir() && fullPath != rootPath {
-			if !security.IsPathSafeResolved(fullPath, allowedDirs) {
-				return filepath.SkipDir
+		},
+	}
+	err := filesystem.Walk(ctx, rootPath, opts, func(e filesystem.Entry) (filesystem.Action, error) {
+		if shouldExcludePath(e.RelPath, excludePatterns) {
+			if e.IsDir() {
+				return filesystem.SkipDir, nil
 			}
+			return filesystem.Continue, nil
 		}
-		relativePath, err := filepath.Rel(rootPath, fullPath)
-		if err != nil {
-			return nil
-		}
-		if relativePath == "." {
-			return nil
-		}
-		relativePathNorm := filepath.ToSlash(relativePath)
-		if shouldExcludePath(relativePathNorm, excludePatterns) {
-			if d.IsDir() {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if matchGlobPattern(relativePathNorm, pattern) {
-			results = append(results, fullPath)
+		if matchGlobPattern(e.RelPath, pattern) {
+			results = append(results, e.Path)
 			if len(results) >= maxResults {
 				truncated = true
-				return errMaxResultsReached
+				return filesystem.Stop, nil
 			}
 		}
-		return nil
+		return filesystem.Continue, nil
 	})
-	if err != nil && err != errMaxResultsReached {
+	if err != nil {
 		return nil, false, err
 	}
 	if results == nil {

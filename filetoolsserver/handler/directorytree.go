@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/dimitar-grigorov/mcp-file-tools/internal/security"
+	"github.com/dimitar-grigorov/mcp-file-tools/internal/filesystem"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -41,47 +41,45 @@ func (h *Handler) HandleDirectoryTree(ctx context.Context, req *mcp.CallToolRequ
 	return &mcp.CallToolResult{}, output, nil
 }
 
-// buildTree recursively builds a tree of directory entries
+// buildTree nests the flat walk: levels[d] takes entries at depth d+1.
 func buildTree(ctx context.Context, dirPath string, excludePatterns []string, allowedDirs []string) ([]TreeEntry, error) {
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	default:
+	top := &[]TreeEntry{}
+	levels := []*[]TreeEntry{top}
+	opts := filesystem.Options{
+		AllowedDirs: allowedDirs,
+		OnError: func(_ string, depth int, err error) error {
+			if depth == 0 {
+				return err
+			}
+			// Drop an unreadable directory, as the old traversal did.
+			if parent := levels[depth-1]; len(*parent) > 0 {
+				*parent = (*parent)[:len(*parent)-1]
+			}
+			return nil
+		},
 	}
-	entries, err := os.ReadDir(dirPath)
+	err := filesystem.Walk(ctx, dirPath, opts, func(e filesystem.Entry) (filesystem.Action, error) {
+		if shouldExclude(e.Name(), excludePatterns) {
+			if e.IsDir() {
+				return filesystem.SkipDir, nil
+			}
+			return filesystem.Continue, nil
+		}
+		levels = levels[:e.Depth]
+		parent := levels[e.Depth-1]
+		treeEntry := TreeEntry{Name: e.Name(), Type: "file"}
+		if e.IsDir() {
+			treeEntry.Type = "directory"
+			treeEntry.Children = &[]TreeEntry{}
+			levels = append(levels, treeEntry.Children)
+		}
+		*parent = append(*parent, treeEntry)
+		return filesystem.Continue, nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	var result []TreeEntry
-	for _, entry := range entries {
-		name := entry.Name()
-		if shouldExclude(name, excludePatterns) {
-			continue
-		}
-		treeEntry := TreeEntry{Name: name}
-		if entry.IsDir() {
-			treeEntry.Type = "directory"
-			childPath := filepath.Join(dirPath, name)
-			if !security.IsPathSafeResolved(childPath, allowedDirs) {
-				continue
-			}
-			children, err := buildTree(ctx, childPath, excludePatterns, allowedDirs)
-			if err != nil {
-				if err == context.Canceled || err == context.DeadlineExceeded {
-					return nil, err
-				}
-				continue
-			}
-			treeEntry.Children = &children
-		} else {
-			treeEntry.Type = "file"
-		}
-		result = append(result, treeEntry)
-	}
-	if result == nil {
-		result = []TreeEntry{}
-	}
-	return result, nil
+	return *top, nil
 }
 
 // shouldExclude checks if a name matches any of the exclude patterns

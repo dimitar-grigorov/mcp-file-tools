@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"fmt"
-	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -13,7 +12,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
-	"github.com/dimitar-grigorov/mcp-file-tools/internal/security"
+	"github.com/dimitar-grigorov/mcp-file-tools/internal/filesystem"
 	"github.com/dimitar-grigorov/mcp-file-tools/internal/workpool"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -82,28 +81,22 @@ func (h *Handler) collectFiles(ctx context.Context, paths []string, include, exc
 			continue
 		}
 		if info.IsDir() {
-			filepath.WalkDir(v.Path, func(p string, d fs.DirEntry, err error) error {
-				// Check for cancellation during walk
-				select {
-				case <-ctx.Done():
-					return ctx.Err()
-				default:
-				}
-				if err != nil {
+			opts := filesystem.Options{
+				AllowedDirs: allowedDirs,
+				OnError: func(p string, _ int, err error) error {
 					slog.Debug("skipping path due to error", "path", p, "error", err)
 					return nil
+				},
+			}
+			_ = filesystem.Walk(ctx, v.Path, opts, func(e filesystem.Entry) (filesystem.Action, error) {
+				if e.IsDir() {
+					return filesystem.Continue, nil
 				}
-				if d.IsDir() {
-					if !security.IsPathSafeResolved(p, allowedDirs) {
-						return filepath.SkipDir
-					}
-					return nil
+				if shouldIncludeFile(e.Path, include, exclude) && !seen[e.Path] {
+					seen[e.Path] = true
+					files = append(files, e.Path)
 				}
-				if shouldIncludeFile(p, include, exclude) && !seen[p] {
-					seen[p] = true
-					files = append(files, p)
-				}
-				return nil
+				return filesystem.Continue, nil
 			})
 		} else if shouldIncludeFile(v.Path, include, exclude) && !seen[v.Path] {
 			seen[v.Path] = true

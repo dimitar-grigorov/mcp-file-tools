@@ -16,6 +16,7 @@ For AI agents working in this repo — Claude Code, Codex, Cursor, anything else
 | `filetoolsserver/handler/` | One file per tool, plus `middleware.go`, `validation.go`, `errors.go` |
 | `internal/encoding/` | Detection and conversion |
 | `internal/security/` | Allowed-directory containment — every path goes through here |
+| `internal/filesystem/` | `Walk` — the one containment-checked traversal behind tree, directory_tree, grep, search_files |
 | `internal/config/`, `internal/updater/` | Env config, update check |
 | `TOOLS.md` | Per-tool parameter reference, kept in sync with registrations |
 
