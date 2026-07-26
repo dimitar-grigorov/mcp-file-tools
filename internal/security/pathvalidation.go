@@ -67,7 +67,15 @@ func ValidatePath(requestedPath string, allowedDirs []string) (string, error) {
 	normalized := normalizePath(absolute)
 
 	if !IsPathWithinAllowedDirectories(normalized, allowedDirs) {
-		return "", fmt.Errorf("%w: %s", ErrPathDenied, absolute)
+		// Retry with 8.3 names expanded: the forms may differ only in short/long naming.
+		// Expanded once here, never inside the per-allowed-dir loop — it hits the disk.
+		if expanded := expandShortPath(absolute); expanded != absolute {
+			absolute = expanded
+			normalized = normalizePath(absolute)
+		}
+		if !IsPathWithinAllowedDirectories(normalized, allowedDirs) {
+			return "", fmt.Errorf("%w: %s", ErrPathDenied, absolute)
+		}
 	}
 
 	resolvedAllowedDirs := ResolveAllowedDirs(allowedDirs)
@@ -218,7 +226,7 @@ func NormalizeAllowedDirs(dirs []string) ([]string, error) {
 			}
 		}
 
-		normalized = append(normalized, normalizePath(filepath.Clean(resolved)))
+		normalized = append(normalized, normalizePath(expandShortPath(filepath.Clean(resolved))))
 	}
 	return normalized, nil
 }
