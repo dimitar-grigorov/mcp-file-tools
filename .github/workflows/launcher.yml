@@ -1,0 +1,181 @@
+name: Launcher
+
+# Manual only for now; uncomment the triggers below to run it on every change.
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: 'Commit the rebuilt launcher back to the branch'
+        type: boolean
+        default: false
+      scan:
+        description: 'Upload the launcher to VirusTotal (makes it public there)'
+        type: boolean
+        default: false
+  # push:
+  #   branches: [main, master]
+  #   paths: ['cmd/mcp-file-tools-launcher/**', '.github/workflows/launcher.yml', 'go.mod']
+  # pull_request:
+  #   paths: ['cmd/mcp-file-tools-launcher/**', 'plugin/launcher/**', '.github/workflows/launcher.yml', 'go.mod']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      # The gate below can only compare against a launcher that is already committed.
+      - name: Is a launcher committed?
+        id: state
+        run: |
+          if git ls-files --error-unmatch plugin/launcher/mcp-file-tools.exe >/dev/null 2>&1
+          then
+            echo 'tracked=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'tracked=false' >> "$GITHUB_OUTPUT"
+            echo 'No launcher is committed yet, so the reproducibility gate did not run.' \
+              >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # -trimpath -buildvcs=false without cgo is bit-for-bit reproducible
+      - name: Build
+        env:
+          GOOS: windows
+          GOARCH: amd64
+          CGO_ENABLED: '0'
+        run: |
+          go build -trimpath -buildvcs=false \
+            -o plugin/launcher/mcp-file-tools.exe ./cmd/mcp-file-tools-launcher
+          sha256sum plugin/launcher/mcp-file-tools.exe \
+            | awk '{ print $1 "  mcp-file-tools.exe" }' \
+            > plugin/launcher/mcp-file-tools.exe.sha256
+          cat plugin/launcher/mcp-file-tools.exe.sha256
+          go version -m plugin/launcher/mcp-file-tools.exe
+
+      - name: Upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: mcp-file-tools-launcher
+          path: plugin/launcher/mcp-file-tools.exe*
+
+      - name: Verify the committed launcher reproduces
+        if: steps.state.outputs.tracked == 'true' && !inputs.commit
+        run: |
+          if ! git diff --quiet -- plugin/launcher/mcp-file-tools.exe; then
+            git diff --stat -- plugin/launcher
+            echo "::error::plugin/launcher/mcp-file-tools.exe does not match a build of cmd/mcp-file-tools-launcher"
+            exit 1
+          fi
+          echo 'Committed launcher reproduces bit for bit.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit
+        if: inputs.commit || github.event_name == 'push'
+        env:
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          if git diff --quiet -- plugin/launcher; then
+            echo 'already up to date'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add plugin/launcher/mcp-file-tools.exe plugin/launcher/mcp-file-tools.exe.sha256
+          git commit -m 'chore(launcher): rebuild Windows launcher from source'
+          git push origin "HEAD:refs/heads/$BRANCH"
+
+      - name: Attest
+        if: inputs.commit || github.event_name == 'push'
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: plugin/launcher/mcp-file-tools.exe
+
+  # Informational only, and deliberately isolated from the repo and its secrets.
+  virustotal:
+    needs: build
+    if: inputs.scan
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Download launcher
+        uses: actions/download-artifact@v8
+        with:
+          name: mcp-file-tools-launcher
+
+      # Every failure here reports and exits 0: a flaky API must not look like a verdict.
+      - name: Scan
+        env:
+          VT_API_KEY: ${{ secrets.VT_API_KEY }}
+        run: |
+          note() { printf '%s\n' "$1" >> "$GITHUB_STEP_SUMMARY"; }
+          if [ -z "${VT_API_KEY:-}" ]; then
+            note 'No VT_API_KEY secret set; skipped.'; exit 0
+          fi
+
+          upload=$(curl -sS -X POST https://www.virustotal.com/api/v3/files \
+            -H "x-apikey: $VT_API_KEY" -F file=@mcp-file-tools.exe) || upload=
+          analysis=$(jq -r '.data.id // empty' <<<"$upload")
+          if [ -z "$analysis" ]; then
+            note 'VirusTotal did not accept the upload; nothing to report.'; exit 0
+          fi
+
+          status=
+          for _ in $(seq 60); do
+            result=$(curl -sS "https://www.virustotal.com/api/v3/analyses/$analysis" \
+              -H "x-apikey: $VT_API_KEY") || result=
+            status=$(jq -r '.data.attributes.status // empty' <<<"$result")
+            [ "$status" = completed ] && break
+            sleep 10
+          done
+
+          note "https://www.virustotal.com/gui/file/$(sha256sum mcp-file-tools.exe | cut -d' ' -f1)"
+          if [ "$status" != completed ]; then
+            note 'Still analysing after 10 minutes; see the link above.'; exit 0
+          fi
+          note "$(jq -r '.data.attributes.stats
+            | "\(.malicious) malicious, \(.suspicious) suspicious, \(.undetected) undetected"' <<<"$result")"
+          jq -r '.data.attributes.results | to_entries[]
+            | select(.value.category == "malicious" or .value.category == "suspicious")
+            | "\(.key): \(.value.result)"' <<<"$result"
+
+  posix:
+    name: posix (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Shell launcher downloads and serves
+        env:
+          CLAUDE_PLUGIN_DATA: ${{ runner.temp }}/plugin-data
+        run: |
+          test -x plugin/launcher/mcp-file-tools || {
+            echo "::error::plugin/launcher/mcp-file-tools is not executable"; exit 1; }
+          request='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"ci","version":"1"}}}'
+          reply=$({ printf '%s\n' "$request"; sleep 3; } | plugin/launcher/mcp-file-tools | head -n 1)
+          echo "$reply"
+          case $reply in
+            *'"serverInfo"'*'mcp-file-tools'*) echo 'handshake OK' ;;
+            *) echo "::error::unexpected reply"; exit 1 ;;
+          esac
