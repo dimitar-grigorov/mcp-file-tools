@@ -7,14 +7,14 @@ import (
 )
 
 // chardet guesses a single-byte charset for short or emoji-heavy UTF-8. Decoding
-// those bytes as CP1252 turns "a​b" into "aâ€‹b", the mojibake class users
+// those bytes as CP1252 turns "a\u200bb" into "aâ€‹b", the mojibake class users
 // report against UTF-8-only tooling.
 func TestDetect_ValidUTF8BeatsSingleByteGuess(t *testing.T) {
 	cases := []struct {
 		name string
 		text string
 	}{
-		{"zero width space", "a​b"},
+		{"zero width space", "a\u200bb"},
 		{"emoji in a sentence", "status: 🔴 offline, 🟢 online, retry in 5s please wait"},
 		{"nordic", "æ ø å"},
 		{"math symbols", "≈ ≠ ±"},
@@ -68,7 +68,7 @@ func TestHasMultiByteUTF8(t *testing.T) {
 		{"empty", nil, false},
 		{"pure ascii", []byte("hello world"), false},
 		{"two byte sequence", []byte("å"), true},
-		{"three byte sequence", []byte("​"), true},
+		{"three byte sequence", []byte("\u200b"), true},
 		{"four byte sequence", []byte("🔴"), true},
 		{"invalid utf-8", []byte{0xE5, 0x20, 0xF8}, false},
 		{"truncated sequence", []byte{0xC3}, false},

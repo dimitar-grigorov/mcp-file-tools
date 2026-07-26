@@ -56,7 +56,7 @@ func TestHandleWriteFile_AstralAndSymbolsSurviveRoundTrip(t *testing.T) {
 		{"math symbols", "≈ ≠ ±"},
 		{"astral emoji", "🔴 🈶"},
 		{"cyrillic", "Ще проверим"},
-		{"zero width space", "a​b"},
+		{"zero width space", "a\u200bb"},
 		{"mixed", "å ≈ 🔴 Щ"},
 	}
 
