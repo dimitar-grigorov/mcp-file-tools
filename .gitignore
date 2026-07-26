@@ -4,6 +4,7 @@
 *.dll
 *.so
 *.dylib
+!plugin/launcher/mcp-file-tools.exe
 
 # Test binary
 *.test

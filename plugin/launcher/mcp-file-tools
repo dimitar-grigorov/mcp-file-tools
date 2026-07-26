@@ -1,0 +1,70 @@
+#!/bin/sh
+# macOS/Linux launcher: downloads the release pinned by plugin.json, checks its
+# SHA-256, caches it and execs it. Windows uses mcp-file-tools.exe beside this file.
+# Logs go to stderr; stdout is the MCP channel.
+set -eu
+
+repo=dimitar-grigorov/mcp-file-tools
+dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
+die() { printf 'mcp-file-tools: %s\n' "$1" >&2; exit 1; }
+
+ver=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
+  "$dir/../.claude-plugin/plugin.json" 2>/dev/null | head -n 1)
+[ -n "$ver" ] || die "cannot read version from plugin.json"
+
+case $(uname -s) in
+  Darwin) os=darwin ;;
+  Linux)  os=linux ;;
+  *)      die "unsupported OS: $(uname -s) (Windows uses mcp-file-tools.exe)" ;;
+esac
+case $(uname -m) in
+  x86_64|amd64)  arch=amd64 ;;
+  arm64|aarch64) arch=arm64 ;;
+  *)             die "unsupported architecture: $(uname -m)" ;;
+esac
+
+bindir="${CLAUDE_PLUGIN_DATA:-$HOME/.cache/mcp-file-tools}/bin"
+bin="$bindir/mcp-file-tools-v$ver-$os-$arch"
+
+if [ ! -x "$bin" ]; then
+  asset="mcp-file-tools_${os}_${arch}"
+  base="https://github.com/$repo/releases/download/v$ver"
+  printf 'mcp-file-tools: downloading v%s (%s/%s)...\n' "$ver" "$os" "$arch" >&2
+
+  if command -v curl >/dev/null 2>&1; then
+    fetch() { curl -fsSL "$1" -o "$2"; }
+  elif command -v wget >/dev/null 2>&1; then
+    fetch() { wget -q "$1" -O "$2"; }
+  else
+    die "neither curl nor wget found"
+  fi
+
+  if command -v sha256sum >/dev/null 2>&1; then
+    sum() { sha256sum "$1" | cut -d' ' -f1; }
+  elif command -v shasum >/dev/null 2>&1; then
+    sum() { shasum -a 256 "$1" | cut -d' ' -f1; }
+  else
+    die "no sha256sum or shasum found"
+  fi
+
+  mkdir -p "$bindir"
+  tmp="$bin.$$.tmp"
+  sums="$bin.$$.sums"
+  trap 'rm -f "$tmp" "$sums"' EXIT INT TERM
+
+  fetch "$base/$asset" "$tmp" || die "download failed: $base/$asset"
+  fetch "$base/checksums.txt" "$sums" || die "download failed: checksums.txt"
+
+  want=$(awk -v a="$asset" '$2 == a { print $1 }' "$sums")
+  got=$(sum "$tmp")
+  [ -n "$want" ] || die "$asset missing from checksums.txt"
+  [ "$want" = "$got" ] || die "checksum mismatch for $asset (want=$want got=$got)"
+
+  chmod 755 "$tmp"
+  mv -f "$tmp" "$bin"   # atomic within the same filesystem
+  rm -f "$sums"
+  trap - EXIT INT TERM
+fi
+
+exec "$bin" "$@"

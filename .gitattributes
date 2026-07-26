@@ -1,2 +1,5 @@
 # Force LF line endings for all text files (Go convention)
 * text=auto eol=lf
+
+# Never let eol normalization touch the committed launcher
+*.exe binary
