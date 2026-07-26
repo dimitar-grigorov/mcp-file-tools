@@ -100,6 +100,10 @@ func (h *Handler) HandleConvertEncoding(ctx context.Context, req *mcp.CallToolRe
 		backupPath = v.Path + ".bak"
 	}
 
+	if r := cancelled(ctx); r != nil {
+		return r, ConvertEncodingOutput{}, nil
+	}
+
 	if err := atomicWriteWithBackup(v.Path, targetData, originalMode, backupPath); err != nil {
 		return errorResult(fmt.Sprintf("failed to write converted file: %v", err)), ConvertEncodingOutput{}, nil
 	}

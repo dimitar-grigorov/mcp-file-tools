@@ -27,6 +27,10 @@ func (h *Handler) HandleDeleteFile(ctx context.Context, req *mcp.CallToolRequest
 		return errorResult("path is a directory, use a different tool to delete directories"), DeleteFileOutput{}, nil
 	}
 
+	if r := cancelled(ctx); r != nil {
+		return r, DeleteFileOutput{}, nil
+	}
+
 	if err := os.Remove(v.Path); err != nil {
 		return errorResult(fmt.Sprintf("failed to delete file: %v", err)), DeleteFileOutput{}, nil
 	}

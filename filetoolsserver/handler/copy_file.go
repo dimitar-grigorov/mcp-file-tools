@@ -36,6 +36,10 @@ func (h *Handler) HandleCopyFile(ctx context.Context, req *mcp.CallToolRequest, 
 		return errorResult(fmt.Sprintf("destination already exists: %s", input.Destination)), CopyFileOutput{}, nil
 	}
 
+	if r := cancelled(ctx); r != nil {
+		return r, CopyFileOutput{}, nil
+	}
+
 	// Copy file with source permissions and timestamps preserved
 	if err := copyFile(src.Path, dst.Path, srcInfo.Mode().Perm(), srcInfo.ModTime()); err != nil {
 		return errorResult(fmt.Sprintf("failed to copy file: %v", err)), CopyFileOutput{}, nil
@@ -85,5 +89,10 @@ func copyFile(src, dst string, mode os.FileMode, modTime time.Time) (err error) 
 		return err
 	}
 
-	return os.Rename(tempPath, dst)
+	if err = os.Rename(tempPath, dst); err != nil {
+		return err
+	}
+
+	syncParentDir(dst)
+	return nil
 }

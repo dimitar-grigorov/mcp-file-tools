@@ -34,6 +34,10 @@ func (h *Handler) HandleWriteFile(ctx context.Context, req *mcp.CallToolRequest,
 		contentToWrite = encoded
 	}
 
+	if r := cancelled(ctx); r != nil {
+		return r, WriteFileOutput{}, nil
+	}
+
 	mode := getFileMode(v.Path)
 	if err := atomicWriteFile(v.Path, contentToWrite, mode); err != nil {
 		return errorResult(fmt.Sprintf("failed to write file: %v", err)), WriteFileOutput{}, nil

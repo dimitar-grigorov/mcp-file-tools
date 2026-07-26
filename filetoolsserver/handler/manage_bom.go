@@ -35,7 +35,7 @@ func (h *Handler) HandleManageBom(ctx context.Context, req *mcp.CallToolRequest,
 	case "detect":
 		return h.bomDetect(v.Path)
 	case "strip":
-		return h.bomStrip(v.Path)
+		return h.bomStrip(ctx, v.Path)
 	case "add":
 		enc := strings.ToLower(input.Encoding)
 		if enc == "" {
@@ -44,7 +44,7 @@ func (h *Handler) HandleManageBom(ctx context.Context, req *mcp.CallToolRequest,
 		if !validBOMEncodings[enc] {
 			return errorResult(fmt.Sprintf("unsupported BOM encoding %q — valid: utf-8, utf-16-le, utf-16-be, utf-32-le, utf-32-be", enc)), ManageBomOutput{}, nil
 		}
-		return h.bomAdd(v.Path, enc)
+		return h.bomAdd(ctx, v.Path, enc)
 	}
 	// unreachable
 	return errorResult("unexpected action"), ManageBomOutput{}, nil
@@ -76,7 +76,7 @@ func (h *Handler) bomDetect(path string) (*mcp.CallToolResult, ManageBomOutput, 
 }
 
 // bomStrip removes the BOM if present, otherwise returns a no-op result.
-func (h *Handler) bomStrip(path string) (*mcp.CallToolResult, ManageBomOutput, error) {
+func (h *Handler) bomStrip(ctx context.Context, path string) (*mcp.CallToolResult, ManageBomOutput, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return errorResult(fmt.Sprintf("failed to read file: %v", err)), ManageBomOutput{}, nil
@@ -94,6 +94,10 @@ func (h *Handler) bomStrip(path string) (*mcp.CallToolResult, ManageBomOutput, e
 	bomSize := encoding.BOMSize(result.Charset)
 	stripped := data[bomSize:]
 
+	if r := cancelled(ctx); r != nil {
+		return r, ManageBomOutput{}, nil
+	}
+
 	mode := getFileMode(path)
 	if err := atomicWriteFile(path, stripped, mode); err != nil {
 		return errorResult(fmt.Sprintf("failed to write file: %v", err)), ManageBomOutput{}, nil
@@ -109,7 +113,7 @@ func (h *Handler) bomStrip(path string) (*mcp.CallToolResult, ManageBomOutput, e
 }
 
 // bomAdd prepends a BOM for the given encoding. Fails if a BOM already exists.
-func (h *Handler) bomAdd(path string, enc string) (*mcp.CallToolResult, ManageBomOutput, error) {
+func (h *Handler) bomAdd(ctx context.Context, path string, enc string) (*mcp.CallToolResult, ManageBomOutput, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return errorResult(fmt.Sprintf("failed to read file: %v", err)), ManageBomOutput{}, nil
@@ -125,6 +129,10 @@ func (h *Handler) bomAdd(path string, enc string) (*mcp.CallToolResult, ManageBo
 	withBOM := make([]byte, len(bomBytes)+len(data))
 	copy(withBOM, bomBytes)
 	copy(withBOM[len(bomBytes):], data)
+
+	if r := cancelled(ctx); r != nil {
+		return r, ManageBomOutput{}, nil
+	}
 
 	mode := getFileMode(path)
 	if err := atomicWriteFile(path, withBOM, mode); err != nil {

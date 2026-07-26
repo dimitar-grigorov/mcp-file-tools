@@ -83,6 +83,9 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 	diff := createUnifiedDiff(content, modifiedContent, input.Path)
 
 	if !input.DryRun {
+		if r := cancelled(ctx); r != nil {
+			return r, EditFileOutput{}, nil
+		}
 		if err := atomicWriteFileWithEncoding(v.Path, modifiedContent, encodingName, lineEndings.Style, originalMode); err != nil {
 			return errorResult(fmt.Sprintf("failed to write file: %v", err)), EditFileOutput{}, nil
 		}

@@ -1,10 +1,22 @@
 package handler
 
 import (
+	"context"
 	"os"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
+
+// cancelled reports an error result if the caller gave up. Check it immediately
+// before a mutating syscall so a cancelled request leaves the file untouched.
+func cancelled(ctx context.Context) *mcp.CallToolResult {
+	select {
+	case <-ctx.Done():
+		return errorResult(ctx.Err().Error())
+	default:
+		return nil
+	}
+}
 
 // shouldLoadEntireFile returns true if the file is small enough to load into memory.
 // Returns (shouldLoad, fileSize). On stat error, defaults to true (load into memory).

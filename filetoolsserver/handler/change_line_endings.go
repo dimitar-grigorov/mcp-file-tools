@@ -113,6 +113,10 @@ func (h *Handler) HandleChangeLineEndings(ctx context.Context, req *mcp.CallTool
 		converted = []byte(ConvertLineEndings(string(data), style))
 	}
 
+	if r := cancelled(ctx); r != nil {
+		return r, ChangeLineEndingsOutput{}, nil
+	}
+
 	mode := getFileMode(v.Path)
 	if err := atomicWriteFile(v.Path, converted, mode); err != nil {
 		return errorResult(fmt.Sprintf("failed to write file: %v", err)), ChangeLineEndingsOutput{}, nil
