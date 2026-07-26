@@ -54,12 +54,11 @@ func (h *Handler) HandleReadTextFile(ctx context.Context, req *mcp.CallToolReque
 		return errorResult(fmt.Sprintf("failed to decode file content: %v", err)), ReadTextFileOutput{}, nil
 	}
 
-	totalLines := strings.Count(content, "\n") + 1
+	totalLines := countLines(content)
 
 	var startLine, endLine int
 	if input.Offset != nil || input.Limit != nil {
-		lines := strings.Split(content, "\n")
-		content, startLine, endLine = applyOffsetLimit(lines, input.Offset, input.Limit)
+		content, startLine, endLine = applyOffsetLimit(content, input.Offset, input.Limit)
 	} else {
 		startLine = 1
 		endLine = totalLines
@@ -225,11 +224,44 @@ func decodeContent(data []byte, encResult encodingResult) (string, error) {
 	return string(utf8Content), nil
 }
 
-// applyOffsetLimit applies offset and limit to select a range of lines.
+// countLines counts lines in content. A trailing terminator does not open a new
+// line, and a lone \r is not a line break.
+func countLines(content string) int {
+	if content == "" {
+		return 0
+	}
+	n := strings.Count(content, "\n")
+	if !strings.HasSuffix(content, "\n") {
+		n++
+	}
+	return n
+}
+
+// lineStarts returns the byte offset where each line begins.
+func lineStarts(content string) []int {
+	if content == "" {
+		return nil
+	}
+	starts := make([]int, 0, countLines(content))
+	starts = append(starts, 0)
+	for i := 0; i < len(content); i++ {
+		if content[i] == '\n' && i+1 < len(content) {
+			starts = append(starts, i+1)
+		}
+	}
+	return starts
+}
+
+// applyOffsetLimit applies offset and limit to select a range of lines. The result
+// is a slice of the original content, so line endings survive byte for byte.
 // Offset is 1-indexed (like line numbers). Returns content, startLine, endLine.
 // Negative values are treated as not provided.
-func applyOffsetLimit(lines []string, offset, limit *int) (string, int, int) {
-	totalLines := len(lines)
+func applyOffsetLimit(content string, offset, limit *int) (string, int, int) {
+	starts := lineStarts(content)
+	totalLines := len(starts)
+	if totalLines == 0 {
+		return "", 1, 0
+	}
 
 	// Default offset is 1 (first line)
 	startIdx := 0
@@ -242,13 +274,14 @@ func applyOffsetLimit(lines []string, offset, limit *int) (string, int, int) {
 
 	// Default limit is all remaining lines
 	endIdx := totalLines
-	if limit != nil && *limit > 0 {
+	if limit != nil && *limit > 0 && startIdx+*limit < endIdx {
 		endIdx = startIdx + *limit
-		if endIdx > totalLines {
-			endIdx = totalLines
-		}
 	}
 
-	selectedLines := lines[startIdx:endIdx]
-	return strings.Join(selectedLines, "\n"), startIdx + 1, endIdx
+	// End at the next line's start, or at EOF for the last line (keeps its terminator).
+	end := len(content)
+	if endIdx < totalLines {
+		end = starts[endIdx]
+	}
+	return content[starts[startIdx]:end], startIdx + 1, endIdx
 }

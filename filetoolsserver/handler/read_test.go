@@ -312,8 +312,8 @@ func TestHandleReadTextFile_OffsetLimit(t *testing.T) {
 		t.Errorf("expected success, got error")
 	}
 
-	// Should return lines 3-6
-	expected := "line3\nline4\nline5\nline6"
+	// Should return lines 3-6, terminator of line 6 included
+	expected := "line3\nline4\nline5\nline6\n"
 	if output.Content != expected {
 		t.Errorf("expected %q, got %q", expected, output.Content)
 	}
@@ -396,8 +396,8 @@ func TestHandleReadTextFile_LimitOnly(t *testing.T) {
 		t.Errorf("expected success, got error")
 	}
 
-	// Should return first 2 lines
-	expected := "line1\nline2"
+	// Should return first 2 lines, terminator of line 2 included
+	expected := "line1\nline2\n"
 	if output.Content != expected {
 		t.Errorf("expected %q, got %q", expected, output.Content)
 	}
