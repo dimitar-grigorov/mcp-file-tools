@@ -11,6 +11,8 @@ MCP server for file operations with non-UTF-8 encoding support. Auto-detects and
 
 **Perfect for:** Delphi/Pascal projects, legacy VB6 apps, old PHP/HTML sites, config files with non-UTF-8 text.
 
+> **PRs welcome and merged fast** — no CLA, no style review, one-line fixes count. Forked this to fix something? Please [send it back](#contributing) instead.
+
 ## What It Does
 
 Provides 21 tools for file operations with automatic encoding conversion:
@@ -381,6 +383,33 @@ Example commands (paste into terminal):
 {"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"detect_encoding","arguments":{"path":"/path/to/project/file.txt"}}}
 ```
 
+## Contributing
+
+**If it fits the scope and works, it gets merged.** Don't ask first — just send the PR.
+
+- No CLA, no style review. `make test` and `make lint` passing is enough; tests are welcome, never required.
+- One-line fixes and half-finished features behind a flag are both fine.
+- Pushed back on (with a comment, not a close): out of scope, or breaking tool contracts other people's agents rely on.
+- Don't want to write the fix? [Open an issue](https://github.com/dimitar-grigorov/mcp-file-tools/issues) with the file, its encoding, and what the tool did.
+
+Details in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Forking
+
+Forking is fine — that's what GPL-3.0 is for. Two sets of asks:
+
+**Required by GPL-3.0** if you distribute your fork: keep GPL-3.0 with [LICENSE](LICENSE) and the copyright notice intact (§4, §5c), state prominently that you modified it and when (§5a), and ship the source (§6).
+
+**Courtesy, not enforced:**
+
+- **Try upstream first.** A PR here beats carrying merge conflicts forever, and you get public credit.
+- **Say it's a fork, at the top.** One line near the start of your README: *"Fork of [dimitar-grigorov/mcp-file-tools](https://github.com/dimitar-grigorov/mcp-file-tools)"*.
+- **Don't ship it under the same identity.** A rebranded fork in public registries (MCP Registry, plugin marketplaces, Smithery) under the same product name with the author swapped reads as if the original project moved. Give it a distinguishable name.
+
+Maintaining a long-running fork? Open an issue about upstreaming the parts that fit — that's a welcome conversation.
+
 ## License
 
 GPL-3.0 - see [LICENSE](LICENSE)
+
+Copyright (C) 2026 Dimitar Grigorov. Free software, distributed WITHOUT ANY WARRANTY.

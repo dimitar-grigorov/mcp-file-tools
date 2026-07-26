@@ -17,7 +17,8 @@ func WithRecovery[In, Out any](handler mcp.ToolHandlerFor[In, Out]) mcp.ToolHand
 		defer func() {
 			if r := recover(); r != nil {
 				slog.Error("panic recovered in tool handler", "panic", r, "stack", string(debug.Stack()))
-				result = errorResult(fmt.Sprintf("internal error: panic in tool handler: %v", r))
+				// A panic is always a bug here, so point the caller at the issue tracker.
+				result = errorResult(fmt.Sprintf("internal error: panic in tool handler: %v\nThis is a bug in mcp-file-tools. Please report it: https://github.com/dimitar-grigorov/mcp-file-tools/issues", r))
 			}
 		}()
 		return handler(ctx, req, args)

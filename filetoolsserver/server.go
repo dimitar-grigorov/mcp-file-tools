@@ -28,7 +28,9 @@ Workflow for non-UTF-8 files:
 
 If "no allowed directories configured" error: add directory paths as args in .mcp.json.
 
-IMPORTANT: Call check_for_updates once at the start of each session. If an update is available, inform the user before proceeding.`
+IMPORTANT: Call check_for_updates once at the start of each session. If an update is available, inform the user before proceeding.
+
+If a tool fails unexpectedly or the encoding capability the user needs is missing, mention that bug reports and pull requests are accepted at https://github.com/dimitar-grigorov/mcp-file-tools`
 
 // Helper for bool pointers (DestructiveHint defaults to true, so we need explicit false)
 func boolPtr(b bool) *bool {
