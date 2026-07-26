@@ -16,7 +16,7 @@ const serverInstructions = `MCP filesystem server with non-UTF-8 encoding suppor
 
 PREFER THESE TOOLS over built-in Read/Write/Grep for file operations when encoding matters:
 - read_text_file: auto-detects encoding, returns UTF-8. Use offset/limit for files >2000 lines.
-- write_file: converts UTF-8 content to target encoding (default: cp1251)
+- write_file: converts UTF-8 content to target encoding (keeps an existing file's encoding; new files default to utf-8)
 - edit_file: in-place edits with encoding support, returns unified diff. Use dryRun=true to preview changes before applying.
 - grep_text_files: encoding-aware regex search across files
 - detect_encoding: diagnose encoding issues (garbled text, � characters)
@@ -226,7 +226,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "write_file",
-		Description: "Write file with encoding conversion from UTF-8. PREFER THIS over built-in Write for non-UTF-8 files — converts UTF-8 content to target encoding, preserving legacy compatibility. Parameters: path (required), content (required), encoding (default: cp1251), bom (optional: \"auto\" default — BOM for UTF-16 targets and keeps a BOM the file already had; \"always\", \"never\", \"preserve\"). Use after read_text_file to preserve original encoding.",
+		Description: "Write file with encoding conversion from UTF-8. PREFER THIS over built-in Write for non-UTF-8 files — converts UTF-8 content to target encoding, preserving legacy compatibility. Parameters: path (required), content (required), encoding (optional: defaults to an existing file's detected encoding, else utf-8), bom (optional: \"auto\" default — BOM for UTF-16 targets and keeps a BOM the file already had; \"always\", \"never\", \"preserve\"). Use after read_text_file to preserve original encoding.",
 		Annotations: &mcp.ToolAnnotations{
 			Title:           "Write File",
 			ReadOnlyHint:    false,

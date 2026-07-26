@@ -151,7 +151,7 @@ func TestHandleWriteFile_DefaultEncoding_NewFile(t *testing.T) {
 	testFile := filepath.Join(tempDir, "new_file.txt")
 	content := "Тест" // Russian "Test"
 
-	// No encoding specified for NEW file - should use configured default (cp1251)
+	// No encoding specified for NEW file - should use configured default (utf-8)
 	input := WriteFileInput{
 		Path:    testFile,
 		Content: content,
@@ -166,17 +166,121 @@ func TestHandleWriteFile_DefaultEncoding_NewFile(t *testing.T) {
 		t.Errorf("expected success, got error")
 	}
 
-	if !strings.Contains(output.Message, "cp1251") {
-		t.Errorf("expected default encoding cp1251 in message, got %q", output.Message)
+	if !strings.Contains(output.Message, "utf-8") && !strings.Contains(output.Message, "UTF-8") {
+		t.Errorf("expected default encoding utf-8 in message, got %q", output.Message)
 	}
 
-	// Verify CP1251 bytes were written
+	// Verify UTF-8 bytes were written
 	written, err := os.ReadFile(testFile)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Expected CP1251 bytes for "Тест"
+	// Expected UTF-8 bytes for "Тест"
+	expectedUTF8 := []byte{0xD0, 0xA2, 0xD0, 0xB5, 0xD1, 0x81, 0xD1, 0x82}
+	if !bytes.Equal(written, expectedUTF8) {
+		t.Errorf("expected UTF-8 bytes %v, got %v", expectedUTF8, written)
+	}
+}
+
+// Regression: before 1.9.0 the cp1251 default made the first write of any
+// non-Cyrillic text fail outright ("rune not supported by encoding").
+func TestHandleWriteFile_DefaultEncoding_NewFile_NonCyrillic(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+	}{
+		{"german umlauts", "Bäcker Grüße Straße"},
+		{"cjk", "日本語のテキスト 中文字符"},
+		{"mixed", "Bäcker 日本語 Ελληνικά"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tempDir := t.TempDir()
+			h := NewHandler([]string{tempDir})
+			testFile := filepath.Join(tempDir, "new_file.txt")
+
+			result, _, err := h.HandleWriteFile(context.Background(), nil, WriteFileInput{
+				Path:    testFile,
+				Content: tt.content,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if result.IsError {
+				t.Fatalf("expected success, got error: %s", extractTextFromResultWrite(result.Content))
+			}
+
+			written, err := os.ReadFile(testFile)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Real UTF-8 bytes, not a lossy transliteration.
+			if !bytes.Equal(written, []byte(tt.content)) {
+				t.Errorf("expected UTF-8 bytes %v, got %v", []byte(tt.content), written)
+			}
+			if bytes.IndexByte(written, '?') >= 0 {
+				t.Errorf("found 0x3F substitution in output: %v", written)
+			}
+		})
+	}
+}
+
+// The 'ä' -> c3 a4 case spelled out, since that is the exact byte pair the
+// cp1251 default could not produce.
+func TestHandleWriteFile_DefaultEncoding_NewFile_UmlautBytes(t *testing.T) {
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+	testFile := filepath.Join(tempDir, "umlaut.txt")
+
+	result, _, err := h.HandleWriteFile(context.Background(), nil, WriteFileInput{
+		Path:    testFile,
+		Content: "ä",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.IsError {
+		t.Fatalf("expected success, got error: %s", extractTextFromResultWrite(result.Content))
+	}
+
+	written, err := os.ReadFile(testFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(written, []byte{0xC3, 0xA4}) {
+		t.Errorf("expected UTF-8 bytes [c3 a4] for 'ä', got % x", written)
+	}
+}
+
+// MCP_DEFAULT_ENCODING=cp1251 restores the pre-1.9.0 default for new files.
+func TestHandleWriteFile_DefaultEncoding_NewFile_EnvOverride(t *testing.T) {
+	t.Setenv("MCP_DEFAULT_ENCODING", "cp1251")
+
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+	testFile := filepath.Join(tempDir, "new_file.txt")
+
+	result, output, err := h.HandleWriteFile(context.Background(), nil, WriteFileInput{
+		Path:    testFile,
+		Content: "Тест",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.IsError {
+		t.Fatalf("expected success, got error: %s", extractTextFromResultWrite(result.Content))
+	}
+	if !strings.Contains(output.Message, "cp1251") {
+		t.Errorf("expected cp1251 in message, got %q", output.Message)
+	}
+
+	written, err := os.ReadFile(testFile)
+	if err != nil {
+		t.Fatal(err)
+	}
 	expectedCP1251 := []byte{0xD2, 0xE5, 0xF1, 0xF2}
 	if !bytes.Equal(written, expectedCP1251) {
 		t.Errorf("expected CP1251 bytes %v, got %v", expectedCP1251, written)

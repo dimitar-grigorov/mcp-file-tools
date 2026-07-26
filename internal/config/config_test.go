@@ -21,14 +21,15 @@ func TestLoad_Defaults(t *testing.T) {
 	}
 }
 
+// cp1251 doubles as the pre-1.9.0 default, so this also covers the migration path.
 func TestLoad_CustomEncoding(t *testing.T) {
-	os.Setenv(EnvDefaultEncoding, "utf-8")
+	os.Setenv(EnvDefaultEncoding, "cp1251")
 	defer os.Unsetenv(EnvDefaultEncoding)
 
 	cfg := Load()
 
-	if cfg.DefaultEncoding != "utf-8" {
-		t.Errorf("expected encoding utf-8, got %q", cfg.DefaultEncoding)
+	if cfg.DefaultEncoding != "cp1251" {
+		t.Errorf("expected encoding cp1251, got %q", cfg.DefaultEncoding)
 	}
 }
 

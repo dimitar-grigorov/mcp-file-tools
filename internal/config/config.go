@@ -15,15 +15,16 @@ const (
 	EnvMemoryThreshold = "MCP_MEMORY_THRESHOLD"
 
 	// Default values
-	DefaultEncoding = "cp1251"
+	DefaultEncoding = "utf-8"
 	DefaultMaxSize  = int64(64 * 1024 * 1024) // 64MB - files smaller than this are loaded into memory
 )
 
 // Config holds server configuration loaded from environment variables.
 type Config struct {
-	// DefaultEncoding is the default encoding for write_file when none is specified.
+	// DefaultEncoding is the default encoding for write_file on NEW files only;
+	// existing files keep their detected encoding.
 	// Set via MCP_DEFAULT_ENCODING environment variable.
-	// Default: "cp1251" (for backward compatibility with legacy codebases)
+	// Default: "utf-8". Legacy codebases can set "cp1251" to restore the pre-1.9.0 default.
 	DefaultEncoding string
 
 	// MemoryThreshold is the threshold for loading files into memory vs streaming.

@@ -81,7 +81,7 @@ Write content to file. UTF-8 writes as-is; other encodings convert from UTF-8.
 **Parameters:**
 - `path` (required): Path to the file
 - `content` (required): Content to write
-- `encoding` (optional): Target encoding (default: cp1251)
+- `encoding` (optional): Target encoding. Defaults to the existing file's detected encoding; for a new file, to `MCP_DEFAULT_ENCODING` (`utf-8`)
 - `bom` (optional): `auto` (default — BOM for UTF-16 targets, keeps a BOM the file already had), `always`, `never`, `preserve`
 
 **Example:**

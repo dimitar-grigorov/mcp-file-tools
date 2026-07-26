@@ -23,7 +23,7 @@ type ReadTextFileOutput struct {
 	EncodingConfidence int    `json:"encodingConfidence,omitempty"`
 }
 
-// WriteFileInput - encoding defaults to cp1251 for legacy codebases.
+// WriteFileInput - encoding defaults to the existing file's encoding, else utf-8.
 // BOM: "auto" (default), "always", "never", "preserve".
 type WriteFileInput struct {
 	Path     string `json:"path"`
