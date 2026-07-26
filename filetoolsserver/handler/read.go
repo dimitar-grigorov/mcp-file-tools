@@ -242,8 +242,7 @@ func decodeContent(data []byte, encResult encodingResult) (string, error) {
 	return string(utf8Content), nil
 }
 
-// countLines counts lines in content. A trailing terminator does not open a new
-// line, and a lone \r is not a line break.
+// countLines counts lines; a trailing terminator doesn't open a new line, and a lone \r isn't a break.
 func countLines(content string) int {
 	if content == "" {
 		return 0
@@ -270,10 +269,7 @@ func lineStarts(content string) []int {
 	return starts
 }
 
-// applyOffsetLimit applies offset and limit to select a range of lines. The result
-// is a slice of the original content, so line endings survive byte for byte.
-// Offset is 1-indexed (like line numbers). Returns content, startLine, endLine.
-// Negative values are treated as not provided.
+// applyOffsetLimit returns lines [offset, offset+limit) sliced from content (line endings preserved); offset is 1-indexed, negatives ignored.
 func applyOffsetLimit(content string, offset, limit *int) (string, int, int) {
 	starts := lineStarts(content)
 	totalLines := len(starts)
