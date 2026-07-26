@@ -12,7 +12,6 @@ import (
 	"golang.org/x/text/encoding/charmap"
 )
 
-// Detection constants
 const (
 	ChunkSize               = 128 * 1024 // 128KB chunks for detection
 	SmallFileThreshold      = 128 * 1024 // Files smaller than this are read entirely
@@ -42,27 +41,22 @@ type DetectionResult struct {
 // Order matters: UTF-32 BOMs must be checked before UTF-16 since they share prefixes.
 func DetectBOM(data []byte) (DetectionResult, bool) {
 	if len(data) >= 4 {
-		// UTF-32 BE: 00 00 FE FF
 		if data[0] == 0x00 && data[1] == 0x00 && data[2] == 0xFE && data[3] == 0xFF {
 			return DetectionResult{Charset: "utf-32-be", Confidence: 100, HasBOM: true}, true
 		}
-		// UTF-32 LE: FF FE 00 00
 		if data[0] == 0xFF && data[1] == 0xFE && data[2] == 0x00 && data[3] == 0x00 {
 			return DetectionResult{Charset: "utf-32-le", Confidence: 100, HasBOM: true}, true
 		}
 	}
 	if len(data) >= 3 {
-		// UTF-8 BOM: EF BB BF
 		if data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF {
 			return DetectionResult{Charset: "utf-8", Confidence: 100, HasBOM: true}, true
 		}
 	}
 	if len(data) >= 2 {
-		// UTF-16 BE: FE FF
 		if data[0] == 0xFE && data[1] == 0xFF {
 			return DetectionResult{Charset: "utf-16-be", Confidence: 100, HasBOM: true}, true
 		}
-		// UTF-16 LE: FF FE
 		if data[0] == 0xFF && data[1] == 0xFE {
 			return DetectionResult{Charset: "utf-16-le", Confidence: 100, HasBOM: true}, true
 		}
@@ -71,7 +65,6 @@ func DetectBOM(data []byte) (DetectionResult, bool) {
 }
 
 // BOMBytesFor returns the BOM byte sequence for a given encoding name, or nil if unsupported.
-// Supported: utf-8, utf-16-le, utf-16-be, utf-32-le, utf-32-be.
 func BOMBytesFor(charset string) []byte {
 	switch strings.ToLower(charset) {
 	case "utf-8":
@@ -253,7 +246,6 @@ func DetectSample(data []byte) (DetectionResult, bool) {
 		return result, result.Confidence >= MinConfidenceThreshold
 	}
 
-	// Check beginning first - if high confidence, return early
 	result := detectLegacy(samples[0].data)
 	if result.Confidence >= HighConfidenceThreshold {
 		return result, true
@@ -327,7 +319,6 @@ func detectSampleFromReader(r io.ReaderAt, size int64) (DetectionResult, error) 
 		return result, nil
 	}
 
-	// Check beginning chunk - if high confidence, return early
 	result := detectLegacy(samples[0].data)
 	if result.Confidence >= HighConfidenceThreshold {
 		return result, nil
@@ -374,15 +365,13 @@ func detectChunkedFromReader(r io.ReaderAt, size int64) (DetectionResult, error)
 		return Detect(data), nil
 	}
 
-	// Check for BOM (need 4 bytes for UTF-32)
-	bomCheck := make([]byte, 4)
+	bomCheck := make([]byte, 4) // longest BOM is UTF-32's
 	if n, _ := r.ReadAt(bomCheck, 0); n >= 2 {
 		if result, ok := DetectBOM(bomCheck[:n]); ok {
 			return result, nil
 		}
 	}
 
-	// Process file in chunks
 	type chunkResult struct {
 		encoding   string
 		confidence int
@@ -424,7 +413,7 @@ func detectChunkedFromReader(r io.ReaderAt, size int64) (DetectionResult, error)
 		return DetectionResult{}, nil
 	}
 
-	// Aggregate results with weighted confidence
+	// Weight each chunk's verdict by its byte count.
 	encodingWeights := make(map[string]int)
 	encodingConfidenceSum := make(map[string]int)
 
