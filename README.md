@@ -367,19 +367,30 @@ Details in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Forking
 
-Forking is fine — that's what GPL-3.0 is for. Taking the project over is not.
+Forking is fine. That's what GPL-3.0 is for. Taking the project over is not.
 
-**GPL-3.0 is a license, not a preference.** If you distribute your fork — a public repo, a release binary, a registry listing, a product you ship to customers — you must keep GPL-3.0 and [LICENSE](LICENSE) in place with the copyright notice intact (§4, §5c), state prominently that you changed the files and when (§5a), and make the source available to everyone you gave it to (§6). Deleting the license or the notice, relicensing it as MIT or proprietary, or shipping only a binary is a license violation, and §8 ends your rights the moment you do it.
+**GPL-3.0 is a license, not a preference.** Distribute your fork in any form (public repo, release binary, registry listing, product you ship to customers) and you must:
 
-**And it will be enforced.** In that order: a request to comply, then a DMCA takedown and a delisting request to whichever registry or marketplace carries it, then legal action as the copyright holder. Complying costs you a license file, a notice and a source link, so none of this needs to happen. Not sure whether what you're shipping complies? [Ask in an issue](https://github.com/dimitar-grigorov/mcp-file-tools/issues) — that's a normal question, and a cheaper one.
+- **Keep GPL-3.0** and [LICENSE](LICENSE), copyright notice intact (§4, §5c)
+- **Say what you changed** and when, prominently (§5a)
+- **Give the source** to everyone you gave the binary to (§6)
 
-That's the enforceable part; the rest below is asked, not enforced.
+> [!WARNING]
+> Deleting the license or the notice, relicensing as MIT or proprietary, or shipping
+> only a binary is a **license violation**, and §8 ends your rights the moment you do it.
 
-**Leave the credit in.** Keeping `Copyright (C) 2026 Dimitar Grigorov` in `LICENSE` and in the source headers is the legal minimum. One line near the top of your README — *"Fork of [dimitar-grigorov/mcp-file-tools](https://github.com/dimitar-grigorov/mcp-file-tools)"* — is what actually tells a reader where this came from, and costs you nothing.
+**It will be enforced,** in this order: a request to comply, then a DMCA takedown plus
+delisting from whichever registry or marketplace carries it, then legal action as the
+copyright holder. Complying costs one license file, one notice, one source link, so none
+of this needs to happen. Unsure whether what you ship complies?
+[Ask in an issue](https://github.com/dimitar-grigorov/mcp-file-tools/issues), that's a
+normal question and a cheaper one.
 
-**Don't ship it under this project's identity.** A rebranded fork in a public registry (MCP Registry, plugin marketplaces, Smithery) carrying the same product name with the author swapped reads as if the original project moved — people install it believing it's this one, and file its bugs here. Give your fork a name of its own.
+**The rest is asked, not enforced:**
 
-**Try upstream first.** A PR here beats carrying merge conflicts forever, and it puts your name on the commit rather than in a credits list. Maintaining a long-running fork? Open an issue about upstreaming the parts that fit — that's a welcome conversation.
+- **Leave the credit in.** `Copyright (C) 2026 Dimitar Grigorov` in `LICENSE` and the source headers is the legal minimum. One line near the top of your README, *"Fork of [dimitar-grigorov/mcp-file-tools](https://github.com/dimitar-grigorov/mcp-file-tools)"*, is what actually tells a reader where this came from, and costs you nothing.
+- **Give your fork its own name.** A rebranded fork in a public registry (MCP Registry, plugin marketplaces, Smithery) under this product name with the author swapped reads as if the original project moved. People install it believing it's this one, then file its bugs here.
+- **Try upstream first.** A PR beats carrying merge conflicts forever, and puts your name on the commit rather than in a credits list. Maintaining a long-running fork? Open an issue about upstreaming the parts that fit.
 
 ## Credits
 
