@@ -8,14 +8,13 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"strings"
-	"sync"
 	"unicode"
 	"unicode/utf8"
 
 	"github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
 	"github.com/dimitar-grigorov/mcp-file-tools/internal/security"
+	"github.com/dimitar-grigorov/mcp-file-tools/internal/workpool"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -139,76 +138,41 @@ func shouldIncludeFile(path string, include, exclude string) bool {
 	return true
 }
 
-// searchFiles searches all files concurrently using a worker pool.
-// Uses a cancellable context to stop workers early when maxMatches is reached.
+// searchFiles searches all files with bounded concurrency, committing results in file
+// order so the truncated set is the same on every run, and stopping once maxMatches is hit.
 func (h *Handler) searchFiles(ctx context.Context, files []string, re *regexp.Regexp, input GrepInput, maxMatches int, maxFileSize int64) ([]GrepMatch, int, bool) {
-	numWorkers := runtime.NumCPU()
-	if numWorkers > len(files) {
-		numWorkers = len(files)
-	}
-	searchCtx, cancelSearch := context.WithCancel(ctx)
-	defer cancelSearch()
-
-	jobs := make(chan string, numWorkers)
-	results := make(chan []GrepMatch, numWorkers)
-	var filesMatched int
-	var mu sync.Mutex
-	// Start workers
-	var wg sync.WaitGroup
-	for i := 0; i < numWorkers; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for path := range jobs {
-				select {
-				case <-searchCtx.Done():
-					results <- nil
-				default:
-					matches := searchSingleFile(path, re, input, maxFileSize)
-					if len(matches) > 0 {
-						mu.Lock()
-						filesMatched++
-						mu.Unlock()
-					}
-					results <- matches
-				}
-			}
-		}()
-	}
-	// Send jobs, stop early if search is cancelled
-	go func() {
-		defer close(jobs)
-		for _, file := range files {
-			select {
-			case <-searchCtx.Done():
-				return
-			case jobs <- file:
-			}
-		}
-	}()
-	// Close results when workers done
-	go func() {
-		wg.Wait()
-		close(results)
-	}()
-	// Collect results, cancel workers when limit reached
 	var allMatches []GrepMatch
+	filesMatched := 0
 	truncated := false
-	for fileMatches := range results {
-		for _, m := range fileMatches {
-			if len(allMatches) >= maxMatches {
-				truncated = true
-				cancelSearch()
-				break
+	// One more than the cap, so a single file overflowing still reports truncation.
+	perFileLimit := maxMatches + 1
+
+	workpool.RunOrdered(ctx, files, workpool.Options{},
+		func(ctx context.Context, _ int, path string) []GrepMatch {
+			if ctx.Err() != nil {
+				return nil
 			}
-			allMatches = append(allMatches, m)
-		}
-	}
+			return searchSingleFile(path, re, input, maxFileSize, perFileLimit)
+		},
+		func(_ int, fileMatches []GrepMatch) bool {
+			if len(fileMatches) > 0 {
+				filesMatched++
+			}
+			for _, m := range fileMatches {
+				if len(allMatches) >= maxMatches {
+					truncated = true
+					return false
+				}
+				allMatches = append(allMatches, m)
+			}
+			return true
+		})
+
 	return allMatches, filesMatched, truncated
 }
 
-// searchSingleFile searches for matches in a single file.
-func searchSingleFile(path string, re *regexp.Regexp, input GrepInput, maxFileSize int64) []GrepMatch {
+// searchSingleFile searches for matches in a single file, stopping at limit matches.
+func searchSingleFile(path string, re *regexp.Regexp, input GrepInput, maxFileSize int64, limit int) []GrepMatch {
 	// Check file size - warn if large file will be loaded to memory
 	if info, err := os.Stat(path); err == nil && info.Size() > maxFileSize {
 		slog.Warn("loading large file into memory", "path", path, "size", info.Size(), "threshold", maxFileSize)
@@ -243,6 +207,9 @@ func searchSingleFile(path string, re *regexp.Regexp, input GrepInput, maxFileSi
 			match.After = getContextAfter(lines, lineNum, input.ContextAfter)
 		}
 		matches = append(matches, match)
+		if len(matches) >= limit {
+			break
+		}
 	}
 	return matches
 }

@@ -5,10 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"runtime"
-	"sync"
 
 	"github.com/dimitar-grigorov/mcp-file-tools/internal/security"
+	"github.com/dimitar-grigorov/mcp-file-tools/internal/workpool"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -20,40 +19,22 @@ func (h *Handler) HandleReadMultipleFiles(ctx context.Context, req *mcp.CallTool
 	}
 	results := make([]FileReadResult, len(input.Paths))
 
-	numWorkers := runtime.NumCPU()
-	if numWorkers > len(input.Paths) {
-		numWorkers = len(input.Paths)
-	}
-
-	type job struct {
-		idx      int
-		filePath string
-	}
-	jobs := make(chan job, len(input.Paths))
-	var wg sync.WaitGroup
-	for i := 0; i < numWorkers; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for j := range jobs {
-				select {
-				case <-ctx.Done():
-					results[j.idx] = FileReadResult{
-						Path:      j.filePath,
-						Error:     "operation cancelled",
-						ErrorCode: ErrCodeOperationFailed,
-					}
-				default:
-					results[j.idx] = h.readSingleFile(j.filePath, input.Encoding)
+	// Every path gets a result even under cancellation, hence DispatchAfterCancel.
+	workpool.RunOrdered(ctx, input.Paths, workpool.Options{DispatchAfterCancel: true},
+		func(ctx context.Context, _ int, path string) FileReadResult {
+			if ctx.Err() != nil {
+				return FileReadResult{
+					Path:      path,
+					Error:     "operation cancelled",
+					ErrorCode: ErrCodeOperationFailed,
 				}
 			}
-		}()
-	}
-	for i, path := range input.Paths {
-		jobs <- job{idx: i, filePath: path}
-	}
-	close(jobs)
-	wg.Wait()
+			return h.readSingleFile(path, input.Encoding)
+		},
+		func(idx int, result FileReadResult) bool {
+			results[idx] = result
+			return true
+		})
 
 	var successCount, errorCount int
 	var errorSummary []string
