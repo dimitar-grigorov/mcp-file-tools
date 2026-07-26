@@ -80,6 +80,7 @@ Write content to file. UTF-8 writes as-is; other encodings convert from UTF-8.
 - `path` (required): Path to the file
 - `content` (required): Content to write
 - `encoding` (optional): Target encoding (default: cp1251)
+- `bom` (optional): `auto` (default — BOM for UTF-16 targets, keeps a BOM the file already had), `always`, `never`, `preserve`
 
 **Example:**
 ```json
@@ -376,12 +377,15 @@ Detect the encoding of a file with confidence percentage. Useful for diagnosing 
 ### convert_encoding
 
 Convert a file from one encoding to another. Reads in source encoding, writes in target encoding.
+A source BOM is stripped before decoding; a BOM that contradicts an explicit `from` is an error.
+No write (and no backup) happens if the file already holds the target bytes — `changed` reports which.
 
 **Parameters:**
 - `path` (required): Path to the file to convert
 - `from` (optional): Source encoding (auto-detected if omitted)
 - `to` (required): Target encoding
 - `backup` (optional): Create a `.bak` backup file before converting (default: false)
+- `bom` (optional): `auto` (default — BOM for UTF-16 targets, keeps a same-encoding source BOM), `always`, `never`, `preserve`
 
 **Example:**
 ```json

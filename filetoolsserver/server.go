@@ -226,7 +226,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "write_file",
-		Description: "Write file with encoding conversion from UTF-8. PREFER THIS over built-in Write for non-UTF-8 files — converts UTF-8 content to target encoding, preserving legacy compatibility. Parameters: path (required), content (required), encoding (default: cp1251). Use after read_text_file to preserve original encoding.",
+		Description: "Write file with encoding conversion from UTF-8. PREFER THIS over built-in Write for non-UTF-8 files — converts UTF-8 content to target encoding, preserving legacy compatibility. Parameters: path (required), content (required), encoding (default: cp1251), bom (optional: \"auto\" default — BOM for UTF-16 targets and keeps a BOM the file already had; \"always\", \"never\", \"preserve\"). Use after read_text_file to preserve original encoding.",
 		Annotations: &mcp.ToolAnnotations{
 			Title:           "Write File",
 			ReadOnlyHint:    false,
@@ -291,7 +291,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "convert_encoding",
-		Description: "Convert file from one encoding to another. Use after detect_encoding to identify the source. Parameters: path (required), from (source encoding, auto-detected if omitted), to (target encoding, required), backup (create .bak file before converting, default: false). IMPORTANT: Use backup=true for irreversible conversions.",
+		Description: "Convert file from one encoding to another. Use after detect_encoding to identify the source. A source BOM is stripped before decoding, and a conflict between the BOM and an explicit 'from' is an error. No-op if the file already holds the target bytes. Parameters: path (required), from (source encoding, auto-detected if omitted), to (target encoding, required), backup (create .bak file before converting, default: false), bom (optional: \"auto\" default — BOM for UTF-16 targets and keeps a same-encoding source BOM; \"always\", \"never\", \"preserve\"). IMPORTANT: Use backup=true for irreversible conversions.",
 		Annotations: &mcp.ToolAnnotations{
 			Title:           "Convert Encoding",
 			ReadOnlyHint:    false,

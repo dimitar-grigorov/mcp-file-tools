@@ -78,7 +78,7 @@ func TestHandleConvertEncoding_WithBackup(t *testing.T) {
 	h := NewHandler([]string{tempDir})
 
 	testFile := filepath.Join(tempDir, "test.txt")
-	originalContent := []byte("original content")
+	originalContent := []byte("Привет") // non-ASCII, so the conversion really changes bytes
 	os.WriteFile(testFile, originalContent, 0644)
 
 	result, output, err := h.HandleConvertEncoding(context.Background(), nil, ConvertEncodingInput{

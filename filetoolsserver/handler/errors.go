@@ -25,6 +25,12 @@ var (
 	// ErrEncodingUnsupported is returned when an unsupported encoding is specified.
 	// Wrap this error to include the encoding name: fmt.Errorf("%w: %s", ErrEncodingUnsupported, name)
 	ErrEncodingUnsupported = errkind.New(errkind.Encoding, "unsupported encoding")
+
+	// ErrBOMEncodingConflict is returned when a file's BOM contradicts the requested encoding.
+	ErrBOMEncodingConflict = errkind.New(errkind.Encoding, "BOM conflicts with requested encoding")
+
+	// ErrBOMPolicyInvalid is returned for an unknown bom policy, or one the encoding cannot satisfy.
+	ErrBOMPolicyInvalid = errkind.New(errkind.InvalidInput, "invalid bom policy")
 )
 
 // Edit operation errors

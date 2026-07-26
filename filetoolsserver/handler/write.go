@@ -14,6 +14,12 @@ func (h *Handler) HandleWriteFile(ctx context.Context, req *mcp.CallToolRequest,
 		return v.Result, WriteFileOutput{}, nil
 	}
 
+	// Resolve the BOM policy before anything mutates the file
+	policy, err := parseBOMPolicy(input.BOM)
+	if err != nil {
+		return errorResult(err.Error()), WriteFileOutput{}, nil
+	}
+
 	// Resolve encoding: explicit > preserve existing > configured default
 	encodingName, err := h.resolveWriteEncoding(input.Encoding, v.Path)
 	if err != nil {
@@ -22,17 +28,31 @@ func (h *Handler) HandleWriteFile(ctx context.Context, req *mcp.CallToolRequest,
 
 	enc, _ := encoding.Get(encodingName) // Already validated by resolveWriteEncoding
 
+	// A BOM in the content is transport (read_text_file returns it as text), not text
+	// to encode — and asking for it back is what the policy decides below.
+	content, contentHadBOM := trimContentBOM(input.Content)
+	existing := existingBOM(v.Path)
+	if contentHadBOM {
+		existing = bomInfo{HasBOM: true, Type: canonicalCharset(encodingName)}
+	}
+
 	var contentToWrite []byte
 	if encoding.IsUTF8(encodingName) {
-		contentToWrite = []byte(input.Content)
+		contentToWrite = []byte(content)
 	} else {
 		encoder := enc.NewEncoder()
-		encoded, err := encoder.Bytes([]byte(input.Content))
+		encoded, err := encoder.Bytes([]byte(content))
 		if err != nil {
 			return errorResult(fmt.Sprintf("failed to encode content: %v", err)), WriteFileOutput{}, nil
 		}
 		contentToWrite = encoded
 	}
+
+	bomBytes, err := bomBytesForPolicy(policy, encodingName, existing)
+	if err != nil {
+		return errorResult(err.Error()), WriteFileOutput{}, nil
+	}
+	contentToWrite = prependBOM(bomBytes, contentToWrite)
 
 	if r := cancelled(ctx); r != nil {
 		return r, WriteFileOutput{}, nil
@@ -43,6 +63,23 @@ func (h *Handler) HandleWriteFile(ctx context.Context, req *mcp.CallToolRequest,
 		return errorResult(fmt.Sprintf("failed to write file: %v", err)), WriteFileOutput{}, nil
 	}
 
-	message := fmt.Sprintf("Successfully wrote %d bytes to %s (encoding: %s)", len(contentToWrite), input.Path, encodingName)
-	return &mcp.CallToolResult{}, WriteFileOutput{Message: message}, nil
+	var output WriteFileOutput
+	detail := "encoding: " + encodingName
+	if len(bomBytes) > 0 {
+		output.HasBOM = true
+		output.BOMType = canonicalCharset(encodingName)
+		detail += ", with " + output.BOMType + " BOM"
+	}
+	output.Message = fmt.Sprintf("Successfully wrote %d bytes to %s (%s)", len(contentToWrite), input.Path, detail)
+	return &mcp.CallToolResult{}, output, nil
+}
+
+// existingBOM reports the BOM of the file about to be overwritten; absent file means none.
+func existingBOM(path string) bomInfo {
+	head, err := readFileHead(path, 4)
+	if err != nil {
+		return bomInfo{}
+	}
+	_, bom := splitBOM(head)
+	return bom
 }

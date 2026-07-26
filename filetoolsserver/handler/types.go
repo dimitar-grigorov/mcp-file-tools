@@ -23,15 +23,19 @@ type ReadTextFileOutput struct {
 	EncodingConfidence int    `json:"encodingConfidence,omitempty"`
 }
 
-// WriteFileInput - encoding defaults to cp1251 for legacy codebases
+// WriteFileInput - encoding defaults to cp1251 for legacy codebases.
+// BOM: "auto" (default), "always", "never", "preserve".
 type WriteFileInput struct {
 	Path     string `json:"path"`
 	Content  string `json:"content"`
 	Encoding string `json:"encoding,omitempty"`
+	BOM      string `json:"bom,omitempty"`
 }
 
 type WriteFileOutput struct {
 	Message string `json:"message"`
+	HasBOM  bool   `json:"hasBom"`
+	BOMType string `json:"bomType,omitempty"`
 }
 
 type ListDirectoryInput struct {
@@ -217,11 +221,13 @@ type CopyFileOutput struct {
 }
 
 // ConvertEncodingInput converts between encodings. From is auto-detected if empty.
+// BOM: "auto" (default), "always", "never", "preserve".
 type ConvertEncodingInput struct {
 	Path   string `json:"path"`
 	From   string `json:"from,omitempty"`
 	To     string `json:"to"`
 	Backup bool   `json:"backup,omitempty"`
+	BOM    string `json:"bom,omitempty"`
 }
 
 type ConvertEncodingOutput struct {
@@ -229,6 +235,9 @@ type ConvertEncodingOutput struct {
 	SourceEncoding string `json:"sourceEncoding"`
 	TargetEncoding string `json:"targetEncoding"`
 	BackupPath     string `json:"backupPath,omitempty"`
+	HasBOM         bool   `json:"hasBom"`
+	BOMType        string `json:"bomType,omitempty"`
+	Changed        bool   `json:"changed"`
 }
 
 // GrepInput for searching file contents with regex

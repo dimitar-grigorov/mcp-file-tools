@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log/slog"
@@ -22,6 +23,12 @@ func (h *Handler) HandleConvertEncoding(ctx context.Context, req *mcp.CallToolRe
 	v := h.ValidatePath(input.Path)
 	if !v.Ok() {
 		return v.Result, ConvertEncodingOutput{}, nil
+	}
+
+	// Resolve the BOM policy before anything mutates the file
+	policy, err := parseBOMPolicy(input.BOM)
+	if err != nil {
+		return errorResult(err.Error()), ConvertEncodingOutput{}, nil
 	}
 
 	// Validate target encoding
@@ -67,14 +74,22 @@ func (h *Handler) HandleConvertEncoding(ctx context.Context, req *mcp.CallToolRe
 		}
 	}
 
+	// Strip any BOM before decoding — it is transport, not content
+	payload, sourceBOM := splitBOM(data)
+	if input.From != "" {
+		if err := checkBOMConflict(sourceBOM, sourceEncodingName); err != nil {
+			return errorResult(err.Error()), ConvertEncodingOutput{}, nil
+		}
+	}
+
 	// Decode to UTF-8
 	var utf8Content string
 	if encoding.IsUTF8(sourceEncodingName) {
-		utf8Content = string(data)
+		utf8Content = string(payload)
 	} else {
 		sourceEnc, _ := encoding.Get(sourceEncodingName)
 		decoder := sourceEnc.NewDecoder()
-		decoded, err := decoder.Bytes(data)
+		decoded, err := decoder.Bytes(payload)
 		if err != nil {
 			return errorResult(fmt.Sprintf("failed to decode from %s: %v", sourceEncodingName, err)), ConvertEncodingOutput{}, nil
 		}
@@ -95,6 +110,27 @@ func (h *Handler) HandleConvertEncoding(ctx context.Context, req *mcp.CallToolRe
 		targetData = encoded
 	}
 
+	targetBOM, err := bomBytesForPolicy(policy, targetEncodingName, sourceBOM)
+	if err != nil {
+		return errorResult(err.Error()), ConvertEncodingOutput{}, nil
+	}
+	targetData = prependBOM(targetBOM, targetData)
+
+	output := ConvertEncodingOutput{
+		SourceEncoding: sourceEncodingName,
+		TargetEncoding: targetEncodingName,
+		HasBOM:         len(targetBOM) > 0,
+	}
+	if output.HasBOM {
+		output.BOMType = canonicalCharset(targetEncodingName)
+	}
+
+	// Nothing to do if the target bytes match what is already on disk
+	if bytes.Equal(targetData, data) {
+		output.Message = fmt.Sprintf("%s is already %s, left unchanged", input.Path, targetEncodingName)
+		return &mcp.CallToolResult{}, output, nil
+	}
+
 	var backupPath string
 	if input.Backup {
 		backupPath = v.Path + ".bak"
@@ -113,10 +149,8 @@ func (h *Handler) HandleConvertEncoding(ctx context.Context, req *mcp.CallToolRe
 		message += fmt.Sprintf(" (backup: %s)", backupPath)
 	}
 
-	return &mcp.CallToolResult{}, ConvertEncodingOutput{
-		Message:        message,
-		SourceEncoding: sourceEncodingName,
-		TargetEncoding: targetEncodingName,
-		BackupPath:     backupPath,
-	}, nil
+	output.Message = message
+	output.BackupPath = backupPath
+	output.Changed = true
+	return &mcp.CallToolResult{}, output, nil
 }
