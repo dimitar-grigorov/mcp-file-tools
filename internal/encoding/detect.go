@@ -1,6 +1,7 @@
 package encoding
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -18,15 +19,6 @@ const (
 	HighConfidenceThreshold = 80         // Confidence level to stop sampling early
 	MinConfidenceThreshold  = 50         // Minimum confidence to trust detection
 	utf8FallbackConfidence  = 80         // Confidence when UTF-8 is inferred from the bytes
-	utf16NoBOMConfidence    = 90         // Confidence when BOM-less UTF-16 is inferred structurally
-)
-
-// UTF-16 column-structure detection.
-const (
-	utf16ScanMax  = 64 * 1024 // bytes examined for the column test (< ChunkSize keeps offsets even)
-	utf16PageByte = 0x0F      // high bytes at or below this are plausible Unicode page bytes (Latin..Thai)
-	utf16HighFrac = 0.80      // the high-byte column must be at least this fraction page bytes
-	utf16LowFrac  = 0.40      // the low-byte column must be below this, so real text lives there
 )
 
 // GBK two-byte ranges: lead 0x81–0xFE, trail 0x40–0xFE except 0x7F.
@@ -128,12 +120,36 @@ func Detect(data []byte) DetectionResult {
 		return result
 	}
 
-	// BOM-less UTF-16 is structurally certain when it fires and gives the right
-	// endianness; chardet misses non-Latin scripts (reports "ascii"/single-byte).
-	if charset, ok := looksLikeUTF16(data); ok {
-		return DetectionResult{Charset: charset, Confidence: utf16NoBOMConfidence}
+	// BOM-less UTF-16 is classified structurally; chardet never sees clean UTF-16.
+	if mayContainUTF16(data) {
+		if result, handled := detectUTF16(data); handled {
+			return result
+		}
 	}
+	return detectLegacy(data)
+}
 
+// mayContainUTF16 cheaply rules out clean UTF-8/ASCII before the structural pass.
+// A NUL or invalid UTF-8 is the obvious signal; sub-0x80 UTF-16 (Cyrillic 0x04xx,
+// Greek 0x03xx…) is valid-UTF-8 control soup, so a high C0-control fraction counts too.
+func mayContainUTF16(data []byte) bool {
+	if len(data) < 4 {
+		return false
+	}
+	if !utf8.Valid(data) || bytes.IndexByte(data, 0) >= 0 {
+		return true
+	}
+	controls := 0
+	for _, b := range data {
+		if b < 0x20 && b != '\t' && b != '\n' && b != '\r' {
+			controls++
+		}
+	}
+	return controls*100 >= len(data)*20
+}
+
+// detectLegacy is the chardet-based path for single-byte and other legacy codecs.
+func detectLegacy(data []byte) DetectionResult {
 	detected := chardet.Detect(data)
 	if detected.Encoding == "" {
 		if utf8.Valid(data) {
@@ -144,6 +160,11 @@ func Detect(data []byte) DetectionResult {
 
 	charset := strings.ToLower(detected.Encoding)
 	confidence := int(detected.Confidence * 100)
+
+	// BOM-less UTF-16 is accepted only by the structural classifier above.
+	if charset == "utf-16-le" || charset == "utf-16-be" || charset == "utf-16le" || charset == "utf-16be" {
+		return DetectionResult{}
+	}
 
 	switch charset {
 	case "gb2312", "hz-gb-2312":
@@ -189,43 +210,6 @@ func hasMultiByteUTF8(data []byte) bool {
 	return false
 }
 
-// looksLikeUTF16 detects BOM-less UTF-16 from its column structure. Every code
-// unit is a (low, high) byte pair; for text the high-byte column is dominated by
-// small Unicode page bytes (0x00 for Latin, 0x04 for Cyrillic, 0x03 for Greek…)
-// while the low-byte column carries the letters. Real single-byte and UTF-8 text
-// never has a byte column that is 80%+ control-range bytes, so this is high
-// precision. Callers pass even-aligned data (offset 0); we scan only the first
-// 64KB so the parity holds. Returns the canonical charset when the signal fires.
-func looksLikeUTF16(data []byte) (string, bool) {
-	n := len(data) &^ 1 // even length; a stray final byte can't complete a unit
-	if n > utf16ScanMax {
-		n = utf16ScanMax
-	}
-	if n < 16 {
-		return "", false // too little to distinguish from noise
-	}
-	units := n / 2
-	var evenPage, oddPage int
-	for i := 0; i < n; i += 2 {
-		if data[i] <= utf16PageByte {
-			evenPage++
-		}
-		if data[i+1] <= utf16PageByte {
-			oddPage++
-		}
-	}
-	evenFrac := float64(evenPage) / float64(units)
-	oddFrac := float64(oddPage) / float64(units)
-	switch {
-	case oddFrac >= utf16HighFrac && evenFrac <= utf16LowFrac:
-		return "utf-16-le", true // high bytes land on odd offsets
-	case evenFrac >= utf16HighFrac && oddFrac <= utf16LowFrac:
-		return "utf-16-be", true // high bytes land on even offsets
-	default:
-		return "", false
-	}
-}
-
 // looksLikeGBK reports whether data holds enough valid GBK two-byte sequences,
 // biased toward the common-hanzi lead range (0xB0–0xD7), to trust it over Latin.
 func looksLikeGBK(data []byte) bool {
@@ -260,35 +244,52 @@ func DetectSample(data []byte) (DetectionResult, bool) {
 		result := Detect(data)
 		return result, result.Confidence >= MinConfidenceThreshold
 	}
-
-	// Sample chunks from beginning, middle, and end
-	var samples []byte
-
-	// Beginning chunk
-	endOfFirst := min(ChunkSize, size)
-	samples = append(samples, data[:endOfFirst]...)
-
-	// Check beginning first - if high confidence, return early
-	result := Detect(samples)
-	if result.Confidence >= HighConfidenceThreshold {
+	if result, ok := DetectBOM(data); ok {
 		return result, true
 	}
 
-	// Middle chunk
-	if size > ChunkSize*2 {
-		midStart := (size - ChunkSize) / 2
-		midEnd := min(midStart+ChunkSize, size)
-		samples = append(samples, data[midStart:midEnd]...)
+	samples := detectionSamplesFromData(data)
+	if result, handled := detectUTF16Samples(samples, int64(size)); handled {
+		return result, result.Confidence >= MinConfidenceThreshold
 	}
 
-	// End chunk
-	if size > ChunkSize {
-		endStart := max(0, size-ChunkSize)
-		samples = append(samples, data[endStart:]...)
+	// Check beginning first - if high confidence, return early
+	result := detectLegacy(samples[0].data)
+	if result.Confidence >= HighConfidenceThreshold {
+		return result, true
 	}
-
-	result = Detect(samples)
+	result = detectLegacy(joinDetectionSamples(samples))
 	return result, result.Confidence >= MinConfidenceThreshold
+}
+
+// detectionSamplesFromData slices even-aligned beginning, middle, and end chunks.
+func detectionSamplesFromData(data []byte) []byteSample {
+	size := len(data)
+	samples := []byteSample{{data: data[:min(ChunkSize, size)], offset: 0}}
+
+	if size > ChunkSize*2 {
+		middle := (size - ChunkSize) / 2
+		middle -= middle % 2
+		samples = append(samples, byteSample{data: data[middle : middle+ChunkSize], offset: int64(middle)})
+	}
+	if size > ChunkSize {
+		end := size - ChunkSize
+		end -= end % 2
+		samples = append(samples, byteSample{data: data[end:], offset: int64(end)})
+	}
+	return samples
+}
+
+func joinDetectionSamples(samples []byteSample) []byte {
+	total := 0
+	for _, sample := range samples {
+		total += len(sample.data)
+	}
+	joined := make([]byte, 0, total)
+	for _, sample := range samples {
+		joined = append(joined, sample.data...)
+	}
+	return joined
 }
 
 // --- Internal streaming implementation ---
@@ -315,51 +316,53 @@ func detectSampleFromReader(r io.ReaderAt, size int64) (DetectionResult, error) 
 		return Detect(data), nil
 	}
 
-	// Read beginning chunk
-	beginChunk := make([]byte, ChunkSize)
-	n, err := r.ReadAt(beginChunk, 0)
-	if err != nil && err != io.EOF {
-		return DetectionResult{}, fmt.Errorf("failed to read beginning: %w", err)
+	samples, err := readDetectionSamples(r, size)
+	if err != nil {
+		return DetectionResult{}, err
 	}
-	beginChunk = beginChunk[:n]
-
-	if result, ok := DetectBOM(beginChunk); ok {
+	if result, ok := DetectBOM(samples[0].data); ok {
+		return result, nil
+	}
+	if result, handled := detectUTF16Samples(samples, size); handled {
 		return result, nil
 	}
 
 	// Check beginning chunk - if high confidence, return early
-	result := Detect(beginChunk)
+	result := detectLegacy(samples[0].data)
 	if result.Confidence >= HighConfidenceThreshold {
 		return result, nil
 	}
+	return detectLegacy(joinDetectionSamples(samples)), nil
+}
 
-	// Collect samples for combined detection
-	samples := make([]byte, 0, ChunkSize*3)
-	samples = append(samples, beginChunk...)
-
-	// Middle chunk
+// readDetectionSamples reads even-aligned beginning, middle, and end samples.
+func readDetectionSamples(r io.ReaderAt, size int64) ([]byteSample, error) {
+	offsets := []int64{0}
 	if size > int64(ChunkSize*2) {
-		midStart := (size - int64(ChunkSize)) / 2
-		midChunk := make([]byte, ChunkSize)
-		n, err := r.ReadAt(midChunk, midStart)
-		if err != nil && err != io.EOF {
-			return DetectionResult{}, fmt.Errorf("failed to read middle: %w", err)
-		}
-		samples = append(samples, midChunk[:n]...)
+		middle := (size - int64(ChunkSize)) / 2
+		middle -= middle % 2
+		offsets = append(offsets, middle)
 	}
-
-	// End chunk
 	if size > int64(ChunkSize) {
-		endStart := size - int64(ChunkSize)
-		endChunk := make([]byte, ChunkSize)
-		n, err := r.ReadAt(endChunk, endStart)
-		if err != nil && err != io.EOF {
-			return DetectionResult{}, fmt.Errorf("failed to read end: %w", err)
-		}
-		samples = append(samples, endChunk[:n]...)
+		end := size - int64(ChunkSize)
+		end -= end % 2
+		offsets = append(offsets, end)
 	}
 
-	return Detect(samples), nil
+	samples := make([]byteSample, 0, len(offsets))
+	for i, offset := range offsets {
+		length := min(int64(ChunkSize), size-offset)
+		if i == len(offsets)-1 {
+			length = size - offset // final sample runs to EOF
+		}
+		data := make([]byte, int(length))
+		n, err := r.ReadAt(data, offset)
+		if err != nil && err != io.EOF {
+			return nil, fmt.Errorf("failed to read sample at %d: %w", offset, err)
+		}
+		samples = append(samples, byteSample{data: data[:n], offset: offset})
+	}
+	return samples, nil
 }
 
 func detectChunkedFromReader(r io.ReaderAt, size int64) (DetectionResult, error) {
@@ -386,6 +389,8 @@ func detectChunkedFromReader(r io.ReaderAt, size int64) (DetectionResult, error)
 		weight     int
 	}
 
+	leAnalyzer := newUTF16Analyzer(utf16LESpec)
+	beAnalyzer := newUTF16Analyzer(utf16BESpec)
 	var results []chunkResult
 	chunk := make([]byte, ChunkSize)
 
@@ -398,7 +403,10 @@ func detectChunkedFromReader(r io.ReaderAt, size int64) (DetectionResult, error)
 			break
 		}
 
-		detected := Detect(chunk[:n])
+		data := chunk[:n]
+		leAnalyzer.Write(data)
+		beAnalyzer.Write(data)
+		detected := detectLegacy(data)
 		if detected.Charset != "" {
 			results = append(results, chunkResult{
 				encoding:   detected.Charset,
@@ -409,6 +417,9 @@ func detectChunkedFromReader(r io.ReaderAt, size int64) (DetectionResult, error)
 		offset += int64(n)
 	}
 
+	if result, handled := decideUTF16(leAnalyzer.Finish(), beAnalyzer.Finish()); handled {
+		return result, nil
+	}
 	if len(results) == 0 {
 		return DetectionResult{}, nil
 	}
