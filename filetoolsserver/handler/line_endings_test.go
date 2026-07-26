@@ -155,14 +155,14 @@ func TestHandleDetectLineEndings(t *testing.T) {
 			name:             "mixed - mostly CRLF with one LF",
 			content:          []byte("line1\r\nline2\nline3\r\nline4\r\n"),
 			wantStyle:        LineEndingMixed,
-			wantTotalLines:   5,
+			wantTotalLines:   4,
 			wantInconsistent: []int{2}, // line 2 has LF when CRLF is dominant
 		},
 		{
 			name:             "mixed - mostly LF with one CRLF",
 			content:          []byte("line1\nline2\r\nline3\nline4\n"),
 			wantStyle:        LineEndingMixed,
-			wantTotalLines:   5,
+			wantTotalLines:   4,
 			wantInconsistent: []int{2}, // line 2 has CRLF when LF is dominant
 		},
 		{
@@ -176,14 +176,14 @@ func TestHandleDetectLineEndings(t *testing.T) {
 			name:             "empty file",
 			content:          []byte{},
 			wantStyle:        LineEndingNone,
-			wantTotalLines:   1,
+			wantTotalLines:   0,
 			wantInconsistent: []int{},
 		},
 		{
 			name:             "mixed - equal CRLF and LF",
 			content:          []byte("line1\r\nline2\n"),
 			wantStyle:        LineEndingMixed,
-			wantTotalLines:   3,
+			wantTotalLines:   2,
 			wantInconsistent: []int{2}, // LF is minority when counts equal (CRLF >= LF)
 		},
 	}

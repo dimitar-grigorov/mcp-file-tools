@@ -69,9 +69,9 @@ func TestHandleDetectLineEndings_UTF16(t *testing.T) {
 		wantTotalLines int
 		wantInconsist  []int
 	}{
-		{"crlf", utf16SampleCRLF, LineEndingCRLF, 5, nil},
-		{"lf", utf16SampleLF, LineEndingLF, 5, nil},
-		{"mixed", utf16SampleMixed, LineEndingMixed, 5, []int{2}},
+		{"crlf", utf16SampleCRLF, LineEndingCRLF, 4, nil},
+		{"lf", utf16SampleLF, LineEndingLF, 4, nil},
+		{"mixed", utf16SampleMixed, LineEndingMixed, 4, []int{2}},
 	}
 
 	for _, v := range utf16Variants() {

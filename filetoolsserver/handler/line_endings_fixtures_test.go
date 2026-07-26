@@ -185,9 +185,9 @@ func mqlFixtures() []struct {
 		style      string
 		totalLines int
 	}{
-		{"localized_utf16le_crlf.mq5", LineEndingCRLF, 6},
-		{"localized_utf16le_crlf.mqh", LineEndingCRLF, 8},
-		{"localized_utf8_lf.mq5", LineEndingLF, 6},
+		{"localized_utf16le_crlf.mq5", LineEndingCRLF, 5},
+		{"localized_utf16le_crlf.mqh", LineEndingCRLF, 7},
+		{"localized_utf8_lf.mq5", LineEndingLF, 5},
 	}
 }
 

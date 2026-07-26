@@ -95,7 +95,7 @@ func main() {
 	os.WriteFile(multiFile, []byte("a\nb\nc\nd"), 0644)
 	limit, offset := 2, 3
 	r12, o12, _ := h.HandleReadTextFile(ctx, nil, handler.ReadTextFileInput{Path: multiFile, Limit: &limit})
-	check("read_text_file (limit=2)", !r12.IsError && o12.Content == "a\nb")
+	check("read_text_file (limit=2)", !r12.IsError && o12.Content == "a\nb\n")
 
 	r13, o13, _ := h.HandleReadTextFile(ctx, nil, handler.ReadTextFileInput{Path: multiFile, Offset: &offset, Limit: &limit})
 	check("read_text_file (offset=3, limit=2)", !r13.IsError && o13.Content == "c\nd")

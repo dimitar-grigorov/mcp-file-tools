@@ -114,6 +114,8 @@ func (h *Handler) HandleDetectLineEndings(ctx context.Context, req *mcp.CallTool
 	br := bufio.NewReader(src)
 	lineNum := 1
 	prevWasCR := false
+	sawAny := false
+	lastWasNewline := false
 
 	for {
 		b, err := br.ReadByte()
@@ -123,6 +125,8 @@ func (h *Handler) HandleDetectLineEndings(ctx context.Context, req *mcp.CallTool
 		if err != nil {
 			return errorResult("failed to read file: " + err.Error()), DetectLineEndingsOutput{}, nil
 		}
+		sawAny = true
+		lastWasNewline = (b == '\n')
 
 		if b == '\n' {
 			lineEndings = append(lineEndings, lineEnding{lineNum: lineNum, isCRLF: prevWasCR})
@@ -156,12 +160,11 @@ func (h *Handler) HandleDetectLineEndings(ctx context.Context, req *mcp.CallTool
 		}
 	}
 
-	// Total lines = last line number (includes last line even without trailing newline)
-	totalLines := lineNum
-	if len(lineEndings) > 0 {
-		totalLines = lineNum // lineNum is 1 more than number of newlines found
-	} else {
-		totalLines = 1 // File has content but no newlines = 1 line
+	// Total lines: a trailing terminator does not open a new line, and an empty file
+	// has none. Matches read_text_file's countLines so both tools agree.
+	totalLines := len(lineEndings)
+	if sawAny && !lastWasNewline {
+		totalLines++ // last line has no terminator
 	}
 
 	// Ensure we don't return nil slice (return empty array for JSON)
