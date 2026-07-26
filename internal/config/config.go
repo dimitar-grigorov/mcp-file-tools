@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Dimitar Grigorov
+
 // Package config provides configuration management for MCP file tools server.
 package config
 

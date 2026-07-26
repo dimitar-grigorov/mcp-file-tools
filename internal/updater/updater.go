@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Dimitar Grigorov
+
 // Package updater checks for new releases on GitHub and notifies users.
 package updater
 

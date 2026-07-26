@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Dimitar Grigorov
+
 //go:build ignore
 
 // End-to-end smoke test over all MCP server operations. Run by CI, or locally

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Dimitar Grigorov
+
 // Package errkind tags an error with a stable failure category, message unchanged.
 package errkind
 

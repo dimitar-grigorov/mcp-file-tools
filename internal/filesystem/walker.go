@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Dimitar Grigorov
+
 // Package filesystem holds the shared, containment-checked directory walk.
 package filesystem
 

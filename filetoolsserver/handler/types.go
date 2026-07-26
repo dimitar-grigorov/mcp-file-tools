@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Dimitar Grigorov
+
 package handler
 
 import "github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Dimitar Grigorov
+
 // Package workpool runs bounded concurrent work and commits results in input order.
 package workpool
 
