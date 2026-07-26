@@ -9,12 +9,12 @@
   },
   "homepage": "https://github.com/dimitar-grigorov/mcp-file-tools",
   "license": "GPL-3.0",
-  "version": "1.7.0",
+  "version": "0.0.0",
   "packages": [
     {
       "registryType": "mcpb",
-      "identifier": "https://github.com/dimitar-grigorov/mcp-file-tools/releases/download/v1.7.0/mcp-file-tools_windows_amd64.exe",
-      "fileSha256": "f03122ec06ffa3e46e1a2acfca77c9f950feb4d95e1b6ebbc4baa8d106e8ba7d",
+      "identifier": "https://github.com/dimitar-grigorov/mcp-file-tools/releases/download/v0.0.0/mcp-file-tools_windows_amd64.exe",
+      "fileSha256": "0000000000000000000000000000000000000000000000000000000000000000",
       "transport": {
         "type": "stdio"
       },
@@ -25,8 +25,8 @@
     },
     {
       "registryType": "mcpb",
-      "identifier": "https://github.com/dimitar-grigorov/mcp-file-tools/releases/download/v1.7.0/mcp-file-tools_windows_arm64.exe",
-      "fileSha256": "08067a53ea0731f779c790ee0ee528c3c8a1a4628d9e0ab110d7ede06eee9593",
+      "identifier": "https://github.com/dimitar-grigorov/mcp-file-tools/releases/download/v0.0.0/mcp-file-tools_windows_arm64.exe",
+      "fileSha256": "0000000000000000000000000000000000000000000000000000000000000000",
       "transport": {
         "type": "stdio"
       },
@@ -37,8 +37,8 @@
     },
     {
       "registryType": "mcpb",
-      "identifier": "https://github.com/dimitar-grigorov/mcp-file-tools/releases/download/v1.7.0/mcp-file-tools_linux_amd64",
-      "fileSha256": "1927992028421678a10c7842fd406b19da667167063b2ede475ca9dea026af30",
+      "identifier": "https://github.com/dimitar-grigorov/mcp-file-tools/releases/download/v0.0.0/mcp-file-tools_linux_amd64",
+      "fileSha256": "0000000000000000000000000000000000000000000000000000000000000000",
       "transport": {
         "type": "stdio"
       },
@@ -49,8 +49,8 @@
     },
     {
       "registryType": "mcpb",
-      "identifier": "https://github.com/dimitar-grigorov/mcp-file-tools/releases/download/v1.7.0/mcp-file-tools_linux_arm64",
-      "fileSha256": "75e317e5c4c5d0c29aa72ee15d86a38414733096b5b81fca267f13e238b1816b",
+      "identifier": "https://github.com/dimitar-grigorov/mcp-file-tools/releases/download/v0.0.0/mcp-file-tools_linux_arm64",
+      "fileSha256": "0000000000000000000000000000000000000000000000000000000000000000",
       "transport": {
         "type": "stdio"
       },
@@ -61,8 +61,8 @@
     },
     {
       "registryType": "mcpb",
-      "identifier": "https://github.com/dimitar-grigorov/mcp-file-tools/releases/download/v1.7.0/mcp-file-tools_darwin_amd64",
-      "fileSha256": "dcccad15f69105458a35a1e7eb6b8b30aed92538f1350a0a638ace002e2f30f9",
+      "identifier": "https://github.com/dimitar-grigorov/mcp-file-tools/releases/download/v0.0.0/mcp-file-tools_darwin_amd64",
+      "fileSha256": "0000000000000000000000000000000000000000000000000000000000000000",
       "transport": {
         "type": "stdio"
       },
@@ -73,8 +73,8 @@
     },
     {
       "registryType": "mcpb",
-      "identifier": "https://github.com/dimitar-grigorov/mcp-file-tools/releases/download/v1.7.0/mcp-file-tools_darwin_arm64",
-      "fileSha256": "89f88446d9bfb3f91edbc9531e7cee941a687f655d8ae82ccc0bd102960dccef",
+      "identifier": "https://github.com/dimitar-grigorov/mcp-file-tools/releases/download/v0.0.0/mcp-file-tools_darwin_arm64",
+      "fileSha256": "0000000000000000000000000000000000000000000000000000000000000000",
       "transport": {
         "type": "stdio"
       },
@@ -130,6 +130,14 @@
       "description": "Detect line ending style (crlf/lf/mixed) and find inconsistent lines"
     },
     {
+      "name": "change_line_endings",
+      "description": "Convert line endings to LF or CRLF, preserving a UTF-16 BOM"
+    },
+    {
+      "name": "manage_bom",
+      "description": "Detect, strip, or add a Unicode byte order mark"
+    },
+    {
       "name": "convert_encoding",
       "description": "Convert file encoding from source to target encoding"
     },
@@ -160,6 +168,10 @@
     {
       "name": "list_allowed_directories",
       "description": "Show directories the server can access"
+    },
+    {
+      "name": "check_for_updates",
+      "description": "Check whether a newer mcp-file-tools release is available"
     }
   ]
 }

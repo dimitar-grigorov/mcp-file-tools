@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // Bump the release version from one command:
 //   node scripts/bump-version.js 1.7.4
-// plugin.json is the source of truth. run.js reads it at runtime, and
-// server.json is rewritten by the publish-registry workflow in CI, so neither
-// is touched here -- only plugin.json and the marketplace catalog entry.
+// plugin.json is the source of truth. run.js reads it at runtime, and server.json
+// is generated in CI from server.template.json, so neither is touched here --
+// only plugin.json and the marketplace catalog entry.
 
 const fs = require('fs');
 const path = require('path');
@@ -44,4 +44,5 @@ for (const { file, re } of targets) {
 
 console.log(`\nbumped ${changed} file(s) to ${version}. Next:`);
 console.log(`  git commit -am "chore: release ${version} (bump plugin.json, marketplace.json)"`);
+console.log(`  node scripts/verify-release-version.js v${version}`);
 console.log(`  git tag v${version} && git push origin main v${version}`);

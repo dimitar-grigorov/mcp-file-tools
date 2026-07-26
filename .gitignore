@@ -50,3 +50,6 @@ Thumbs.db
 
 # MCP Publisher tool (built locally)
 mcp-publisher.exe
+
+# Generated at publish time from server.template.json
+/server.json

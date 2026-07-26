@@ -6,13 +6,11 @@ on:
       - '**.md'
       - 'LICENSE'
       - '.gitignore'
-      - 'server.json'
   pull_request:
     paths-ignore:
       - '**.md'
       - 'LICENSE'
       - '.gitignore'
-      - 'server.json'
 
 permissions:
   contents: read
@@ -44,11 +42,18 @@ jobs:
 
       - name: Run staticcheck
         if: matrix.os == 'ubuntu-latest'
-        run: go run honnef.co/go/tools/cmd/staticcheck@latest ./...
+        run: go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...
 
       - name: Run govulncheck
         if: matrix.os == 'ubuntu-latest'
-        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.6.0 ./...
+
+      - name: Lint GitHub Actions workflows
+        if: matrix.os == 'ubuntu-latest'
+        run: bash scripts/validate-workflows.sh
+
+      - name: Test release scripts
+        run: node --test scripts/generate-server-json.test.js scripts/verify-release-version.test.js
 
       - name: Test all server operations
         run: go run test_server.go
