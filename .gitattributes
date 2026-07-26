@@ -3,3 +3,7 @@
 
 # Never let eol normalization touch the committed launcher
 *.exe binary
+
+# Preserve encoding/line-ending test fixtures byte-for-byte
+filetoolsserver/handler/testdata/line_endings_real/*.fixture -text
+filetoolsserver/handler/testdata/mql/* -text

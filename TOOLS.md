@@ -409,6 +409,7 @@ Detect line ending style (CRLF/LF/mixed) and find lines with inconsistent ending
 
 **Parameters:**
 - `path` (required): Path to the file to analyze
+- `encoding` (optional): Auto-detected by default. Pass `utf-16-le` or `utf-16-be` for UTF-16 files without a BOM — those cannot be auto-detected.
 
 **Example:**
 ```json
@@ -434,11 +435,12 @@ Detect line ending style (CRLF/LF/mixed) and find lines with inconsistent ending
 
 ### change_line_endings
 
-Convert line endings in a file to LF or CRLF. Use after `detect_line_endings` to fix mixed or wrong line endings. No-op if the file already uses the target style.
+Convert line endings in a file to LF or CRLF. Use after `detect_line_endings` to fix mixed or wrong line endings. No-op if the file already uses the target style. UTF-16 files are converted per code unit and keep their BOM.
 
 **Parameters:**
 - `path` (required): Path to the file
 - `style` (required): Target line ending style (`"lf"` or `"crlf"`)
+- `encoding` (optional): Auto-detected by default. Pass `utf-16-le` or `utf-16-be` for UTF-16 files without a BOM — those cannot be auto-detected.
 
 **Example:**
 ```json

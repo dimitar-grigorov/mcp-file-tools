@@ -263,14 +263,16 @@ type GrepOutput struct {
 }
 
 type DetectLineEndingsInput struct {
-	Path string `json:"path"`
+	Path     string `json:"path"`
+	Encoding string `json:"encoding,omitempty"`
 }
 
 // ChangeLineEndingsInput converts line endings in a file.
 // Style must be "lf" or "crlf".
 type ChangeLineEndingsInput struct {
-	Path  string `json:"path"`
-	Style string `json:"style"`
+	Path     string `json:"path"`
+	Style    string `json:"style"`
+	Encoding string `json:"encoding,omitempty"`
 }
 
 type ChangeLineEndingsOutput struct {

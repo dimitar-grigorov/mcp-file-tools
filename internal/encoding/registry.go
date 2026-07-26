@@ -61,15 +61,27 @@ var encodings = map[string]EncodingInfo{
 // registry maps all names (canonical + aliases) to EncodingInfo for fast lookup.
 var registry map[string]*EncodingInfo
 
+// canonicalNames maps all names (canonical + aliases) to the canonical name.
+var canonicalNames map[string]string
+
 func init() {
 	registry = make(map[string]*EncodingInfo)
+	canonicalNames = make(map[string]string)
 	for canonical, info := range encodings {
 		infoCopy := info
 		registry[canonical] = &infoCopy
+		canonicalNames[canonical] = canonical
 		for _, alias := range info.Aliases {
 			registry[alias] = &infoCopy
+			canonicalNames[alias] = canonical
 		}
 	}
+}
+
+// Canonical resolves a name or alias to the canonical encoding name.
+func Canonical(name string) (string, bool) {
+	canonical, ok := canonicalNames[strings.ToLower(name)]
+	return canonical, ok
 }
 
 func Get(name string) (encoding.Encoding, bool) {

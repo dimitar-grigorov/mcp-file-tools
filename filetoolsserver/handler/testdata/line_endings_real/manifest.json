@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "description": "Unmodified upstream UTF-16 fixtures for line-ending tests.",
+  "fixtures": [
+    {
+      "encoding": "utf-16-be",
+      "file": "utf-16-be.fixture",
+      "source_project": "uchardet",
+      "source_revision": "ab1d2f1120297af6537f2a0d09dca589d4c3ea3b",
+      "source_path": "test/ja/utf-16be.txt",
+      "source_url": "https://raw.githubusercontent.com/oe-mirrors/uchardet/ab1d2f1120297af6537f2a0d09dca589d4c3ea3b/test/ja/utf-16be.txt",
+      "license_file": "COPYING.uchardet",
+      "sha256": "73df6f4ac1e8be28b71ba4fb37f689cbaa7e08f74cd8034120089122b1a3df01",
+      "byte_length": 1416,
+      "bom": "none",
+      "expected_style": "lf",
+      "crlf_count": 0,
+      "lf_count": 13,
+      "expected_total_lines": 14
+    },
+    {
+      "encoding": "utf-16-le",
+      "file": "utf-16-le.fixture",
+      "source_project": "chromium",
+      "source_revision": "df90a3be4f02f312e4e97e3d7b2fb17e642d0034",
+      "source_path": "alias_mapping/UTF-16LE.html",
+      "source_url": "https://chromium.googlesource.com/chromium/src/+/df90a3be4f02f312e4e97e3d7b2fb17e642d0034/chrome/test/data/encoding_tests/alias_mapping/UTF-16LE.html?format=TEXT",
+      "license_file": "LICENSE.chromium",
+      "sha256": "09cbfff41f2eca31152d63864ed1b39174da3082250b5d1e76b2354eb5775a20",
+      "byte_length": 956,
+      "bom": "utf-16-le",
+      "expected_style": "lf",
+      "crlf_count": 0,
+      "lf_count": 24,
+      "expected_total_lines": 25
+    }
+  ]
+}

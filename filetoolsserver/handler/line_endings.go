@@ -7,7 +7,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"golang.org/x/text/transform"
 )
 
 // LineEndingStyle constants for line ending types.
@@ -85,11 +87,22 @@ func (h *Handler) HandleDetectLineEndings(ctx context.Context, req *mcp.CallTool
 		return v.Result, DetectLineEndingsOutput{}, nil
 	}
 
+	encResult, err := h.resolveEncoding(input.Encoding, v.Path)
+	if err != nil {
+		return errorResult(err.Error()), DetectLineEndingsOutput{}, nil
+	}
+
 	f, err := os.Open(v.Path)
 	if err != nil {
 		return errorResult("failed to open file: " + err.Error()), DetectLineEndingsOutput{}, nil
 	}
 	defer f.Close()
+
+	// Scan decoded UTF-8: UTF-16 has a 00 between CR and LF.
+	var src io.Reader = f
+	if !encoding.IsUTF8(encResult.name) {
+		src = transform.NewReader(f, encResult.encoder.NewDecoder())
+	}
 
 	// Track each line's ending type
 	type lineEnding struct {
@@ -98,7 +111,7 @@ func (h *Handler) HandleDetectLineEndings(ctx context.Context, req *mcp.CallTool
 	}
 	var lineEndings []lineEnding
 
-	br := bufio.NewReader(f)
+	br := bufio.NewReader(src)
 	lineNum := 1
 	prevWasCR := false
 

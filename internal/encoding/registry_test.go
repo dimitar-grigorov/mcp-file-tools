@@ -69,6 +69,34 @@ func TestIsUTF8(t *testing.T) {
 	}
 }
 
+func TestCanonical(t *testing.T) {
+	tests := []struct {
+		name   string
+		want   string
+		wantOk bool
+	}{
+		{"utf-16-le", "utf-16-le", true},
+		{"utf16le", "utf-16-le", true},
+		{"utf-16LE", "utf-16-le", true},
+		{"utf16be", "utf-16-be", true},
+		{"cp1251", "windows-1251", true},
+		{"ascii", "utf-8", true},
+		{"invalid", "", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := Canonical(tt.name)
+			if ok != tt.wantOk {
+				t.Errorf("Canonical(%q) ok = %v, want %v", tt.name, ok, tt.wantOk)
+			}
+			if got != tt.want {
+				t.Errorf("Canonical(%q) = %q, want %q", tt.name, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestListEncodings(t *testing.T) {
 	items := ListEncodings()
 	if len(items) == 0 {
