@@ -6,6 +6,26 @@ versions see the [GitHub releases](https://github.com/dimitar-grigorov/mcp-file-
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2026-07-27
+
+### Fixed
+
+- **Pure-ASCII files no longer silently convert to `utf-8` on edit/write.**
+
+  Detection reports `ascii` with full confidence for ASCII-only content, and
+  `ascii` is a registered `utf-8` alias — so it was treated as a confident
+  encoding match. For an existing legacy file (e.g. `cp1251`) that happened to
+  contain no non-ASCII bytes yet, this silently overrode `MCP_DEFAULT_ENCODING`
+  and re-saved it as `utf-8` the moment any edit added non-ASCII text.
+
+  `ascii` detections now fall through to the configured default, same as any
+  other inconclusive detection.
+
+- **`edit_file` now honors `MCP_DEFAULT_ENCODING`.**
+
+  It previously hardcoded `utf-8` as its fallback for inconclusive detection,
+  ignoring the configured default entirely — `write_file` already respected it.
+
 ## [2.0.0] - 2026-07-26
 
 ### Changed — BREAKING
