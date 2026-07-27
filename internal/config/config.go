@@ -24,10 +24,9 @@ const (
 
 // Config holds server configuration loaded from environment variables.
 type Config struct {
-	// DefaultEncoding is the default encoding for write_file on NEW files only;
-	// existing files keep their detected encoding.
-	// Set via MCP_DEFAULT_ENCODING environment variable.
-	// Default: "utf-8". Legacy codebases can set "cp1251" to restore the pre-2.0.0 default.
+	// DefaultEncoding is the fallback for write_file/edit_file: new files, and
+	// existing files with inconclusive detection (e.g. pure ASCII).
+	// Set via MCP_DEFAULT_ENCODING. Default: "utf-8" ("cp1251" for legacy codebases).
 	DefaultEncoding string
 
 	// DefaultEncodingFromEnv reports whether MCP_DEFAULT_ENCODING set DefaultEncoding.

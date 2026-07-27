@@ -4,6 +4,7 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"path/filepath"
@@ -366,6 +367,51 @@ func TestEditFile_CP1251Encoding(t *testing.T) {
 
 	if string(modifiedData) != string(expectedCP1251) {
 		t.Errorf("file content mismatch.\ngot bytes: %v\nwant bytes: %v", modifiedData, expectedCP1251)
+	}
+}
+
+// Regression: a pure-ASCII file gives no signal about its real legacy encoding,
+// so edit_file must fall back to MCP_DEFAULT_ENCODING instead of hardcoding utf-8.
+func TestEditFile_InconclusiveDetection_UsesConfiguredDefault(t *testing.T) {
+	t.Setenv("MCP_DEFAULT_ENCODING", "cp1251")
+
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+
+	testFile := filepath.Join(tempDir, "legacy.pas")
+	asciiContent := "unit Main;\n\n// old english comment\n"
+	if err := os.WriteFile(testFile, []byte(asciiContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// No explicit encoding - mirrors how edit_file is normally called.
+	input := EditFileInput{
+		Path: testFile,
+		Edits: []EditOperation{
+			{OldText: "// old english comment", NewText: "// нов коментар"},
+		},
+	}
+
+	result, output, err := h.HandleEditFile(context.Background(), nil, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.IsError {
+		t.Fatalf("edit failed: %v", output)
+	}
+
+	modifiedData, err := os.ReadFile(testFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// "нов коментар" in CP1251
+	expectedCP1251Comment := []byte{0xED, 0xEE, 0xE2, 0x20, 0xEA, 0xEE, 0xEC, 0xE5, 0xED, 0xF2, 0xE0, 0xF0}
+	if !bytes.Contains(modifiedData, expectedCP1251Comment) {
+		t.Errorf("expected CP1251-encoded comment in file, got bytes: %v", modifiedData)
+	}
+	if bytes.HasPrefix(modifiedData, []byte{0xEF, 0xBB, 0xBF}) {
+		t.Errorf("file should not have gained a UTF-8 BOM: %v", modifiedData)
 	}
 }
 

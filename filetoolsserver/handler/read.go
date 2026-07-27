@@ -126,14 +126,15 @@ func (h *Handler) resolveWriteEncoding(inputEncoding string, filePath string) (s
 	if _, err := os.Stat(filePath); err == nil {
 		fileExists = true
 		detected, err := encoding.DetectFromFile(filePath, "sample")
-		if err == nil && detected.Confidence >= encoding.MinConfidenceThreshold {
+		// "ascii" fits every encoding we support, so it's inconclusive, not a match.
+		if err == nil && detected.Confidence >= encoding.MinConfidenceThreshold && detected.Charset != "ascii" {
 			// Validate the detected encoding is supported
 			if _, ok := encoding.Get(detected.Charset); ok {
 				slog.Debug("preserving existing file encoding", "path", filePath, "encoding", detected.Charset, "confidence", detected.Confidence)
 				return detected.Charset, encodingFromExisting, nil
 			}
 		}
-		// Detection failed or low confidence - fall through to default
+		// Detection failed, ascii, or low confidence - fall through to default
 		slog.Debug("encoding detection inconclusive, using default", "path", filePath, "detected", detected.Charset, "confidence", detected.Confidence)
 	}
 
@@ -155,18 +156,18 @@ func (h *Handler) resolveEncodingFromData(inputEncoding string, data []byte, fil
 		return encodingName, nil
 	}
 
-	// 2. Auto-detect from loaded data
+	// 2. Auto-detect from loaded data ("ascii" is inconclusive - see resolveWriteEncoding)
 	detected := encoding.Detect(data)
-	if detected.Confidence >= encoding.MinConfidenceThreshold {
+	if detected.Confidence >= encoding.MinConfidenceThreshold && detected.Charset != "ascii" {
 		if _, ok := encoding.Get(detected.Charset); ok {
 			slog.Debug("auto-detected encoding from data", "path", filePath, "encoding", detected.Charset, "confidence", detected.Confidence)
 			return detected.Charset, nil
 		}
 	}
 
-	// 3. Detection failed or low confidence - fall back to UTF-8
-	slog.Debug("encoding detection inconclusive, using utf-8", "path", filePath, "detected", detected.Charset, "confidence", detected.Confidence)
-	return "utf-8", nil
+	// 3. Fall back to configured default, same as resolveWriteEncoding's existing-file branch
+	slog.Debug("encoding detection inconclusive, using configured default", "path", filePath, "detected", detected.Charset, "confidence", detected.Confidence, "default", h.config.DefaultEncoding)
+	return h.config.DefaultEncoding, nil
 }
 
 // resolveEncoding returns explicit encoding or auto-detects based on file size.
