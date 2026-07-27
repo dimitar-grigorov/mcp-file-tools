@@ -32,12 +32,9 @@ type Config struct {
 	// DefaultEncodingFromEnv reports whether MCP_DEFAULT_ENCODING set DefaultEncoding.
 	DefaultEncodingFromEnv bool
 
-	// MemoryThreshold is the threshold for loading files into memory vs streaming.
-	// Files smaller than this are loaded entirely into memory for better performance.
-	// Files larger use streaming I/O to reduce memory usage.
-	// Also used as threshold for encoding detection mode (full vs sample).
-	// Set via MCP_MEMORY_THRESHOLD environment variable.
-	// Default: 67108864 (64MB)
+	// MemoryThreshold: files smaller load fully into memory, larger stream.
+	// Also gates encoding detection mode (full vs sample).
+	// Set via MCP_MEMORY_THRESHOLD. Default: 67108864 (64MB)
 	MemoryThreshold int64
 }
 
