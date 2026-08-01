@@ -281,8 +281,7 @@ func atomicWriteFileWithEncoding(path, content, encodingName, lineEndingStyle st
 		if !ok {
 			return fmt.Errorf("unsupported encoding: %s", encodingName)
 		}
-		encoder := enc.NewEncoder()
-		encoded, err := encoder.Bytes([]byte(content))
+		encoded, err := encoding.Encode(content, enc, encodingName)
 		if err != nil {
 			return fmt.Errorf("failed to encode content to %s: %w", encodingName, err)
 		}

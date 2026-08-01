@@ -58,8 +58,7 @@ func (h *Handler) HandleWriteFile(ctx context.Context, req *mcp.CallToolRequest,
 	if encoding.IsUTF8(encodingName) {
 		contentToWrite = []byte(content)
 	} else {
-		encoder := enc.NewEncoder()
-		encoded, err := encoder.Bytes([]byte(content))
+		encoded, err := encoding.Encode(content, enc, encodingName)
 		if err != nil {
 			return errorResult(fmt.Sprintf("failed to encode content: %v", err)), WriteFileOutput{}, nil
 		}
