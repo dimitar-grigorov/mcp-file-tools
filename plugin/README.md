@@ -14,6 +14,12 @@ UTF-8, and writes back in the file's original encoding with BOM and line endings
 /plugin install mcp-file-tools
 ```
 
+## Bundled skill
+
+`skills/fixing-text-encodings/` — diagnosing mojibake and auditing or bulk-converting a
+legacy codebase. Claude loads it on demand when a task matches; it costs nothing until
+then. Not needed for ordinary UTF-8 work.
+
 ## How it works
 
 `.mcp.json` declares one MCP server (`file-tools`) launched as

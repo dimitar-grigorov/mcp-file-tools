@@ -62,6 +62,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The plugin now bundles a skill, `fixing-text-encodings`.** It covers what no single
+  tool description can: the mojibake symptom-to-cause table, surveying a project with
+  `tree showEncoding=true`, and the backup-and-verify checklist for a bulk conversion.
+  Claude loads it only when a task matches, so it costs nothing otherwise.
+
 - **`read_text_file` and `write_file` now return a `hint`** when there is
   something the agent should know: a file that already has mixed line endings
   (with counts, and a pointer to `manage_line_endings`), and — once per file per
