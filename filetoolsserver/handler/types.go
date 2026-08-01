@@ -13,6 +13,7 @@ type ReadTextFileInput struct {
 	Offset        *int   `json:"offset,omitempty"`
 	Limit         *int   `json:"limit,omitempty"`
 	MaxCharacters *int   `json:"maxCharacters,omitempty"`
+	LineNumbers   bool   `json:"lineNumbers,omitempty"` // prefix lines with "N<tab>", absolute numbering
 }
 
 type ReadTextFileOutput struct {

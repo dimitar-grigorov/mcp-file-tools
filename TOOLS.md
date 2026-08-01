@@ -20,6 +20,10 @@ Read file contents with automatic encoding detection and optional partial readin
 - `offset` (optional): Start reading from this line number (1-indexed)
 - `limit` (optional): Maximum number of lines to read
 - `maxCharacters` (optional): Truncate content at this character count to prevent token overflow
+- `lineNumbers` (optional, default false): Prefix every line with `N<tab>`. Numbering is
+  absolute — a paged read starting at `offset: 100` numbers from 100 — so it lines up with
+  `grep_text_files` results, `manage_line_endings` reports and encoding-error positions.
+  Strip the prefix before using text as `edit_file` `oldText`; the file itself has no numbers.
 
 **Example:**
 ```json

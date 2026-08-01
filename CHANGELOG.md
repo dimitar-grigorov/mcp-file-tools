@@ -6,6 +6,24 @@ versions see the [GitHub releases](https://github.com/dimitar-grigorov/mcp-file-
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`read_text_file` takes `lineNumbers`** (default false): prefixes every line
+  with `N<tab>`, using absolute numbers so a paged read starting at line 100
+  numbers from 100. Everything else already speaks in line numbers —
+  `grep_text_files` matches, `manage_line_endings` reports, and encoding errors
+  ("ä at line 12, column 8") — but the reading tool gave the model nothing to
+  correlate them against. Off by default so a read → write round trip cannot
+  bake numbers into a file; the encoding-error message now points to it.
+
+### Changed
+
+- `edit_file` now tells the model not to re-read a file to verify an edit: a
+  success with a diff means the edit is on disk, a failure changes nothing.
+  Saves one read per edit.
+
 ## [3.1.0] - 2026-08-01
 
 ### Added

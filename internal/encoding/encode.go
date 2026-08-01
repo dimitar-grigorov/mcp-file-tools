@@ -53,7 +53,7 @@ func (e *UnsupportedError) Error() string {
 	if e.Total > len(e.Runes) {
 		b.WriteString(" (list_encodings shows what each encoding covers)")
 	}
-	b.WriteString(".")
+	b.WriteString(". To see the lines, read_text_file with lineNumbers=true.")
 	return b.String()
 }
 

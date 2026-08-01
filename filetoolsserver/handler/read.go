@@ -67,6 +67,10 @@ func (h *Handler) HandleReadTextFile(ctx context.Context, req *mcp.CallToolReque
 		endLine = totalLines
 	}
 
+	if input.LineNumbers {
+		content = addLineNumbers(content, startLine)
+	}
+
 	// Apply maxCharacters truncation (counts Unicode runes, not bytes)
 	truncated := false
 	if input.MaxCharacters != nil && *input.MaxCharacters > 0 && utf8.RuneCountInString(content) > *input.MaxCharacters {
@@ -281,6 +285,25 @@ func lineStarts(content string) []int {
 }
 
 // applyOffsetLimit returns lines [offset, offset+limit) sliced from content (line endings preserved); offset is 1-indexed, negatives ignored.
+// addLineNumbers prefixes each line with "N<tab>", numbering from start so a
+// paged read shows absolute file line numbers. A trailing newline gets no number.
+func addLineNumbers(content string, start int) string {
+	if content == "" {
+		return content
+	}
+	var b strings.Builder
+	b.Grow(len(content) + len(content)/16)
+	num := start
+	for _, line := range strings.SplitAfter(content, "\n") {
+		if line == "" { // after a trailing newline
+			break
+		}
+		fmt.Fprintf(&b, "%d\t%s", num, line)
+		num++
+	}
+	return b.String()
+}
+
 func applyOffsetLimit(content string, offset, limit *int) (string, int, int) {
 	starts := lineStarts(content)
 	totalLines := len(starts)
