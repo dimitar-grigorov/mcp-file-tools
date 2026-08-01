@@ -8,6 +8,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **A failed conversion now names the characters that do not fit.** Encoding to a
+  narrower charset used to fail with x/text's positionless
+  `rune not supported by encoding`, which left the caller nothing to act on but a
+  blind retry. It now reports which characters and where:
+
+  ```
+  cp1251 cannot represent 3 characters: "ä" (U+00E4) at line 12, column 8,
+  "ü" (U+00FC) at line 12, column 20, "ß" (U+00DF) at line 40, column 5.
+  Convert to utf-8 instead, or remove these characters.
+  ```
+
+  Applies to `convert_encoding`, `write_file` and `edit_file` alike, since all
+  three shared the same dead end. Up to 10 characters are listed; the count is
+  always exact.
+
+- **`convert_encoding` takes a batch and a dry run.** New `paths` array (mutually
+  exclusive with `path`) and `dryRun`.
+
+  A batch does not stop at the first failure — every file gets an entry in
+  `results`, with `errors` summarising what went wrong. A file that cannot be
+  encoded carries the offenders as data (`unsupportedCount`, plus `unsupported`
+  as `{char, code, line, column}`), so `dryRun` over a whole project tells you
+  which files would lose characters *before* anything is written.
+
+  Migrating a legacy tree used to be N calls with no preview; it is now one call
+  you can inspect first. `paths` takes explicit files — build the list with
+  `search_files` or `tree`.
+
+  A single `path` behaves exactly as before, including failing hard rather than
+  reporting the failure in `results`.
+
 ### Changed
 
 - **`move_file` now sets `destructiveHint: true`.** It was `false`, which the spec

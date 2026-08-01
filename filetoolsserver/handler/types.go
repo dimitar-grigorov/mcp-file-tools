@@ -213,22 +213,47 @@ type CopyFileOutput struct {
 
 // ConvertEncodingInput converts between encodings. From is auto-detected if empty.
 // BOM: "auto" (default), "always", "never", "preserve".
+// Pass either Path (one file) or Paths (a batch), never both.
 type ConvertEncodingInput struct {
-	Path   string `json:"path"`
-	From   string `json:"from,omitempty"`
-	To     string `json:"to"`
-	Backup bool   `json:"backup,omitempty"`
-	BOM    string `json:"bom,omitempty"`
+	Path   string   `json:"path,omitempty"`
+	Paths  []string `json:"paths,omitempty"`
+	From   string   `json:"from,omitempty"`
+	To     string   `json:"to"`
+	Backup bool     `json:"backup,omitempty"`
+	BOM    string   `json:"bom,omitempty"`
+	DryRun bool     `json:"dryRun,omitempty"`
 }
 
+// ConvertFileResult is one file's outcome within a batch conversion.
+type ConvertFileResult struct {
+	Path             string                     `json:"path"`
+	SourceEncoding   string                     `json:"sourceEncoding,omitempty"`
+	Changed          bool                       `json:"changed"`
+	Message          string                     `json:"message,omitempty"`
+	Error            string                     `json:"error,omitempty"`
+	BackupPath       string                     `json:"backupPath,omitempty"`
+	HasBOM           bool                       `json:"hasBom,omitempty"`
+	BOMType          string                     `json:"bomType,omitempty"`
+	Unsupported      []encoding.UnsupportedRune `json:"unsupported,omitempty"`
+	UnsupportedCount int                        `json:"unsupportedCount,omitempty"`
+}
+
+// ConvertEncodingOutput keeps the flat fields for a single Path; Results and the
+// counts are populated only for a Paths batch.
 type ConvertEncodingOutput struct {
 	Message        string `json:"message"`
-	SourceEncoding string `json:"sourceEncoding"`
+	SourceEncoding string `json:"sourceEncoding,omitempty"`
 	TargetEncoding string `json:"targetEncoding"`
 	BackupPath     string `json:"backupPath,omitempty"`
 	HasBOM         bool   `json:"hasBom"`
 	BOMType        string `json:"bomType,omitempty"`
 	Changed        bool   `json:"changed"`
+	DryRun         bool   `json:"dryRun,omitempty"`
+
+	Results      []ConvertFileResult `json:"results,omitempty"`
+	SuccessCount int                 `json:"successCount,omitempty"`
+	ErrorCount   int                 `json:"errorCount,omitempty"`
+	Errors       []string            `json:"errors,omitempty"`
 }
 
 // GrepInput for searching file contents with regex

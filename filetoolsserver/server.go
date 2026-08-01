@@ -206,9 +206,11 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "convert_encoding",
-		Description: "Convert a file from one encoding to another. A source BOM is stripped before decoding; a BOM contradicting an explicit 'from' is an error. No-op if the file already holds the target bytes. Parameters: path, to (target, required), from (omit to auto-detect — pass it only to override a misdetection), backup (write .bak first — IMPORTANT for irreversible conversions), bom (\"auto\" default — BOM for UTF-16 targets and keeps a same-encoding source BOM; \"always\", \"never\", \"preserve\"). " +
-			"A narrowing conversion (e.g. utf-8 to cp1251) fails rather than corrupting text when the target lacks characters. " +
-			`Example: {"path": "D:\\legacy\\data.txt", "to": "utf-8", "backup": true} detects the source and leaves data.txt.bak.`,
+		Description: "Convert files from one encoding to another. A source BOM is stripped before decoding; a BOM contradicting an explicit 'from' is an error. No-op if a file already holds the target bytes. Parameters: path (one file) OR paths (array, a batch — never both), to (target, required), from (omit to auto-detect — pass it only to override a misdetection), backup (write .bak first — IMPORTANT for irreversible conversions), dryRun (report what would change, write nothing), bom (\"auto\" default — BOM for UTF-16 targets and keeps a same-encoding source BOM; \"always\", \"never\", \"preserve\"). " +
+			"A narrowing conversion (e.g. utf-8 to cp1251) fails rather than corrupting text, and names the characters the target lacks with their line and column. " +
+			"In a batch one bad file does not stop the rest: each gets an entry in results. Use dryRun over a whole project first to see which files would lose characters. " +
+			`Examples: {"path": "D:\\legacy\\data.txt", "to": "utf-8", "backup": true} detects the source and leaves data.txt.bak. ` +
+			`{"paths": ["a.pas", "b.pas"], "to": "utf-8", "dryRun": true} previews a migration.`,
 		Annotations: &mcp.ToolAnnotations{
 			Title:           "Convert Encoding",
 			ReadOnlyHint:    false,

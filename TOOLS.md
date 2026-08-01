@@ -435,15 +435,18 @@ A source BOM is stripped before decoding; a BOM that contradicts an explicit `fr
 No write (and no backup) happens if the file already holds the target bytes — `changed` reports which.
 
 **Parameters:**
-- `path` (required): Path to the file to convert
-- `from` (optional): Source encoding (auto-detected if omitted)
+- `path`: Path to a single file to convert — use this **or** `paths`, never both
+- `paths`: Array of files to convert as a batch
+- `from` (optional): Source encoding (auto-detected per file if omitted)
 - `to` (required): Target encoding
 - `backup` (optional): Create a `.bak` backup file before converting (default: false)
+- `dryRun` (optional): Report what would change and write nothing (default: false)
 - `bom` (optional): `auto` (default — BOM for UTF-16 targets, keeps a same-encoding source BOM), `always`, `never`, `preserve`
 
 Omit `from` to auto-detect; pass it only to override detection on a file that misdetects.
 A narrowing conversion (e.g. `utf-8` → `cp1251`) fails outright if the content contains
-characters the target encoding lacks, rather than writing corrupted text.
+characters the target encoding lacks, rather than writing corrupted text — and the error
+names those characters with their line and column, so you can decide what to do about them.
 
 **Example:**
 ```json
@@ -473,6 +476,47 @@ Auto-detected source, with a backup:
   "backupPath": "/path/to/file.pas.bak"
 }
 ```
+
+#### Batch conversion
+
+Pass `paths` instead of `path`. One bad file does not stop the rest — each gets an entry in
+`results`, and `errors` summarises the failures. Combine with `dryRun` to preview a whole
+migration before touching anything:
+
+```json
+{
+  "paths": ["src/main.pas", "src/forms.pas", "src/legacy.pas"],
+  "to": "utf-8",
+  "dryRun": true
+}
+```
+
+**Response:**
+```json
+{
+  "message": "2 of 3 files would convert to utf-8; 1 failed (see results)",
+  "targetEncoding": "utf-8",
+  "dryRun": true,
+  "successCount": 2,
+  "errorCount": 1,
+  "errors": ["src/legacy.pas: failed to encode to utf-8: ..."],
+  "results": [
+    {
+      "path": "src/main.pas",
+      "sourceEncoding": "windows-1251",
+      "changed": true,
+      "message": "Would convert src/main.pas from windows-1251 to utf-8"
+    }
+  ]
+}
+```
+
+When a file cannot be encoded, its result carries the offending characters as data, not just
+prose — `unsupportedCount` plus an `unsupported` array of `{char, code, line, column}`. That is
+what makes a dry run over a whole project actionable.
+
+**Getting the file list:** `paths` takes explicit files, not directories or globs. Use
+`search_files` or `tree` to build the list first.
 
 ### manage_line_endings
 
