@@ -47,6 +47,7 @@ func (h *Handler) HandleSearchFiles(ctx context.Context, req *mcp.CallToolReques
 		maxResults:  maxResults,
 		sortBy:      sortBy,
 		reverse:     input.Reverse,
+		gitignore:   gitignoreDefault(input.RespectGitignore),
 	})
 	if err != nil {
 		if err == context.Canceled || err == context.DeadlineExceeded {
@@ -66,6 +67,7 @@ type searchOptions struct {
 	sortBy      string
 	reverse     bool
 	stat        statFunc
+	gitignore   bool
 }
 
 // searchFiles recursively searches for files matching the pattern. Name keeps the
@@ -73,7 +75,8 @@ type searchOptions struct {
 // since the newest file may be the last one visited.
 func searchFiles(ctx context.Context, rootPath string, sOpts searchOptions) ([]string, bool, error) {
 	opts := filesystem.Options{
-		AllowedDirs: sOpts.allowedDirs,
+		AllowedDirs:      sOpts.allowedDirs,
+		RespectGitignore: sOpts.gitignore,
 		OnError: func(path string, _ int, err error) error {
 			slog.Debug("skipping path due to error", "path", path, "error", err)
 			return nil

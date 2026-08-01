@@ -16,3 +16,8 @@ func errorResult(message string) *mcp.CallToolResult {
 		IsError: true,
 	}
 }
+
+// gitignoreDefault resolves the respectGitignore parameter: nil means true.
+func gitignoreDefault(v *bool) bool {
+	return v == nil || *v
+}

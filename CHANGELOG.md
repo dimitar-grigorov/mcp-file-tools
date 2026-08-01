@@ -24,6 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   prompts work in every MCP client. The server now advertises the `prompts`
   capability.
 
+- **`tree`, `search_files` and `grep_text_files` honour `.gitignore`** — nested
+  files, full syntax (negation, anchoring, dir-only, `**`) — and skip `.git`.
+  Build output and `__history` noise no longer needs `exclude` on every call.
+
+  **Behaviour change:** on by default. Pass `respectGitignore: false` for the
+  old behaviour. Trees without a `.gitignore` are unaffected.
+
 ### Changed
 
 - `edit_file` now tells the model not to re-read a file to verify an edit: a

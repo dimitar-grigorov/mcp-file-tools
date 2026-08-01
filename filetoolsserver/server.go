@@ -77,7 +77,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 	// Orient: find files and directories
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "tree",
-		Description: "Compact indented tree view of directory structure. PREFER THIS for directory visualization. Set showEncoding=true to detect and display file encodings (e.g., for auditing legacy codebases). Parameters: path (required), maxDepth (0=unlimited), maxFiles (default 1000), dirsOnly (bool), exclude (array of patterns), showEncoding (bool, shows detected encoding per file).",
+		Description: "Compact indented tree view of directory structure. PREFER THIS for directory visualization. Skips .gitignore'd files and .git (respectGitignore=false to include). Set showEncoding=true to detect and display file encodings (e.g., for auditing legacy codebases). Parameters: path (required), maxDepth (0=unlimited), maxFiles (default 1000), dirsOnly (bool), exclude (array of patterns), showEncoding (bool, shows detected encoding per file).",
 		Meta:        mcp.Meta{"anthropic/maxResultSizeChars": 200000},
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "Tree (Compact)",
@@ -98,7 +98,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "search_files",
-		Description: "Recursively search for files matching a glob pattern (*.ext or **/*.ext). Returns full paths. Parameters: path (required), pattern (required), excludePatterns, maxResults (default 10000), sortBy, reverse. " +
+		Description: "Recursively search for files matching a glob pattern (*.ext or **/*.ext). Returns full paths. Skips .gitignore'd files (respectGitignore=false to include). Parameters: path (required), pattern (required), excludePatterns, maxResults (default 10000), sortBy, reverse. " +
 			"sortBy: \"name\" (default, lexical), \"mtime\" (newest first) or \"size\" (largest first); reverse flips the order. With mtime or size the whole tree is ranked before the cap, so a truncated result really is the newest/largest maxResults files. " +
 			`Example: {"path": "D:\\proj", "pattern": "**/*.pas", "sortBy": "mtime"}`,
 		Annotations: &mcp.ToolAnnotations{
@@ -110,7 +110,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "grep_text_files",
-		Description: "Regex search in file contents with encoding support. PREFER THIS over built-in Grep for non-UTF-8 files. Parameters: pattern (regex), paths (array of files, or dirs searched recursively), caseSensitive (default true), contextBefore/After, maxMatches (default 1000), offset, include/exclude, encoding. " +
+		Description: "Regex search in file contents with encoding support. PREFER THIS over built-in Grep for non-UTF-8 files. Skips .gitignore'd files (respectGitignore=false to include). Parameters: pattern (regex), paths (array of files, or dirs searched recursively), caseSensitive (default true), contextBefore/After, maxMatches (default 1000), offset, include/exclude, encoding. " +
 			"outputMode: \"content\" (default, matching lines), \"files_with_matches\" (paths only, far cheaper when you just need WHICH files), \"count\" (matching lines per file). contextBefore/After apply to content mode only. " +
 			"matchesOnly=true returns the matched substring instead of the whole line, for extracting values. offset skips the first N results, so you can page past maxMatches; the response echoes nextOffset when truncated. " +
 			"include/exclude are single glob STRINGS matched against the file name, not arrays: use \"*.pas\", not [\"*.pas\"]. Brace sets (\"*.{pas,dfm}\") and directory-qualified patterns (\"src/*.pas\") match nothing. " +

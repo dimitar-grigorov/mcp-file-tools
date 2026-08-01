@@ -34,9 +34,10 @@ type Entry struct {
 
 // Options is the shared traversal policy.
 type Options struct {
-	AllowedDirs []string                                      // from security.ResolveAllowedDirs
-	MaxDepth    int                                           // unlimited when <= 0
-	OnError     func(path string, depth int, err error) error // nil aborts on a root error, skips deeper ones
+	AllowedDirs      []string                                      // from security.ResolveAllowedDirs
+	MaxDepth         int                                           // unlimited when <= 0
+	OnError          func(path string, depth int, err error) error // nil aborts on a root error, skips deeper ones
+	RespectGitignore bool                                          // honour .gitignore files and skip .git dirs
 }
 
 // Visitor processes one entry and picks the next action.
@@ -59,13 +60,13 @@ func Walk(ctx context.Context, root string, opts Options, visit Visitor) error {
 		}
 		return fmt.Errorf("walk: root resolves outside allowed directories: %s", root)
 	}
-	if err := walkDir(ctx, root, "", 1, opts, visit); err != nil && !errors.Is(err, errStopped) {
+	if err := walkDir(ctx, root, "", 1, opts, nil, visit); err != nil && !errors.Is(err, errStopped) {
 		return err
 	}
 	return nil
 }
 
-func walkDir(ctx context.Context, dir, relDir string, depth int, opts Options, visit Visitor) error {
+func walkDir(ctx context.Context, dir, relDir string, depth int, opts Options, ignores ignoreStack, visit Visitor) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -73,9 +74,19 @@ func walkDir(ctx context.Context, dir, relDir string, depth int, opts Options, v
 	if err != nil {
 		return handleError(opts, dir, depth-1, err)
 	}
+	if opts.RespectGitignore {
+		if data, err := os.ReadFile(filepath.Join(dir, ".gitignore")); err == nil {
+			if patterns := parseGitignore(data); len(patterns) > 0 {
+				ignores = append(ignores, ignoreScope{relDir: relDir, patterns: patterns})
+			}
+		}
+	}
 	for _, dirEntry := range entries {
 		if err := ctx.Err(); err != nil {
 			return err
+		}
+		if opts.RespectGitignore && dirEntry.IsDir() && dirEntry.Name() == ".git" {
+			continue
 		}
 		path := filepath.Join(dir, dirEntry.Name())
 		if needsCheck(dirEntry) && !security.IsPathSafeResolved(path, opts.AllowedDirs) {
@@ -84,6 +95,9 @@ func walkDir(ctx context.Context, dir, relDir string, depth int, opts Options, v
 		relPath := dirEntry.Name()
 		if relDir != "" {
 			relPath = relDir + "/" + dirEntry.Name()
+		}
+		if opts.RespectGitignore && ignores.Ignored(relPath, dirEntry.IsDir()) {
+			continue
 		}
 		action, err := visit(Entry{DirEntry: dirEntry, Path: path, RelPath: relPath, Depth: depth})
 		if err != nil {
@@ -98,7 +112,7 @@ func walkDir(ctx context.Context, dir, relDir string, depth int, opts Options, v
 		if opts.MaxDepth > 0 && depth >= opts.MaxDepth {
 			continue
 		}
-		if err := walkDir(ctx, path, relPath, depth+1, opts, visit); err != nil {
+		if err := walkDir(ctx, path, relPath, depth+1, opts, ignores, visit); err != nil {
 			return err
 		}
 	}

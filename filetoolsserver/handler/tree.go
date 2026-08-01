@@ -46,7 +46,11 @@ func (h *Handler) HandleTree(ctx context.Context, req *mcp.CallToolRequest, inpu
 		truncated:    false,
 	}
 	var sb strings.Builder
-	opts := filesystem.Options{AllowedDirs: h.ResolvedAllowedDirs(), MaxDepth: input.MaxDepth}
+	opts := filesystem.Options{
+		AllowedDirs:      h.ResolvedAllowedDirs(),
+		MaxDepth:         input.MaxDepth,
+		RespectGitignore: gitignoreDefault(input.RespectGitignore),
+	}
 	if err := filesystem.Walk(ctx, v.Path, opts, state.visit(&sb)); err != nil {
 		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 			state.truncated = true

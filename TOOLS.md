@@ -8,6 +8,12 @@ The tools that can legitimately return a lot of text — `read_text_file`, `read
 those tools instead of spilling the overflow to a file reference, which would otherwise hide
 part of a tree or search result from the model. Every other tool keeps the client default.
 
+## Gitignore
+
+`tree`, `search_files` and `grep_text_files` honour `.gitignore` files (nested ones too,
+full syntax: negation, anchoring, dir-only, `**`) and skip `.git`. Pass
+`respectGitignore: false` to see everything. Trees without a `.gitignore` are unaffected.
+
 ## File Operations
 
 ### read_text_file

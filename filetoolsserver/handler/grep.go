@@ -91,7 +91,7 @@ func (h *Handler) HandleGrep(ctx context.Context, req *mcp.CallToolRequest, inpu
 	case outputModeFiles:
 		opts.perFileLimit = 1 // stop reading the moment the file qualifies
 	}
-	files := h.collectFiles(ctx, input.Paths, input.Include, input.Exclude)
+	files := h.collectFiles(ctx, input.Paths, input.Include, input.Exclude, gitignoreDefault(input.RespectGitignore))
 	if len(files) == 0 {
 		return &mcp.CallToolResult{}, GrepOutput{Matches: []GrepMatch{}, FilesSearched: 0}, nil
 	}
@@ -112,7 +112,7 @@ func compilePattern(pattern string, caseSensitive *bool) (*regexp.Regexp, error)
 }
 
 // collectFiles gathers all files to search from the given paths.
-func (h *Handler) collectFiles(ctx context.Context, paths []string, include, exclude string) []string {
+func (h *Handler) collectFiles(ctx context.Context, paths []string, include, exclude string, gitignore bool) []string {
 	var files []string
 	seen := make(map[string]bool)
 	allowedDirs := h.ResolvedAllowedDirs()
@@ -133,7 +133,8 @@ func (h *Handler) collectFiles(ctx context.Context, paths []string, include, exc
 		}
 		if info.IsDir() {
 			opts := filesystem.Options{
-				AllowedDirs: allowedDirs,
+				AllowedDirs:      allowedDirs,
+				RespectGitignore: gitignore,
 				OnError: func(p string, _ int, err error) error {
 					slog.Debug("skipping path due to error", "path", p, "error", err)
 					return nil

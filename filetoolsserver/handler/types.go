@@ -117,12 +117,13 @@ type MoveFileOutput struct {
 // SearchFilesInput - pattern supports *.ext and **/*.ext syntax.
 // SortBy is "name" (default), "mtime" or "size".
 type SearchFilesInput struct {
-	Path            string   `json:"path"`
-	Pattern         string   `json:"pattern"`
-	ExcludePatterns []string `json:"excludePatterns,omitempty"`
-	MaxResults      int      `json:"maxResults,omitempty"`
-	SortBy          string   `json:"sortBy,omitempty"`
-	Reverse         bool     `json:"reverse,omitempty"`
+	Path             string   `json:"path"`
+	Pattern          string   `json:"pattern"`
+	ExcludePatterns  []string `json:"excludePatterns,omitempty"`
+	RespectGitignore *bool    `json:"respectGitignore,omitempty"` // default true
+	MaxResults       int      `json:"maxResults,omitempty"`
+	SortBy           string   `json:"sortBy,omitempty"`
+	Reverse          bool     `json:"reverse,omitempty"`
 }
 
 type SearchFilesOutput struct {
@@ -186,12 +187,13 @@ type ReadMultipleFilesOutput struct {
 
 // TreeInput for compact tree view. MaxFiles defaults to 1000.
 type TreeInput struct {
-	Path         string   `json:"path"`
-	MaxDepth     int      `json:"maxDepth,omitempty"`
-	MaxFiles     int      `json:"maxFiles,omitempty"`
-	DirsOnly     bool     `json:"dirsOnly,omitempty"`
-	Exclude      []string `json:"exclude,omitempty"`
-	ShowEncoding bool     `json:"showEncoding,omitempty"`
+	Path             string   `json:"path"`
+	MaxDepth         int      `json:"maxDepth,omitempty"`
+	MaxFiles         int      `json:"maxFiles,omitempty"`
+	DirsOnly         bool     `json:"dirsOnly,omitempty"`
+	Exclude          []string `json:"exclude,omitempty"`
+	ShowEncoding     bool     `json:"showEncoding,omitempty"`
+	RespectGitignore *bool    `json:"respectGitignore,omitempty"` // default true
 }
 
 type TreeOutput struct {
@@ -266,18 +268,19 @@ type ConvertEncodingOutput struct {
 // GrepInput for searching file contents with regex.
 // OutputMode: "content" (default), "files_with_matches", "count".
 type GrepInput struct {
-	Pattern       string   `json:"pattern"`
-	Paths         []string `json:"paths"`
-	CaseSensitive *bool    `json:"caseSensitive,omitempty"` // defaults to true
-	ContextBefore int      `json:"contextBefore,omitempty"`
-	ContextAfter  int      `json:"contextAfter,omitempty"`
-	MaxMatches    int      `json:"maxMatches,omitempty"` // defaults to 1000
-	Include       string   `json:"include,omitempty"`
-	Exclude       string   `json:"exclude,omitempty"`
-	Encoding      string   `json:"encoding,omitempty"`
-	OutputMode    string   `json:"outputMode,omitempty"`
-	MatchesOnly   bool     `json:"matchesOnly,omitempty"` // text is the matched substring, not the line
-	Offset        int      `json:"offset,omitempty"`      // skip the first N results, for paging
+	Pattern          string   `json:"pattern"`
+	Paths            []string `json:"paths"`
+	CaseSensitive    *bool    `json:"caseSensitive,omitempty"` // defaults to true
+	ContextBefore    int      `json:"contextBefore,omitempty"`
+	ContextAfter     int      `json:"contextAfter,omitempty"`
+	MaxMatches       int      `json:"maxMatches,omitempty"` // defaults to 1000
+	Include          string   `json:"include,omitempty"`
+	Exclude          string   `json:"exclude,omitempty"`
+	Encoding         string   `json:"encoding,omitempty"`
+	OutputMode       string   `json:"outputMode,omitempty"`
+	MatchesOnly      bool     `json:"matchesOnly,omitempty"`      // text is the matched substring, not the line
+	Offset           int      `json:"offset,omitempty"`           // skip the first N results, for paging
+	RespectGitignore *bool    `json:"respectGitignore,omitempty"` // default true
 }
 
 type GrepMatch struct {
