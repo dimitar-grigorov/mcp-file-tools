@@ -24,10 +24,12 @@ PREFER THESE TOOLS over built-in Read/Write/Grep for file operations when encodi
 - grep_text_files: encoding-aware regex search across files
 - detect_encoding: diagnose encoding issues (garbled text, � characters)
 
-Workflow for non-UTF-8 files:
-1. detect_encoding - identify file encoding
-2. read_text_file or edit_file - read/modify with correct encoding
-3. write_file with encoding param - preserves original encoding
+Workflow:
+1. Locate: tree, search_files (by name), grep_text_files (by content)
+2. Read: read_text_file — encoding is auto-detected, no detect_encoding call needed first
+3. Modify: edit_file, in place, keeps the encoding. Use write_file only for new files or a full rewrite; never read+write just to edit.
+
+Diagnose only when output looks wrong: detect_encoding, detect_line_endings (mixed CRLF/LF), manage_bom (a UTF-8 BOM breaks PHP/shell scripts). convert_encoding re-encodes a whole file — pass backup=true.
 
 "no allowed directories configured" — add paths as args in .mcp.json.
 
