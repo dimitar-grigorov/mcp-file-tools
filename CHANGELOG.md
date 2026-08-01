@@ -18,6 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   correlate them against. Off by default so a read → write round trip cannot
   bake numbers into a file; the encoding-error message now points to it.
 
+- **Three MCP prompts**: `audit_encodings`, `fix_mojibake` and
+  `migrate_to_utf8` — guided workflows that clients surface as user commands
+  (Claude Code slash commands, opencode commands). Unlike the bundled skill,
+  prompts work in every MCP client. The server now advertises the `prompts`
+  capability.
+
 ### Changed
 
 - `edit_file` now tells the model not to re-read a file to verify an edit: a

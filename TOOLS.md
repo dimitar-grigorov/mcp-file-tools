@@ -803,3 +803,15 @@ or stripped by [`manage_bom`](#manage_bom), but UTF-32 is not a transcoding targ
 `convert_encoding` and the `encoding` parameter do not accept it, and
 [`manage_line_endings`](#manage_line_endings) refuses UTF-32 files rather than breaking
 their 4-byte alignment.
+
+## Prompts
+
+Besides tools, the server exposes three prompts — guided workflows that clients surface as
+user commands (Claude Code: `/mcp__file-tools__<name>`, opencode: commands). Each renders to
+a complete task brief the model executes with the tools above.
+
+| Prompt | Arguments | What it does |
+|---|---|---|
+| `audit_encodings` | `path` | Read-only survey: encoding distribution via `tree showEncoding=true`, BOMs, low-confidence detections |
+| `fix_mojibake` | `path` | Diagnose garbled text, confirm the correct reading with the user, then repair with `convert_encoding backup=true` |
+| `migrate_to_utf8` | `path`, `pattern` (default `*.pas`) | Batch migration: build the list, `dryRun=true` first, report lossy files, convert with backups, verify |

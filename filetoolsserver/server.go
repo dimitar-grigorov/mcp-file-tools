@@ -59,13 +59,17 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 		RootsListChangedHandler: createRootsListChangedHandler(h),
 		// Explicit: unset, the SDK also advertises logging and listChanged.
 		Capabilities: &mcp.ServerCapabilities{
-			Tools: &mcp.ToolCapabilities{},
+			Tools:   &mcp.ToolCapabilities{},
+			Prompts: &mcp.PromptCapabilities{},
 		},
 	}
 	server := mcp.NewServer(impl, serverOpts)
 
 	// Repair array/object args some MCP clients send as JSON-encoded strings.
 	server.AddReceivingMiddleware(handler.RepairStringifiedArrayArgs)
+
+	// Guided workflows, surfaced by clients as user commands.
+	registerPrompts(server)
 
 	// Register all tools using the new AddTool API with annotations
 	// All handlers are wrapped with recovery middleware (and logging if logger is provided)
