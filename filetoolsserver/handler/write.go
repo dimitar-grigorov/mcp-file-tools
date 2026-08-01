@@ -6,6 +6,7 @@ package handler
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -45,9 +46,12 @@ func (h *Handler) HandleWriteFile(ctx context.Context, req *mcp.CallToolRequest,
 	}
 
 	// Match the file's line endings; agents rewriting a CRLF file usually emit LF.
-	eolStyle := resolveLineEndingStyle(eolPolicy, v.Path, h.config.DefaultLineEndings)
-	if eolStyle != "" {
-		content = ConvertLineEndings(content, eolStyle)
+	eolNormalized := ""
+	if eolStyle := resolveLineEndingStyle(eolPolicy, v.Path, h.config.DefaultLineEndings); eolStyle != "" {
+		if converted := ConvertLineEndings(content, eolStyle); converted != content {
+			content = converted
+			eolNormalized = eolStyle
+		}
 	}
 
 	var contentToWrite []byte
@@ -85,8 +89,16 @@ func (h *Handler) HandleWriteFile(ctx context.Context, req *mcp.CallToolRequest,
 		detail += ", with " + output.BOMType + " BOM"
 	}
 	output.Message = fmt.Sprintf("Successfully wrote %d bytes to %s (%s)", len(contentToWrite), input.Path, detail)
+	if eolNormalized != "" {
+		output.LineEndings = eolNormalized
+		output.Message += fmt.Sprintf(" Content was normalised to %s to match the file — send %s next time.",
+			strings.ToUpper(eolNormalized), strings.ToUpper(eolNormalized))
+	}
 	if encodingFrom == encodingFromDefault {
 		output.Message += h.utf8TransitionNotice()
+	}
+	if hint := h.plainUTF8HintFor(v.Path, encodingName, output.HasBOM); hint != "" {
+		output.Message += " " + hint
 	}
 	return &mcp.CallToolResult{}, output, nil
 }

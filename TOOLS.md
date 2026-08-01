@@ -44,6 +44,10 @@ Read file contents with automatic encoding detection and optional partial readin
 }
 ```
 
+The response may carry a `hint` field: it reports a file that already has
+**mixed** line endings, and — once per file — notes that a plain utf-8 file with
+no BOM is better handled by the agent's own built-in tools.
+
 `totalLines` counts newline-terminated lines: a trailing newline does not add an empty final line, and an empty file is `0`. (Matches `detect_line_endings`.)
 
 ### read_multiple_files
@@ -104,6 +108,9 @@ For a new file (or one with no line endings yet) the fallback is
 `MCP_DEFAULT_LINE_ENDINGS` (`crlf`/`lf`); unset, the content is written unchanged.
 
 Use `crlf`/`lf` to force a style, or `asis` for byte-for-byte writes.
+
+When content is normalised, the response says so and sets `lineEndings`, so the
+conversion is never silent.
 
 **BOM modes:**
 

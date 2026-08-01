@@ -36,6 +36,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   **Behaviour change:** `write_file` is no longer byte-verbatim by default. Pass
   `lineEndings: "asis"` for the old behaviour.
 
+### Added
+
+- **`read_text_file` and `write_file` now return a `hint`** when there is
+  something the agent should know: a file that already has mixed line endings
+  (with counts, and a pointer to `change_line_endings`), and — once per file per
+  session — that a plain utf-8 file with no BOM is better served by the agent's
+  own built-in tools, since this server adds nothing for it.
+
+  `write_file` also reports when it normalised line endings and sets
+  `lineEndings` in its result, so the conversion is never silent.
+
 ### Changed
 
 - **Upgraded to `modelcontextprotocol/go-sdk` v1.7.0** (MCP spec `2026-07-28`).

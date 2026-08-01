@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/dimitar-grigorov/mcp-file-tools/internal/config"
+	"github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
 	"github.com/dimitar-grigorov/mcp-file-tools/internal/security"
 )
 
@@ -25,6 +26,22 @@ type Handler struct {
 	mu          sync.RWMutex
 
 	utf8NoticeOnce sync.Once // TODO(2.3.0): remove with the utf-8 default transition notice
+	plainUTF8Seen  sync.Map  // path -> struct{}, for the built-in-tooling hint
+}
+
+// Phrased as an instruction because models relay instructions and ignore trivia.
+const plainUTF8Hint = "This file is plain utf-8 with no BOM, so your built-in file tools handle it correctly — " +
+	"prefer them for it. These encoding-aware tools are for non-utf-8 files."
+
+// Returns the hint the first time a path looks like plain utf-8, "" after that.
+func (h *Handler) plainUTF8HintFor(path, encodingName string, hasBOM bool) string {
+	if hasBOM || !encoding.IsUTF8(encodingName) {
+		return ""
+	}
+	if _, seen := h.plainUTF8Seen.LoadOrStore(path, struct{}{}); seen {
+		return ""
+	}
+	return plainUTF8Hint
 }
 
 // TODO(2.3.0): remove the utf-8 default transition notice.

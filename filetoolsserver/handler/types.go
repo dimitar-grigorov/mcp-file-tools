@@ -24,6 +24,7 @@ type ReadTextFileOutput struct {
 	Truncated          bool   `json:"truncated,omitempty"`
 	DetectedEncoding   string `json:"detectedEncoding,omitempty"`
 	EncodingConfidence int    `json:"encodingConfidence,omitempty"`
+	Hint               string `json:"hint,omitempty"`
 }
 
 // WriteFileInput - encoding defaults to the existing file's encoding, else utf-8.
@@ -38,9 +39,10 @@ type WriteFileInput struct {
 }
 
 type WriteFileOutput struct {
-	Message string `json:"message"`
-	HasBOM  bool   `json:"hasBom"`
-	BOMType string `json:"bomType,omitempty"`
+	Message     string `json:"message"`
+	HasBOM      bool   `json:"hasBom"`
+	BOMType     string `json:"bomType,omitempty"`
+	LineEndings string `json:"lineEndings,omitempty"` // set when content was normalised
 }
 
 type ListDirectoryInput struct {
