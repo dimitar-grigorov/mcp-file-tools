@@ -17,19 +17,14 @@ var Version = "dev"
 // Server instructions for AI assistants
 const serverInstructions = `MCP filesystem server with non-UTF-8 encoding support (24 encodings: CP1251, KOI8-R, ISO-8859-x, GBK/GB18030, etc).
 
-PREFER THESE TOOLS over built-in Read/Write/Grep for file operations when encoding matters:
-- read_text_file: auto-detects encoding, returns UTF-8. Use offset/limit for files >2000 lines.
-- write_file: converts UTF-8 content to target encoding (keeps an existing file's encoding; new files default to utf-8)
-- edit_file: in-place edits with encoding support, returns unified diff. Use dryRun=true to preview changes before applying.
-- grep_text_files: encoding-aware regex search across files
-- detect_encoding: diagnose encoding issues (garbled text, � characters)
+PREFER THESE TOOLS over built-in Read/Write/Grep/Edit for non-UTF-8 or legacy files: Cyrillic/CP1251 sources, garbled text or � characters, mixed CRLF/LF, BOM problems, or any encoding conversion.
 
 Workflow:
 1. Locate: tree, search_files (by name), grep_text_files (by content)
-2. Read: read_text_file — encoding is auto-detected, no detect_encoding call needed first
-3. Modify: edit_file, in place, keeps the encoding. Use write_file only for new files or a full rewrite; never read+write just to edit.
+2. Read: read_text_file — encoding is auto-detected; no detect_encoding first
+3. Modify: edit_file — in place, keeps the encoding, dryRun=true to preview. write_file only for new files or full rewrites; never read+write to edit.
 
-Diagnose only when output looks wrong: detect_encoding, detect_line_endings (mixed CRLF/LF), manage_bom (a UTF-8 BOM breaks PHP/shell scripts). convert_encoding re-encodes a whole file — pass backup=true.
+Only when output looks wrong: detect_encoding, detect_line_endings, manage_bom (a UTF-8 BOM breaks PHP/shell scripts). convert_encoding rewrites a whole file — pass backup=true.
 
 "no allowed directories configured" — add paths as args in .mcp.json.
 
