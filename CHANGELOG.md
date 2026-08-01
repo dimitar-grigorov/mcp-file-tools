@@ -10,6 +10,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`grep_text_files` can answer without the match text.** New `outputMode`:
+  `content` (the default, unchanged), `files_with_matches` (paths only) and
+  `count` (matching lines per file).
+
+  "Which files mention `TFormMain`" used to cost up to 1000 match objects with
+  their lines; `files_with_matches` returns the path list and stops reading each
+  file at its first hit, so it is cheaper in I/O as well as tokens.
+
+  Also new: `matchesOnly`, which puts the matched substring in `text` instead of
+  the whole line — every occurrence on the line, each with its own column — for
+  extracting values rather than reading context. And `offset`, which skips the
+  first N results: `truncated` was previously a dead end with no way to reach
+  match 1001, and the response now carries `nextOffset` to page on with.
+
+  `maxMatches` still defaults to 1000 and `content` mode is byte-for-byte what it
+  was.
+
 - **A failed conversion now names the characters that do not fit.** Encoding to a
   narrower charset used to fail with x/text's positionless
   `rune not supported by encoding`, which left the caller nothing to act on but a

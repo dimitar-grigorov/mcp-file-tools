@@ -23,7 +23,30 @@ import (
 const (
 	defaultMaxMatches = 1000
 	binaryCheckSize   = 8192 // 8KB to catch files with text header but binary payload
+
+	outputModeContent = "content"
+	outputModeFiles   = "files_with_matches"
+	outputModeCount   = "count"
 )
+
+// grepOptions is the resolved per-search policy handed to each worker.
+type grepOptions struct {
+	re            *regexp.Regexp
+	mode          string
+	matchesOnly   bool
+	contextBefore int
+	contextAfter  int
+	encoding      string
+	maxFileSize   int64
+	perFileLimit  int // 0 means no limit: count mode must see the whole file
+}
+
+// fileHits is one file's outcome. matches is filled in content mode only;
+// count is the number of matching lines, capped at 1 in files_with_matches.
+type fileHits struct {
+	matches []GrepMatch
+	count   int
+}
 
 // HandleGrep searches for a pattern in files with encoding support.
 func (h *Handler) HandleGrep(ctx context.Context, req *mcp.CallToolRequest, input GrepInput) (*mcp.CallToolResult, GrepOutput, error) {
@@ -33,6 +56,14 @@ func (h *Handler) HandleGrep(ctx context.Context, req *mcp.CallToolRequest, inpu
 	if len(input.Paths) == 0 {
 		return errorResult("paths is required"), GrepOutput{}, nil
 	}
+	mode := input.OutputMode
+	if mode == "" {
+		mode = outputModeContent
+	}
+	if mode != outputModeContent && mode != outputModeFiles && mode != outputModeCount {
+		return errorResult(fmt.Sprintf("invalid outputMode %q: use %q, %q or %q",
+			input.OutputMode, outputModeContent, outputModeFiles, outputModeCount)), GrepOutput{}, nil
+	}
 	re, err := compilePattern(input.Pattern, input.CaseSensitive)
 	if err != nil {
 		return errorResult(fmt.Sprintf("invalid regex pattern: %v", err)), GrepOutput{}, nil
@@ -41,18 +72,36 @@ func (h *Handler) HandleGrep(ctx context.Context, req *mcp.CallToolRequest, inpu
 	if maxMatches <= 0 {
 		maxMatches = defaultMaxMatches
 	}
+	offset := input.Offset
+	if offset < 0 {
+		offset = 0
+	}
+	opts := grepOptions{
+		re:          re,
+		mode:        mode,
+		matchesOnly: input.MatchesOnly,
+		encoding:    input.Encoding,
+		maxFileSize: h.config.MemoryThreshold,
+	}
+	switch mode {
+	case outputModeContent:
+		opts.contextBefore = input.ContextBefore
+		opts.contextAfter = input.ContextAfter
+		// One past the page end, so a single file overflowing still reports truncation.
+		opts.perFileLimit = offset + maxMatches + 1
+	case outputModeFiles:
+		opts.perFileLimit = 1 // stop reading the moment the file qualifies
+	}
 	files := h.collectFiles(ctx, input.Paths, input.Include, input.Exclude)
 	if len(files) == 0 {
 		return &mcp.CallToolResult{}, GrepOutput{Matches: []GrepMatch{}, FilesSearched: 0}, nil
 	}
-	matches, filesMatched, truncated := h.searchFiles(ctx, files, re, input, maxMatches, h.config.MemoryThreshold)
-	return &mcp.CallToolResult{}, GrepOutput{
-		Matches:       matches,
-		TotalMatches:  len(matches),
-		FilesSearched: len(files),
-		FilesMatched:  filesMatched,
-		Truncated:     truncated,
-	}, nil
+	output := h.searchFiles(ctx, files, opts, maxMatches, offset)
+	output.FilesSearched = len(files)
+	if output.Truncated {
+		output.NextOffset = offset + maxMatches
+	}
+	return &mcp.CallToolResult{}, output, nil
 }
 
 // compilePattern compiles the regex pattern with optional case sensitivity.
@@ -135,79 +184,140 @@ func shouldIncludeFile(path string, include, exclude string) bool {
 }
 
 // searchFiles searches all files with bounded concurrency, committing results in file
-// order so the truncated set is the same on every run, and stopping once maxMatches is hit.
-func (h *Handler) searchFiles(ctx context.Context, files []string, re *regexp.Regexp, input GrepInput, maxMatches int, maxFileSize int64) ([]GrepMatch, int, bool) {
-	var allMatches []GrepMatch
-	filesMatched := 0
-	truncated := false
-	// One more than the cap, so a single file overflowing still reports truncation.
-	perFileLimit := maxMatches + 1
+// order so the truncated set is the same on every run, and stopping once the page is full.
+// Results before offset are counted and dropped; the mode decides what gets collected.
+func (h *Handler) searchFiles(ctx context.Context, files []string, opts grepOptions, maxMatches, offset int) GrepOutput {
+	out := GrepOutput{Matches: []GrepMatch{}}
+	skip, taken := offset, 0
+
+	// take reports whether the page is still open after admitting one more result.
+	take := func(admit func()) bool {
+		if skip > 0 {
+			skip--
+			return true
+		}
+		if taken >= maxMatches {
+			out.Truncated = true
+			return false
+		}
+		admit()
+		taken++
+		return true
+	}
 
 	workpool.RunOrdered(ctx, files, workpool.Options{},
-		func(ctx context.Context, _ int, path string) []GrepMatch {
+		func(ctx context.Context, _ int, path string) fileHits {
 			if ctx.Err() != nil {
-				return nil
+				return fileHits{}
 			}
-			return searchSingleFile(path, re, input, maxFileSize, perFileLimit)
+			return searchSingleFile(path, opts)
 		},
-		func(_ int, fileMatches []GrepMatch) bool {
-			if len(fileMatches) > 0 {
-				filesMatched++
+		func(_ int, hits fileHits) bool {
+			if hits.count == 0 {
+				return true
 			}
-			for _, m := range fileMatches {
-				if len(allMatches) >= maxMatches {
-					truncated = true
+			out.FilesMatched++
+			switch opts.mode {
+			case outputModeFiles:
+				path := hits.matches[0].Path
+				return take(func() { out.Files = append(out.Files, path) })
+			case outputModeCount:
+				c := GrepFileCount{Path: hits.matches[0].Path, Count: hits.count}
+				return take(func() { out.Counts = append(out.Counts, c) })
+			}
+			for _, m := range hits.matches {
+				if !take(func() { out.Matches = append(out.Matches, m) }) {
 					return false
 				}
-				allMatches = append(allMatches, m)
 			}
 			return true
 		})
 
-	return allMatches, filesMatched, truncated
+	// totalMatches counts what the page actually reports: matching lines in content
+	// mode, paths in files_with_matches (one hit each, the search stopped there),
+	// and the summed per-file counts in count mode.
+	out.TotalMatches = taken
+	if opts.mode == outputModeCount {
+		out.TotalMatches = 0
+		for _, c := range out.Counts {
+			out.TotalMatches += c.Count
+		}
+	}
+	return out
 }
 
-// searchSingleFile searches for matches in a single file, stopping at limit matches.
-func searchSingleFile(path string, re *regexp.Regexp, input GrepInput, maxFileSize int64, limit int) []GrepMatch {
+// searchSingleFile searches one file under the resolved options. In content mode it
+// collects matches; otherwise it only counts, so nothing is built to be thrown away.
+func searchSingleFile(path string, opts grepOptions) fileHits {
 	// Check file size - warn if large file will be loaded to memory
-	if info, err := os.Stat(path); err == nil && info.Size() > maxFileSize {
-		slog.Warn("loading large file into memory", "path", path, "size", info.Size(), "threshold", maxFileSize)
+	if info, err := os.Stat(path); err == nil && info.Size() > opts.maxFileSize {
+		slog.Warn("loading large file into memory", "path", path, "size", info.Size(), "threshold", opts.maxFileSize)
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil
+		return fileHits{}
 	}
 	// Decode first: UTF-16 text is full of NUL bytes, so classify the decoded text.
-	content, detectedEncoding := decodeFileContent(data, input.Encoding)
+	content, detectedEncoding := decodeFileContent(data, opts.encoding)
 	if content == "" || isBinaryText(content) {
-		return nil
+		return fileHits{}
 	}
 	lines := splitGrepLines(content)
-	var matches []GrepMatch
+	var hits fileHits
 	for lineNum, line := range lines {
-		loc := re.FindStringIndex(line)
-		if loc == nil {
+		locs := findLineMatches(opts, line)
+		if len(locs) == 0 {
 			continue
 		}
-		match := GrepMatch{
-			Path:     path,
-			Line:     lineNum + 1,
-			Column:   loc[0] + 1,
-			Text:     line,
-			Encoding: detectedEncoding,
+		if opts.mode != outputModeContent {
+			// The path is all the caller needs; carry it on a bare match.
+			if hits.count == 0 {
+				hits.matches = []GrepMatch{{Path: path}}
+			}
+			hits.count += len(locs)
+			if opts.perFileLimit > 0 && hits.count >= opts.perFileLimit {
+				break
+			}
+			continue
 		}
-		if input.ContextBefore > 0 {
-			match.Before = getContextBefore(lines, lineNum, input.ContextBefore)
+		for _, loc := range locs {
+			text := line
+			if opts.matchesOnly {
+				text = line[loc[0]:loc[1]]
+			}
+			match := GrepMatch{
+				Path:     path,
+				Line:     lineNum + 1,
+				Column:   loc[0] + 1,
+				Text:     text,
+				Encoding: detectedEncoding,
+			}
+			if opts.contextBefore > 0 {
+				match.Before = getContextBefore(lines, lineNum, opts.contextBefore)
+			}
+			if opts.contextAfter > 0 {
+				match.After = getContextAfter(lines, lineNum, opts.contextAfter)
+			}
+			hits.matches = append(hits.matches, match)
+			hits.count++
 		}
-		if input.ContextAfter > 0 {
-			match.After = getContextAfter(lines, lineNum, input.ContextAfter)
-		}
-		matches = append(matches, match)
-		if len(matches) >= limit {
+		if opts.perFileLimit > 0 && hits.count >= opts.perFileLimit {
 			break
 		}
 	}
-	return matches
+	return hits
+}
+
+// findLineMatches returns the match spans on a line: every occurrence when
+// matchesOnly extracts substrings, otherwise just the first — one match per line.
+func findLineMatches(opts grepOptions, line string) [][]int {
+	if opts.matchesOnly && opts.mode == outputModeContent {
+		return opts.re.FindAllStringIndex(line, -1)
+	}
+	if loc := opts.re.FindStringIndex(line); loc != nil {
+		return [][]int{loc}
+	}
+	return nil
 }
 
 // splitGrepLines splits on CRLF, lone CR and LF so no line keeps a trailing \r.

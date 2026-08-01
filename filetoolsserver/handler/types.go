@@ -256,7 +256,9 @@ type ConvertEncodingOutput struct {
 	Errors       []string            `json:"errors,omitempty"`
 }
 
-// GrepInput for searching file contents with regex
+// GrepInput for searching file contents with regex.
+// OutputMode: "content" (default), "files_with_matches", "count".
+// ContextBefore/ContextAfter apply to "content" only and are ignored elsewhere.
 type GrepInput struct {
 	Pattern       string   `json:"pattern"`
 	Paths         []string `json:"paths"`
@@ -267,6 +269,9 @@ type GrepInput struct {
 	Include       string   `json:"include,omitempty"`
 	Exclude       string   `json:"exclude,omitempty"`
 	Encoding      string   `json:"encoding,omitempty"`
+	OutputMode    string   `json:"outputMode,omitempty"`
+	MatchesOnly   bool     `json:"matchesOnly,omitempty"` // text is the matched substring, not the line
+	Offset        int      `json:"offset,omitempty"`      // skip the first N results, for paging
 }
 
 type GrepMatch struct {
@@ -279,12 +284,23 @@ type GrepMatch struct {
 	Encoding string   `json:"encoding,omitempty"`
 }
 
+// GrepFileCount is one file's matching-line count in "count" mode.
+type GrepFileCount struct {
+	Path  string `json:"path"`
+	Count int    `json:"count"`
+}
+
+// GrepOutput carries the fields for the requested output mode: Matches for
+// "content", Files for "files_with_matches", Counts for "count".
 type GrepOutput struct {
-	Matches       []GrepMatch `json:"matches"`
-	TotalMatches  int         `json:"totalMatches"`
-	FilesSearched int         `json:"filesSearched"`
-	FilesMatched  int         `json:"filesMatched"`
-	Truncated     bool        `json:"truncated,omitempty"`
+	Matches       []GrepMatch     `json:"matches"`
+	Files         []string        `json:"files,omitempty"`
+	Counts        []GrepFileCount `json:"counts,omitempty"`
+	TotalMatches  int             `json:"totalMatches"`
+	FilesSearched int             `json:"filesSearched"`
+	FilesMatched  int             `json:"filesMatched"`
+	Truncated     bool            `json:"truncated,omitempty"`
+	NextOffset    int             `json:"nextOffset,omitempty"` // pass as offset to page on
 }
 
 type DetectLineEndingsInput struct {

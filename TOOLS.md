@@ -351,10 +351,13 @@ Search file contents using regex patterns with encoding support. Supports contex
 **Parameters:**
 - `pattern` (required): Regular expression pattern to search for
 - `paths` (required): Array of file or directory paths to search
+- `outputMode` (optional): `content` (default), `files_with_matches`, or `count`
 - `caseSensitive` (optional): Case-sensitive matching (default: true)
+- `matchesOnly` (optional): Return the matched substring instead of the whole line
 - `contextBefore` (optional): Number of lines to show before each match
 - `contextAfter` (optional): Number of lines to show after each match
-- `maxMatches` (optional): Maximum total matches to return (default: 1000)
+- `maxMatches` (optional): Maximum results per page (default: 1000)
+- `offset` (optional): Skip the first N results, to page past `maxMatches`
 - `include` (optional): Glob pattern to include files (e.g., `*.go`)
 - `exclude` (optional): Glob pattern to exclude files (e.g., `*_test.go`)
 - `encoding` (optional): File encoding (auto-detected if omitted)
@@ -397,6 +400,68 @@ patterns (`src/*.pas`) are not supported by the underlying matcher and will matc
   "truncated": false
 }
 ```
+
+#### Output modes
+
+`outputMode` decides what comes back, and how much of each file gets read.
+
+| Mode | Returns | Reads |
+|---|---|---|
+| `content` (default) | `matches[]` with the full line, plus context | every matching line, up to the page end |
+| `files_with_matches` | `files[]`, paths only | **stops at the first match in each file** |
+| `count` | `counts[]` of `{path, count}` matching lines per file | the whole file, but keeps no text |
+
+Ask `files_with_matches` when the question is *which* files contain something —
+it is the cheapest answer by a wide margin, in tokens and in I/O:
+
+```json
+{"pattern": "TFormMain", "paths": ["D:\\proj\\src"], "outputMode": "files_with_matches"}
+```
+
+```json
+{
+  "matches": [],
+  "files": ["D:\\proj\\src\\main.pas", "D:\\proj\\src\\forms.pas"],
+  "totalMatches": 2,
+  "filesSearched": 412,
+  "filesMatched": 2
+}
+```
+
+`contextBefore`/`contextAfter` are meaningless outside `content` and are ignored
+silently — no context fields come back in the other two modes.
+
+`totalMatches` reports what the page actually holds: matching lines in `content`,
+returned paths in `files_with_matches` (the search stops at one hit per file, so it
+is *not* a match total — use `count` for that), and the summed per-file counts in
+`count`. `filesMatched` counts every file with a hit, including ones dropped by
+`offset`.
+
+#### matchesOnly
+
+`matchesOnly: true` puts the matched substring in `text` instead of the whole
+line — `ripgrep -o`. Unlike the default, which reports the first match per line,
+this returns *every* occurrence on a line, each with its own `column`, so it works
+for pulling values out of a file:
+
+```json
+{"pattern": "\\d+\\.\\d+\\.\\d+", "paths": ["version.inc"], "matchesOnly": true}
+```
+
+#### Paging
+
+`maxMatches` caps one page — matches in `content`, paths in `files_with_matches`,
+file entries in `count`. `offset` skips that many results first, so `truncated`
+is no longer a dead end: the response carries `nextOffset`, and passing it back
+returns the next page.
+
+```json
+{"pattern": "TODO", "paths": ["src"], "maxMatches": 1000, "offset": 1000}
+```
+
+The default of 1000 is deliberately unchanged; Claude Code's own `Grep` uses 250,
+which is cheaper per call but pages more often. Lower `maxMatches` yourself if you
+prefer that trade.
 
 ## Encoding Tools
 
