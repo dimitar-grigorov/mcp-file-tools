@@ -284,7 +284,6 @@ func lineStarts(content string) []int {
 	return starts
 }
 
-// applyOffsetLimit returns lines [offset, offset+limit) sliced from content (line endings preserved); offset is 1-indexed, negatives ignored.
 // addLineNumbers prefixes each line with "N<tab>", numbering from start so a
 // paged read shows absolute file line numbers. A trailing newline gets no number.
 func addLineNumbers(content string, start int) string {
@@ -304,6 +303,7 @@ func addLineNumbers(content string, start int) string {
 	return b.String()
 }
 
+// applyOffsetLimit returns lines [offset, offset+limit) sliced from content (line endings preserved); offset is 1-indexed, negatives ignored.
 func applyOffsetLimit(content string, offset, limit *int) (string, int, int) {
 	starts := lineStarts(content)
 	totalLines := len(starts)

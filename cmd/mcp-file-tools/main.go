@@ -60,9 +60,8 @@ func main() {
 		slog.Debug("normalized allowed directories", "dirs", normalized)
 	}
 
-	// Create MCP server with allowed directories (can be empty, directories can be added dynamically)
-	// Pass nil for logger to disable logging middleware (recovery still active)
-	// Pass nil for config to load from environment variables (MCP_DEFAULT_ENCODING, MCP_MEMORY_THRESHOLD)
+	// nil logger disables logging middleware (recovery stays on); nil config loads
+	// MCP_DEFAULT_ENCODING/MCP_MEMORY_THRESHOLD from the environment.
 	server := filetoolsserver.NewServer(normalized, nil, nil)
 
 	// Run server on stdio transport
