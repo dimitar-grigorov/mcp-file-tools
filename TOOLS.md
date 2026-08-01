@@ -162,7 +162,7 @@ Make line-based edits to a text file. Supports exact matching and whitespace-fle
 
 **Parameters:**
 - `path` (required): Path to the file to edit
-- `edits` (required): Array of edit operations, each with `oldText` and `newText`
+- `edits` (required): Array of edit operations with `oldText`, `newText`, and optional `similarity` (0.0-1.0)
 - `dryRun` (optional): If true, returns diff without writing changes (default: false)
 - `encoding` (optional): File encoding (auto-detected if not specified)
 - `forceWritable` (optional): If true, clears read-only flag before editing (default: false — fails on read-only files)
@@ -170,12 +170,14 @@ Make line-based edits to a text file. Supports exact matching and whitespace-fle
 **Features:**
 - Exact text matching (first occurrence)
 - Whitespace-flexible matching (ignores per-line leading *and* trailing whitespace; interior spacing must still match)
+- Optional fuzzy matching. The score is `1 - line edit distance / longer block length`, after trimming each line. Candidates more than `oldText`'s line count away are rejected.
 - Preserves original indentation
 - CRLF line endings normalized to LF, so CRLF/LF differences never block a match
 - Atomic write (temp file + rename)
 - Fails on read-only files by default (set `forceWritable: true` only when user explicitly requests it)
 
 Edits apply in order, and each one replaces only the **first** match remaining at that point.
+If an exact edit fails, prefer copying the hint into `oldText`. Use `similarity` only to tolerate whitespace or comment drift, ideally with `dryRun: true`; it is not for different code. Below threshold, the error includes the best score.
 
 **Example:**
 ```json

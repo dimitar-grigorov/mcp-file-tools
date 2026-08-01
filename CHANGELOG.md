@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`edit_file` edits take optional `similarity`** (0.0-1.0) for bounded,
+  line-based fuzzy matching when whitespace or comments drift.
+
 - **`read_text_file` takes `lineNumbers`** (default false): prefixes every line
   with `N<tab>`, using absolute numbers so a paged read starting at line 100
   numbers from 100. Everything else already speaks in line numbers —

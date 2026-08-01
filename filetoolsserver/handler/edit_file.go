@@ -114,6 +114,9 @@ func applyEdits(content string, edits []EditOperation) (string, error) {
 		if edit.OldText == "" {
 			return "", ErrOldTextEmpty
 		}
+		if edit.Similarity != nil && (*edit.Similarity < 0 || *edit.Similarity > 1) {
+			return "", fmt.Errorf("similarity must be between 0.0 and 1.0")
+		}
 
 		normalizedOld := ConvertLineEndings(edit.OldText, LineEndingLF)
 		normalizedNew := ConvertLineEndings(edit.NewText, LineEndingLF)
@@ -130,30 +133,118 @@ func applyEdits(content string, edits []EditOperation) (string, error) {
 			modifiedContent = result
 			continue
 		}
+		if edit.Similarity != nil {
+			candidate := closestCandidate(modifiedContent, normalizedOld)
+			if candidate.start >= 0 && candidate.score >= *edit.Similarity {
+				modifiedContent = replaceLineBlock(modifiedContent, normalizedOld, normalizedNew, candidate.start, candidate.lines)
+				continue
+			}
+			return "", noMatchError(modifiedContent, normalizedOld, edit.OldText, edit.Similarity)
+		}
 
-		return "", noMatchError(modifiedContent, normalizedOld, edit.OldText)
+		return "", noMatchError(modifiedContent, normalizedOld, edit.OldText, nil)
 	}
 
 	return modifiedContent, nil
 }
 
 // noMatchError wraps ErrEditNoMatch, appending the closest matching block if found.
-func noMatchError(content, normalizedOld, rawOld string) error {
-	line, count := longestMatchingBlock(content, normalizedOld)
-	if count == 0 {
+func noMatchError(content, normalizedOld, rawOld string, threshold *float64) error {
+	candidate := closestCandidate(content, normalizedOld)
+	if candidate.start < 0 || candidate.score == 0 {
+		if threshold != nil {
+			return fmt.Errorf("%w:\n%s\n\nBest candidate scored %.2f, threshold %g",
+				ErrEditNoMatch, rawOld, candidate.score, *threshold)
+		}
 		return fmt.Errorf("%w:\n%s", ErrEditNoMatch, rawOld)
 	}
 
 	lines := strings.Split(content, "\n")
-	start := max(0, line-1)
-	end := min(len(lines), line+count+1)
+	start := max(0, candidate.start-1)
+	end := min(len(lines), candidate.start+candidate.lines+1)
 	snippet := strings.Join(lines[start:end], "\n")
+	score := ""
+	if threshold != nil {
+		score = fmt.Sprintf(" Best candidate scored %.2f, threshold %g.", candidate.score, *threshold)
+	}
 
 	return fmt.Errorf("%w:\n%s\n\n"+
-		"HINT: the closest match starts at line %d (%d consecutive lines matched, ignoring whitespace).\n"+
+		"HINT: the closest match starts at line %d (%d line edits away, ignoring whitespace).%s\n"+
 		"Actual file content there:\n%s\n\n"+
 		"Copy the snippet above into oldText and retry",
-		ErrEditNoMatch, rawOld, line+1, count, snippet)
+		ErrEditNoMatch, rawOld, candidate.start+1, candidate.distance, score, snippet)
+}
+
+type matchCandidate struct {
+	start    int
+	lines    int
+	distance int
+	score    float64
+}
+
+// closestCandidate uses normalized line edit distance and bounds the span.
+func closestCandidate(content, oldText string) matchCandidate {
+	contentLines := strings.Split(content, "\n")
+	oldLines := strings.Split(oldText, "\n")
+	if len(contentLines) == 0 || len(oldLines) == 0 {
+		return matchCandidate{start: -1}
+	}
+
+	best := matchCandidate{start: -1, score: -1}
+	maxLines := min(len(contentLines), len(oldLines)*2)
+	for size := 1; size <= maxLines; size++ {
+		for i := 0; i <= len(contentLines)-size; i++ {
+			distance := lineEditDistance(oldLines, contentLines[i:i+size])
+			if distance > len(oldLines) {
+				continue
+			}
+			score := 1 - float64(distance)/float64(max(len(oldLines), size))
+			if score > best.score || score == best.score && distance < best.distance {
+				best = matchCandidate{start: i, lines: size, distance: distance, score: score}
+			}
+		}
+	}
+	return best
+}
+
+func lineEditDistance(a, b []string) int {
+	previous := make([]int, len(b)+1)
+	for j := range previous {
+		previous[j] = j
+	}
+	for i, left := range a {
+		current := make([]int, len(b)+1)
+		current[0] = i + 1
+		for j, right := range b {
+			cost := 1
+			if strings.TrimSpace(left) == strings.TrimSpace(right) {
+				cost = 0
+			}
+			current[j+1] = min(previous[j+1]+1, current[j]+1, previous[j]+cost)
+		}
+		previous = current
+	}
+	return previous[len(b)]
+}
+
+func replaceLineBlock(content, oldText, newText string, start, oldLineCount int) string {
+	contentLines := strings.Split(content, "\n")
+	oldLines := strings.Split(oldText, "\n")
+	newLines := strings.Split(newText, "\n")
+	baseIndent := getLeadingWhitespace(contentLines[start])
+	for i := range newLines {
+		if i == 0 {
+			newLines[i] = baseIndent + strings.TrimLeft(newLines[i], " \t")
+		} else {
+			newLines[i] = adjustRelativeIndent(oldLines, newLines[i], i, baseIndent)
+		}
+	}
+
+	result := make([]string, 0, len(contentLines)-oldLineCount+len(newLines))
+	result = append(result, contentLines[:start]...)
+	result = append(result, newLines...)
+	result = append(result, contentLines[start+oldLineCount:]...)
+	return strings.Join(result, "\n")
 }
 
 // longestMatchingBlock returns the start line and length of the longest run of
@@ -199,23 +290,7 @@ func tryFlexibleMatch(content, oldText, newText string) (bool, string) {
 		}
 
 		if isMatch {
-			originalIndent := getLeadingWhitespace(contentLines[i])
-			newLines := strings.Split(newText, "\n")
-
-			for j := range newLines {
-				if j == 0 {
-					newLines[j] = originalIndent + strings.TrimLeft(newLines[j], " \t")
-				} else {
-					newLines[j] = adjustRelativeIndent(oldLines, newLines[j], j, originalIndent)
-				}
-			}
-
-			result := make([]string, 0, len(contentLines)-len(oldLines)+len(newLines))
-			result = append(result, contentLines[:i]...)
-			result = append(result, newLines...)
-			result = append(result, contentLines[i+len(oldLines):]...)
-
-			return true, strings.Join(result, "\n")
+			return true, replaceLineBlock(content, oldText, newText, i, len(oldLines))
 		}
 	}
 

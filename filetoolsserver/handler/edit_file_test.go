@@ -469,3 +469,50 @@ func TestApplyEdits_NoMatchNoHintWhenNothingMatches(t *testing.T) {
 		t.Errorf("no hint expected when no lines match, got: %s", err.Error())
 	}
 }
+
+func TestApplyEdits_FuzzyMatch(t *testing.T) {
+	threshold := 0.66
+	got, err := applyEdits("func f() {\n\t// current comment\n\treturn 1\n}\n", []EditOperation{{
+		OldText: "func f() {\n\t// old comment\n\treturn 1", NewText: "func f() {\n\treturn 2", Similarity: &threshold,
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(got, "return 2") {
+		t.Fatalf("fuzzy edit not applied: %q", got)
+	}
+}
+
+func TestApplyEdits_FuzzyMissReportsScore(t *testing.T) {
+	threshold := 0.8
+	_, err := applyEdits("a\nb\nx\nd\n", []EditOperation{{
+		OldText: "a\nb\nc\nd", NewText: "changed", Similarity: &threshold,
+	}})
+	if err == nil || !strings.Contains(err.Error(), "Best candidate scored 0.75, threshold 0.8") {
+		t.Fatalf("expected score and threshold, got %v", err)
+	}
+}
+
+func TestApplyEdits_FuzzyThresholdBoundary(t *testing.T) {
+	threshold := 0.75
+	got, err := applyEdits("a\nb\nx\nd\n", []EditOperation{{
+		OldText: "a\nb\nc\nd", NewText: "changed", Similarity: &threshold,
+	}})
+	if err != nil || !strings.HasPrefix(got, "changed") {
+		t.Fatalf("boundary match failed: %q, %v", got, err)
+	}
+}
+
+func TestApplyEdits_FuzzyDoesNotSpanExtraLines(t *testing.T) {
+	threshold := 0.8
+	content := "func wanted() {\n\ta\n\tb\n\tc\n}\n\nfunc other() {\n\ta\n\textra\n\tb\n\tc\n}\n"
+	got, err := applyEdits(content, []EditOperation{{
+		OldText: "func other() {\n\ta\n\tb\n\tc", NewText: "wrong", Similarity: &threshold,
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(got, "func wanted()") || !strings.Contains(got, "\nwrong\n}") {
+		t.Fatalf("fuzzy match chose the wrong function: %q", got)
+	}
+}

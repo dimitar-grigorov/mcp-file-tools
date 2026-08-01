@@ -132,8 +132,9 @@ type SearchFilesOutput struct {
 }
 
 type EditOperation struct {
-	OldText string `json:"oldText"`
-	NewText string `json:"newText"`
+	OldText    string   `json:"oldText"`
+	NewText    string   `json:"newText"`
+	Similarity *float64 `json:"similarity,omitempty"`
 }
 
 // EditFileInput applies text replacements with whitespace-flexible matching.
