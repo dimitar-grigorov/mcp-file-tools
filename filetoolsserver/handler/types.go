@@ -141,7 +141,8 @@ type EditOperation struct {
 // Set DryRun to preview changes without writing.
 type EditFileInput struct {
 	Path          string          `json:"path"`
-	Edits         []EditOperation `json:"edits"`
+	Edits         []EditOperation `json:"edits,omitempty"`
+	Patch         string          `json:"patch,omitempty"`
 	DryRun        bool            `json:"dryRun,omitempty"`
 	Encoding      string          `json:"encoding,omitempty"`
 	ForceWritable *bool           `json:"forceWritable,omitempty"` // default: false - fail on read-only files

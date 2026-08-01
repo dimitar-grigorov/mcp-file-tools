@@ -158,11 +158,12 @@ Strip a UTF-8 BOM:
 
 ### edit_file
 
-Make line-based edits to a text file. Supports exact matching and whitespace-flexible matching. Returns a git-style unified diff showing changes.
+Make replacements or apply a unified diff to one text file. Returns a unified diff showing changes.
 
 **Parameters:**
 - `path` (required): Path to the file to edit
-- `edits` (required): Array of edit operations with `oldText`, `newText`, and optional `similarity` (0.0-1.0)
+- `edits`: Array of edit operations with `oldText`, `newText`, and optional `similarity` (0.0-1.0)
+- `patch`: Unified diff string with `---`, `+++`, and `@@` hunks
 - `dryRun` (optional): If true, returns diff without writing changes (default: false)
 - `encoding` (optional): File encoding (auto-detected if not specified)
 - `forceWritable` (optional): If true, clears read-only flag before editing (default: false — fails on read-only files)
@@ -171,12 +172,14 @@ Make line-based edits to a text file. Supports exact matching and whitespace-fle
 - Exact text matching (first occurrence)
 - Whitespace-flexible matching (ignores per-line leading *and* trailing whitespace; interior spacing must still match)
 - Optional fuzzy matching. The score is `1 - line edit distance / longer block length`, after trimming each line. Candidates more than `oldText`'s line count away are rejected.
+- Patch hunks use the same exact then whitespace-flexible matching. Multi-file patches are rejected.
 - Preserves original indentation
 - CRLF line endings normalized to LF, so CRLF/LF differences never block a match
 - Atomic write (temp file + rename)
 - Fails on read-only files by default (set `forceWritable: true` only when user explicitly requests it)
 
 Edits apply in order, and each one replaces only the **first** match remaining at that point.
+Pass exactly one of `edits` or `patch`. A diff returned by `edit_file` can be passed back as `patch` against the original file.
 If an exact edit fails, prefer copying the hint into `oldText`. Use `similarity` only to tolerate whitespace or comment drift, ideally with `dryRun: true`; it is not for different code. Below threshold, the error includes the best score.
 
 **Example:**

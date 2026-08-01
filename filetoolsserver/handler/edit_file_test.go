@@ -516,3 +516,109 @@ func TestApplyEdits_FuzzyDoesNotSpanExtraLines(t *testing.T) {
 		t.Fatalf("fuzzy match chose the wrong function: %q", got)
 	}
 }
+
+func TestHandleEditFile_Patch(t *testing.T) {
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+	testFile := filepath.Join(tempDir, "test.txt")
+	os.WriteFile(testFile, []byte("alpha\nbeta\ngamma\n"), 0644)
+
+	patch := "--- test.txt\n+++ test.txt\n@@ -1,3 +1,3 @@\n alpha\n-beta\n+BETA\n gamma\n"
+	result, output, err := h.HandleEditFile(context.Background(), nil, EditFileInput{Path: testFile, Patch: patch})
+	if err != nil || result.IsError {
+		t.Fatalf("patch failed: %v", err)
+	}
+	if !strings.Contains(output.Diff, "+BETA") {
+		t.Fatalf("missing returned diff: %q", output.Diff)
+	}
+	content, _ := os.ReadFile(testFile)
+	if string(content) != "alpha\nBETA\ngamma\n" {
+		t.Fatalf("unexpected content: %q", content)
+	}
+}
+
+func TestApplyPatch_RoundTripEditFileDiff(t *testing.T) {
+	original := "one\ntwo\nthree\n"
+	modified := "one\nTWO\nthree\n"
+	diff := createUnifiedDiff(original, modified, "test.txt")
+	got, err := applyPatch(original, diff)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != modified {
+		t.Fatalf("round trip mismatch: %q", got)
+	}
+}
+
+func TestApplyPatch_WhitespaceFlexible(t *testing.T) {
+	patch := "--- test.go\n+++ test.go\n@@ -1,2 +1,2 @@\n if ok {\n-    old()\n+    new()\n"
+	got, err := applyPatch("\tif ok {\n\t\told()\n", patch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(got, "new()") {
+		t.Fatalf("flexible hunk not applied: %q", got)
+	}
+}
+
+func TestApplyPatch_FailingHunkHasHint(t *testing.T) {
+	patch := "--- test.txt\n+++ test.txt\n@@ -1,2 +1,2 @@\n func run() {\n-old\n+new\n"
+	_, err := applyPatch("func main() {\nold\n", patch)
+	if err == nil || !strings.Contains(err.Error(), "patch hunk 1 failed") || !strings.Contains(err.Error(), "HINT") {
+		t.Fatalf("expected hunk number and hint, got %v", err)
+	}
+}
+
+func TestHandleEditFile_RejectsPatchAndEdits(t *testing.T) {
+	h := NewHandler([]string{t.TempDir()})
+	result, _, err := h.HandleEditFile(context.Background(), nil, EditFileInput{
+		Path: "unused", Patch: "patch", Edits: []EditOperation{{OldText: "a", NewText: "b"}},
+	})
+	if err != nil || !result.IsError {
+		t.Fatalf("expected validation error, got %v", err)
+	}
+}
+
+func TestHandleEditFile_PatchDryRun(t *testing.T) {
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+	testFile := filepath.Join(tempDir, "test.txt")
+	os.WriteFile(testFile, []byte("old\n"), 0644)
+	patch := "--- test.txt\n+++ test.txt\n@@ -1 +1 @@\n-old\n+new\n"
+
+	result, _, err := h.HandleEditFile(context.Background(), nil, EditFileInput{Path: testFile, Patch: patch, DryRun: true})
+	if err != nil || result.IsError {
+		t.Fatalf("dry run failed: %v", err)
+	}
+	content, _ := os.ReadFile(testFile)
+	if string(content) != "old\n" {
+		t.Fatalf("dry run wrote the file: %q", content)
+	}
+}
+
+func TestHandleEditFile_PatchCP1251(t *testing.T) {
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+	testFile := filepath.Join(tempDir, "legacy.txt")
+	original := []byte{0xCD, 0xE5, 0xE2, 0xE0, 0xEB, 0xE8, 0xE4, 0xE5, 0xED}
+	os.WriteFile(testFile, original, 0644)
+	patch := "--- legacy.txt\n+++ legacy.txt\n@@ -1 +1 @@\n-Невалиден\n+Валиден\n"
+
+	result, _, err := h.HandleEditFile(context.Background(), nil, EditFileInput{Path: testFile, Patch: patch, Encoding: "cp1251"})
+	if err != nil || result.IsError {
+		t.Fatalf("CP1251 patch failed: %v", err)
+	}
+	content, _ := os.ReadFile(testFile)
+	expected := []byte{0xC2, 0xE0, 0xEB, 0xE8, 0xE4, 0xE5, 0xED}
+	if !bytes.Equal(content, expected) {
+		t.Fatalf("CP1251 round trip failed: %v", content)
+	}
+}
+
+func TestApplyPatch_RejectsMultipleFiles(t *testing.T) {
+	patch := "--- a\n+++ a\n@@ -1 +1 @@\n-a\n+A\n--- b\n+++ b\n@@ -1 +1 @@\n-b\n+B\n"
+	_, err := applyPatch("a\n", patch)
+	if err == nil || !strings.Contains(err.Error(), "multiple files") {
+		t.Fatalf("expected multi-file rejection, got %v", err)
+	}
+}

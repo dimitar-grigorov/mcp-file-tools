@@ -171,11 +171,11 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 	// WrapContentOnly: returns readable diff text instead of StructuredContent JSON.
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "edit_file",
-		Description: "Replace text in a file, whitespace-flexible. Returns a unified diff and keeps the file's encoding and line endings. PREFER THIS over read+write to modify a file. " +
+		Description: "Edit one file with replacements or a unified diff. Returns a unified diff and keeps the file's encoding and line endings. PREFER THIS over read+write to modify a file. " +
 			"In 'ask before edits' mode call dryRun=true first, show the diff, then dryRun=false once the user confirms; with auto-edit permissions go straight to dryRun=false. " +
 			"On no match, prefer fixing oldText from the closest-content hint. Alternatively retry that edit with similarity (0.0-1.0) for whitespace/comment drift, not different code. " +
 			"Do NOT re-read the file afterwards to verify: a success with a diff means the edit is on disk, a failed edit changes nothing. " +
-			"Parameters: path, edits [{oldText, newText, similarity?}], dryRun (default false), encoding (auto). " +
+			"Parameters: path; exactly one of edits [{oldText, newText, similarity?}] or patch (---/+++/@@ unified diff for one file); dryRun (default false); encoding (auto). " +
 			"Edits apply in order, each replacing only the FIRST match. Matching ignores per-line leading/trailing whitespace and CRLF/LF, but interior spacing must match; newText is re-indented. " +
 			`Example: {"path": "D:\\src\\unit1.pas", "edits": [{"oldText": "i: Integer;", "newText": "i: NativeInt;"}, {"oldText": "for i := 0 to 10 do", "newText": "for i := 0 to 20 do"}], "dryRun": true}`,
 		Annotations: &mcp.ToolAnnotations{
