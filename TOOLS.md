@@ -3,7 +3,7 @@
 ## Large results
 
 The tools that can legitimately return a lot of text — `read_text_file`, `read_multiple_files`,
-`grep_text_files`, `tree`, `directory_tree` — declare `anthropic/maxResultSizeChars` in their
+`grep_text_files` and `tree` — declare `anthropic/maxResultSizeChars` in their
 `tools/list` `_meta`. Clients that honour it (Claude Code) raise their default result cap for
 those tools instead of spilling the overflow to a file reference, which would otherwise hide
 part of a tree or search result from the model. Every other tool keeps the client default.
@@ -210,7 +210,7 @@ List files and directories with optional pattern filtering.
 
 ### tree
 
-Compact indented tree view optimized for AI/LLM consumption. Uses ~85% fewer tokens than `directory_tree`.
+Compact indented tree view optimized for AI/LLM consumption.
 
 **Parameters:**
 - `path` (required): Root directory
@@ -257,20 +257,6 @@ Compact indented tree view optimized for AI/LLM consumption. Uses ~85% fewer tok
   "truncated": false
 }
 ```
-
-### directory_tree (deprecated)
-
-Get a recursive tree view as JSON. **Use `tree` instead for 85% fewer tokens.**
-
-**Parameters:**
-- `path` (required): Root directory
-- `excludePatterns` (optional): Array of glob patterns to exclude
-
-**Response:**
-```json
-{
-  "tree": "{\"name\":\"project\",\"type\":\"directory\",\"children\":[...]}"
-}
 
 ### get_file_info
 

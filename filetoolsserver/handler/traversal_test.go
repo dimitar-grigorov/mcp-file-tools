@@ -5,7 +5,6 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -33,20 +32,6 @@ func TestTraversal_DirectoryLinkEscapeIsSkipped(t *testing.T) {
 	}
 	if strings.Contains(treeOut.Tree, "escape") || strings.Contains(treeOut.Tree, "secret.txt") {
 		t.Errorf("tree exposed the escape: %q", treeOut.Tree)
-	}
-
-	_, dirTreeOut, err := h.HandleDirectoryTree(context.Background(), nil, DirectoryTreeInput{Path: allowedDir})
-	if err != nil {
-		t.Fatal(err)
-	}
-	var entries []TreeEntry
-	if err := json.Unmarshal([]byte(dirTreeOut.Tree), &entries); err != nil {
-		t.Fatal(err)
-	}
-	for _, e := range entries {
-		if e.Name != "keep.txt" {
-			t.Errorf("directory_tree exposed %q", e.Name)
-		}
 	}
 
 	_, searchOut, err := h.HandleSearchFiles(context.Background(), nil, SearchFilesInput{Path: allowedDir, Pattern: "*.txt"})
@@ -85,11 +70,6 @@ func TestTraversal_CancelledContext(t *testing.T) {
 		t.Fatal(err)
 	} else if !out.Truncated {
 		t.Error("tree: expected truncated=true on a cancelled context")
-	}
-	if res, _, err := h.HandleDirectoryTree(ctx, nil, DirectoryTreeInput{Path: tempDir}); err != nil {
-		t.Fatal(err)
-	} else if !res.IsError {
-		t.Error("directory_tree: expected an error result on a cancelled context")
 	}
 	if res, _, err := h.HandleSearchFiles(ctx, nil, SearchFilesInput{Path: tempDir, Pattern: "*.txt"}); err != nil {
 		t.Fatal(err)

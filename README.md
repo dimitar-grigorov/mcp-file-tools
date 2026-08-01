@@ -25,7 +25,7 @@ tool owns the file.
 
 ## What It Does
 
-Provides 22 tools for file operations with automatic encoding conversion:
+Provides 21 tools for file operations with automatic encoding conversion:
 - [`read_text_file`](TOOLS.md#read_text_file) - Read files with encoding auto-detection and conversion
 - [`read_multiple_files`](TOOLS.md#read_multiple_files) - Read multiple files concurrently with encoding support
 - [`write_file`](TOOLS.md#write_file) - Write files in specific encodings
@@ -34,7 +34,6 @@ Provides 22 tools for file operations with automatic encoding conversion:
 - [`delete_file`](TOOLS.md#delete_file) - Delete a file
 - [`list_directory`](TOOLS.md#list_directory) - Browse directories with pattern filtering
 - [`tree`](TOOLS.md#tree) - Compact indented tree view (85% fewer tokens than JSON)
-- [`directory_tree`](TOOLS.md#directory_tree-deprecated) - Get recursive tree view as JSON (deprecated, use `tree`)
 - [`search_files`](TOOLS.md#search_files) - Recursively search for files matching glob patterns
 - [`grep_text_files`](TOOLS.md#grep_text_files) - Regex search in file contents with encoding support
 - [`detect_encoding`](TOOLS.md#detect_encoding) - Auto-detect file encoding with confidence score

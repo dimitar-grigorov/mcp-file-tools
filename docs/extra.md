@@ -81,7 +81,6 @@ left out, so Claude asks before them:
       "mcp__file-tools__copy_file",
       "mcp__file-tools__list_directory",
       "mcp__file-tools__tree",
-      "mcp__file-tools__directory_tree",
       "mcp__file-tools__search_files",
       "mcp__file-tools__grep_text_files",
       "mcp__file-tools__detect_encoding",

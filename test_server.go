@@ -10,10 +10,10 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/dimitar-grigorov/mcp-file-tools/filetoolsserver"
 	"github.com/dimitar-grigorov/mcp-file-tools/filetoolsserver/handler"
@@ -78,20 +78,11 @@ func main() {
 	os.Mkdir(filepath.Join(tempDir, "subdir"), 0755)
 	os.WriteFile(filepath.Join(tempDir, "subdir", "nested.txt"), []byte("x"), 0644)
 
-	r10, o10, _ := h.HandleDirectoryTree(ctx, nil, handler.DirectoryTreeInput{Path: tempDir})
-	var tree []handler.TreeEntry
-	json.Unmarshal([]byte(o10.Tree), &tree)
-	check("directory_tree", !r10.IsError && len(tree) >= 2)
+	r10, o10, _ := h.HandleTree(ctx, nil, handler.TreeInput{Path: tempDir})
+	check("tree", !r10.IsError && o10.FileCount >= 2 && o10.DirCount >= 1)
 
-	r11, o11, _ := h.HandleDirectoryTree(ctx, nil, handler.DirectoryTreeInput{Path: tempDir, ExcludePatterns: []string{"*.txt"}})
-	json.Unmarshal([]byte(o11.Tree), &tree)
-	hasFile := false
-	for _, e := range tree {
-		if e.Type == "file" {
-			hasFile = true
-		}
-	}
-	check("directory_tree (exclude)", !r11.IsError && !hasFile)
+	r11, o11, _ := h.HandleTree(ctx, nil, handler.TreeInput{Path: tempDir, Exclude: []string{"*.txt"}})
+	check("tree (exclude)", !r11.IsError && !strings.Contains(o11.Tree, ".txt"))
 
 	// Offset/Limit pagination
 	multiFile := filepath.Join(tempDir, "multi.txt")

@@ -107,11 +107,7 @@
     },
     {
       "name": "tree",
-      "description": "Compact indented tree view (85% fewer tokens)"
-    },
-    {
-      "name": "directory_tree",
-      "description": "Recursive tree view as JSON (deprecated, use tree)"
+      "description": "Compact indented tree view of directory structure"
     },
     {
       "name": "search_files",

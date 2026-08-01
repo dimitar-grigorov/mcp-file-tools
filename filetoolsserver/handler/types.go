@@ -89,22 +89,6 @@ type GetFileInfoOutput struct {
 	Permissions string `json:"permissions"`
 }
 
-// DirectoryTreeInput - deprecated, use TreeInput instead
-type DirectoryTreeInput struct {
-	Path            string   `json:"path"`
-	ExcludePatterns []string `json:"excludePatterns,omitempty"`
-}
-
-type DirectoryTreeOutput struct {
-	Tree string `json:"tree"`
-}
-
-type TreeEntry struct {
-	Name     string       `json:"name"`
-	Type     string       `json:"type"`
-	Children *[]TreeEntry `json:"children,omitempty"`
-}
-
 type CreateDirectoryInput struct {
 	Path string `json:"path"`
 }

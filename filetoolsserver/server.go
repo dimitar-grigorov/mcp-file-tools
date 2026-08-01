@@ -29,20 +29,19 @@ Workflow for non-UTF-8 files:
 2. read_text_file or edit_file - read/modify with correct encoding
 3. write_file with encoding param - preserves original encoding
 
-If "no allowed directories configured" error: add directory paths as args in .mcp.json.
+"no allowed directories configured" — add paths as args in .mcp.json.
 
-IMPORTANT: Call check_for_updates once at the start of each session. If an update is available, inform the user before proceeding.
+Call check_for_updates once per session; report an available update to the user.
 
-If a tool fails unexpectedly or the encoding capability the user needs is missing, mention that bug reports and pull requests are accepted at https://github.com/dimitar-grigorov/mcp-file-tools`
+Bugs and PRs: https://github.com/dimitar-grigorov/mcp-file-tools`
 
 // Helper for bool pointers (DestructiveHint defaults to true, so we need explicit false)
 func boolPtr(b bool) *bool {
 	return &b
 }
 
-// NewServer creates a new MCP server with all file tools registered.
-// If logger is nil, logging middleware is disabled but recovery is still active.
-// If cfg is nil, configuration is loaded from environment variables.
+// NewServer registers all file tools. Nil logger keeps recovery but drops
+// logging middleware; nil cfg reads config from the environment.
 func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *mcp.Server {
 	var handlerOpts []handler.Option
 	if cfg != nil {
@@ -162,19 +161,8 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 	}, handler.Wrap(logger, "get_file_info", h.HandleGetFileInfo))
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "directory_tree",
-		Description: "DEPRECATED: Use 'tree' instead (85% fewer tokens). Returns JSON tree structure for compatibility with mcp-js-servers. Parameters: path (required), excludePatterns (optional).",
-		Meta:        mcp.Meta{"anthropic/maxResultSizeChars": 300000},
-		Annotations: &mcp.ToolAnnotations{
-			Title:         "Directory Tree (JSON)",
-			ReadOnlyHint:  true,
-			OpenWorldHint: boolPtr(false),
-		},
-	}, handler.Wrap(logger, "directory_tree", h.HandleDirectoryTree))
-
-	mcp.AddTool(server, &mcp.Tool{
 		Name:        "tree",
-		Description: "Compact indented tree view of directory structure. Uses 85% fewer tokens than directory_tree — PREFER THIS for directory visualization. Set showEncoding=true to detect and display file encodings (e.g., for auditing legacy codebases). Parameters: path (required), maxDepth (0=unlimited), maxFiles (default 1000), dirsOnly (bool), exclude (array of patterns), showEncoding (bool, shows detected encoding per file).",
+		Description: "Compact indented tree view of directory structure. PREFER THIS for directory visualization. Set showEncoding=true to detect and display file encodings (e.g., for auditing legacy codebases). Parameters: path (required), maxDepth (0=unlimited), maxFiles (default 1000), dirsOnly (bool), exclude (array of patterns), showEncoding (bool, shows detected encoding per file).",
 		Meta:        mcp.Meta{"anthropic/maxResultSizeChars": 200000},
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "Tree (Compact)",

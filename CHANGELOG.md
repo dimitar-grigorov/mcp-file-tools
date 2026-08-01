@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed — BREAKING
+
+- **`directory_tree` is gone.** It had been deprecated in favour of `tree`,
+  which returns the same structure in ~85% fewer tokens. Callers still using it
+  should switch to `tree`; `excludePatterns` is spelled `exclude` there, and the
+  result is indented text with `fileCount`/`dirCount` rather than JSON.
+
+  The tool count drops from 22 to 21.
+
 ### Changed
 
 - **Upgraded to `modelcontextprotocol/go-sdk` v1.7.0** (MCP spec `2026-07-28`).
@@ -34,10 +43,9 @@ and are retained for older clients.
   basename globs, not arrays). Mirrored in `TOOLS.md`.
 
 - **`anthropic/maxResultSizeChars` declared** on the tools that can return large
-  output: `read_text_file` and `tree` (200,000), `read_multiple_files`,
-  `grep_text_files` and `directory_tree` (300,000). Without it the client
-  truncates those results to a file reference, hiding part of a tree or search
-  result from the model.
+  output: `read_text_file` and `tree` (200,000), `read_multiple_files` and
+  `grep_text_files` (300,000). Without it the client truncates those results to
+  a file reference, hiding part of a tree or search result from the model.
 
 ## [2.0.1] - 2026-07-27
 
