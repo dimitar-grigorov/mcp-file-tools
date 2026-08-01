@@ -56,10 +56,19 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 	}
 
 	serverOpts := &mcp.ServerOptions{
-		Instructions:            serverInstructions,
-		Logger:                  logger,
-		InitializedHandler:      createInitializedHandler(h),
+		Instructions:       serverInstructions,
+		Logger:             logger,
+		InitializedHandler: createInitializedHandler(h),
+		// Deprecated in 2026-07-28 (the notification was removed), kept for older clients.
 		RootsListChangedHandler: createRootsListChangedHandler(h),
+		// Advertise tools without list-changed notifications. The tool set is
+		// static and never mutates at runtime, so we never emit list_changed.
+		// Left unset, the SDK infers listChanged:true from the presence of tools
+		// and also advertises logging, which 2026-07-28 deprecates. Declaring
+		// this explicitly keeps the advertised capabilities honest.
+		Capabilities: &mcp.ServerCapabilities{
+			Tools: &mcp.ToolCapabilities{},
+		},
 	}
 	server := mcp.NewServer(impl, serverOpts)
 

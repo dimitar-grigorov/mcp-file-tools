@@ -3,6 +3,9 @@
 
 package filetoolsserver
 
+// Roots are deprecated as of 2026-07-28 but still functional; older clients rely on them.
+//lint:file-ignore SA1019 intentional: roots kept for pre-2026-07-28 clients
+
 import (
 	"context"
 	"fmt"

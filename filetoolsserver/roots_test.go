@@ -3,6 +3,8 @@
 
 package filetoolsserver
 
+//lint:file-ignore SA1019 intentional: roots kept for pre-2026-07-28 clients
+
 import (
 	"path/filepath"
 	"runtime"

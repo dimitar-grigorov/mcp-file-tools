@@ -6,6 +6,27 @@ versions see the [GitHub releases](https://github.com/dimitar-grigorov/mcp-file-
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Upgraded to `modelcontextprotocol/go-sdk` v1.7.0**, which implements MCP
+  spec revision `2026-07-28`. Older clients are unaffected — the SDK serves both
+  the legacy `initialize` handshake and the new stateless model behind the same
+  API, and falls back to `initialize` when `server/discover` fails.
+
+- **Server capabilities are now declared explicitly** as `tools` only. Left
+  unset, the SDK advertised `logging` (deprecated in `2026-07-28`) and inferred
+  `listChanged: true` from the presence of tools — a capability this server does
+  not support, since its tool set is static and it never emits `list_changed`.
+
+- `readOnlyHint` and `idempotentHint` are now always present in `tools/list`
+  output instead of being omitted when `false`. This is an SDK-side wire change;
+  it makes "false" and "unset" distinguishable.
+
+Roots, sampling and MCP logging are deprecated in `2026-07-28` with a 12-month
+window. The roots integration is retained as-is for pre-`2026-07-28` clients.
+
 ## [2.0.1] - 2026-07-27
 
 ### Fixed
