@@ -10,37 +10,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Upgraded to `modelcontextprotocol/go-sdk` v1.7.0**, which implements MCP
-  spec revision `2026-07-28`. Older clients are unaffected — the SDK serves both
-  the legacy `initialize` handshake and the new stateless model behind the same
-  API, and falls back to `initialize` when `server/discover` fails.
+- **Upgraded to `modelcontextprotocol/go-sdk` v1.7.0** (MCP spec `2026-07-28`).
+  Older clients are unaffected: the SDK serves both the legacy `initialize`
+  handshake and the new stateless model behind the same API.
 
 - **Server capabilities are now declared explicitly** as `tools` only. Left
-  unset, the SDK advertised `logging` (deprecated in `2026-07-28`) and inferred
-  `listChanged: true` from the presence of tools — a capability this server does
-  not support, since its tool set is static and it never emits `list_changed`.
+  unset, the SDK advertised `logging` (now deprecated) and inferred
+  `listChanged: true` — a capability this server does not support, since its
+  tool set is static and it never emits `list_changed`.
 
 - `readOnlyHint` and `idempotentHint` are now always present in `tools/list`
-  output instead of being omitted when `false`. This is an SDK-side wire change;
-  it makes "false" and "unset" distinguishable.
+  instead of omitted when `false`, so "false" and "unset" are distinguishable.
 
-Roots, sampling and MCP logging are deprecated in `2026-07-28` with a 12-month
-window. The roots integration is retained as-is for pre-`2026-07-28` clients.
+Roots and MCP logging are deprecated in `2026-07-28` with a 12-month window,
+and are retained for older clients.
 
 ### Added
 
-- **Usage examples in the descriptions of the five most ambiguous tools** —
+- **Usage examples in the five most ambiguous tool descriptions** —
   `read_text_file` (offset/limit paging), `write_file` and `convert_encoding`
-  (BOM modes, auto-detected vs explicit `from`), `edit_file` (multi-edit arrays
-  and what the whitespace latitude actually permits), and `grep_text_files`
-  (`include`/`exclude` are single basename globs, not arrays). These document
-  behaviour the generated JSON schema cannot express. Mirrored in `TOOLS.md`.
+  (BOM modes, auto-detected vs explicit `from`), `edit_file` (multi-edit arrays,
+  whitespace latitude), `grep_text_files` (`include`/`exclude` are single
+  basename globs, not arrays). Mirrored in `TOOLS.md`.
 
-- **`anthropic/maxResultSizeChars` declared** on the five tools that can
-  legitimately return large output: `read_text_file` and `tree` (200,000),
-  `read_multiple_files`, `grep_text_files` and `directory_tree` (300,000).
-  Clients that honour it stop truncating those results to a file reference,
-  which silently hid part of a tree or search result from the model.
+- **`anthropic/maxResultSizeChars` declared** on the tools that can return large
+  output: `read_text_file` and `tree` (200,000), `read_multiple_files`,
+  `grep_text_files` and `directory_tree` (300,000). Without it the client
+  truncates those results to a file reference, hiding part of a tree or search
+  result from the model.
 
 ## [2.0.1] - 2026-07-27
 

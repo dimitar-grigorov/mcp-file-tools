@@ -3,9 +3,6 @@
 
 package filetoolsserver
 
-// Roots are deprecated as of 2026-07-28 but still functional; older clients rely on them.
-//lint:file-ignore SA1019 intentional: roots kept for pre-2026-07-28 clients
-
 import (
 	"context"
 	"fmt"
@@ -20,19 +17,34 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+// listRootURIs isolates the deprecated roots API to one deletable function.
+func listRootURIs(ctx context.Context, session *mcp.ServerSession) ([]string, error) {
+	//lint:ignore SA1019 roots kept for pre-2026-07-28 clients
+	result, err := session.ListRoots(ctx, &mcp.ListRootsParams{})
+	if err != nil {
+		return nil, err
+	}
+
+	uris := make([]string, 0, len(result.Roots))
+	for _, root := range result.Roots {
+		uris = append(uris, root.URI)
+	}
+	return uris, nil
+}
+
 func createInitializedHandler(h *handler.Handler) func(context.Context, *mcp.InitializedRequest) {
 	return func(ctx context.Context, req *mcp.InitializedRequest) {
 		// Async update check — runs regardless of roots support.
 		go handler.CheckForUpdatesAsync(req.Session, Version)
 
-		result, err := req.Session.ListRoots(ctx, &mcp.ListRootsParams{})
+		uris, err := listRootURIs(ctx, req.Session)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to request roots from client: %v\n", err)
 			return
 		}
 
-		if len(result.Roots) > 0 {
-			updateAllowedDirectoriesFromRoots(h, result.Roots)
+		if len(uris) > 0 {
+			updateAllowedDirectoriesFromRoots(h, uris)
 		} else {
 			currentDirs := h.GetAllowedDirectories()
 			if len(currentDirs) == 0 {
@@ -45,13 +57,13 @@ func createInitializedHandler(h *handler.Handler) func(context.Context, *mcp.Ini
 
 func createRootsListChangedHandler(h *handler.Handler) func(context.Context, *mcp.RootsListChangedRequest) {
 	return func(ctx context.Context, req *mcp.RootsListChangedRequest) {
-		result, err := req.Session.ListRoots(ctx, &mcp.ListRootsParams{})
+		uris, err := listRootURIs(ctx, req.Session)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to request updated roots from client: %v\n", err)
 			return
 		}
 
-		updateAllowedDirectoriesFromRoots(h, result.Roots)
+		updateAllowedDirectoriesFromRoots(h, uris)
 	}
 }
 
@@ -75,11 +87,11 @@ func fileURIToPath(uri string) string {
 	return path
 }
 
-func updateAllowedDirectoriesFromRoots(h *handler.Handler, roots []*mcp.Root) {
-	validatedDirs := make([]string, 0, len(roots))
+func updateAllowedDirectoriesFromRoots(h *handler.Handler, rootURIs []string) {
+	validatedDirs := make([]string, 0, len(rootURIs))
 
-	for _, root := range roots {
-		rootPath := fileURIToPath(root.URI)
+	for _, uri := range rootURIs {
+		rootPath := fileURIToPath(uri)
 
 		normalized, err := security.NormalizeAllowedDirs([]string{rootPath})
 		if err != nil {

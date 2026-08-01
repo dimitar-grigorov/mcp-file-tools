@@ -3,15 +3,12 @@
 
 package filetoolsserver
 
-//lint:file-ignore SA1019 intentional: roots kept for pre-2026-07-28 clients
-
 import (
 	"path/filepath"
 	"runtime"
 	"testing"
 
 	"github.com/dimitar-grigorov/mcp-file-tools/filetoolsserver/handler"
-	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func TestUpdateAllowedDirectoriesFromRoots_ValidRoots(t *testing.T) {
@@ -21,10 +18,10 @@ func TestUpdateAllowedDirectoriesFromRoots_ValidRoots(t *testing.T) {
 
 	h := handler.NewHandler([]string{})
 
-	// Create mock roots with file:// URIs (standard format for both platforms)
-	roots := []*mcp.Root{
-		{URI: "file:///" + filepath.ToSlash(tempDir1)},
-		{URI: "file:///" + filepath.ToSlash(tempDir2)},
+	// file:// URIs work on both platforms
+	roots := []string{
+		"file:///" + filepath.ToSlash(tempDir1),
+		"file:///" + filepath.ToSlash(tempDir2),
 	}
 
 	updateAllowedDirectoriesFromRoots(h, roots)
@@ -38,7 +35,7 @@ func TestUpdateAllowedDirectoriesFromRoots_ValidRoots(t *testing.T) {
 func TestUpdateAllowedDirectoriesFromRoots_EmptyRoots(t *testing.T) {
 	h := handler.NewHandler([]string{})
 
-	updateAllowedDirectoriesFromRoots(h, []*mcp.Root{})
+	updateAllowedDirectoriesFromRoots(h, []string{})
 
 	dirs := h.GetAllowedDirectories()
 	if len(dirs) != 0 {
@@ -56,8 +53,8 @@ func TestUpdateAllowedDirectoriesFromRoots_WindowsPath(t *testing.T) {
 	h := handler.NewHandler([]string{})
 
 	// Windows format with drive letter
-	roots := []*mcp.Root{
-		{URI: "file:///" + filepath.ToSlash(tempDir)},
+	roots := []string{
+		"file:///" + filepath.ToSlash(tempDir),
 	}
 
 	updateAllowedDirectoriesFromRoots(h, roots)
@@ -83,8 +80,8 @@ func TestUpdateAllowedDirectoriesFromRoots_UnixPath(t *testing.T) {
 	h := handler.NewHandler([]string{})
 
 	// Standard file URI: file:///home/user (three slashes)
-	roots := []*mcp.Root{
-		{URI: "file://" + tempDir}, // file:// + /tmp/... = file:///tmp/...
+	roots := []string{
+		"file://" + tempDir, // file:// + /tmp/... = file:///tmp/...
 	}
 
 	updateAllowedDirectoriesFromRoots(h, roots)
@@ -139,8 +136,8 @@ func TestUpdateAllowedDirectoriesFromRoots_MergesWithCLIBaseline(t *testing.T) {
 	}
 
 	// Update with a different root - should augment the CLI baseline, not replace it.
-	roots := []*mcp.Root{
-		{URI: "file:///" + filepath.ToSlash(tempDir2)},
+	roots := []string{
+		"file:///" + filepath.ToSlash(tempDir2),
 	}
 
 	updateAllowedDirectoriesFromRoots(h, roots)
@@ -171,8 +168,8 @@ func TestUpdateAllowedDirectoriesFromRoots_DedupsBaseline(t *testing.T) {
 	h := handler.NewHandler([]string{tempDir1})
 
 	// Root identical to the CLI baseline must not produce a duplicate.
-	roots := []*mcp.Root{
-		{URI: "file:///" + filepath.ToSlash(tempDir1)},
+	roots := []string{
+		"file:///" + filepath.ToSlash(tempDir1),
 	}
 
 	updateAllowedDirectoriesFromRoots(h, roots)

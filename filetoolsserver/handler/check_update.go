@@ -49,8 +49,7 @@ func CheckForUpdatesAsync(session *mcp.ServerSession, version string) {
 	defer cancel()
 
 	if msg := updater.Check(ctx, version, false); msg != "" {
-		// MCP logging is deprecated as of 2026-07-28 but still delivered to older clients.
-		//lint:ignore SA1019 intentional: notice still reaches pre-2026-07-28 clients
+		//lint:ignore SA1019 logging deprecated in 2026-07-28, still reaches older clients
 		_ = session.Log(ctx, &mcp.LoggingMessageParams{
 			Level:  "notice",
 			Logger: "update-checker",
