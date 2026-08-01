@@ -60,3 +60,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  # Chained call rather than a `release: published` trigger: GoReleaser creates
+  # the release with GITHUB_TOKEN, whose events never trigger other workflows.
+  publish-registry:
+    needs: release
+    uses: ./.github/workflows/publish-registry.yml
+    with:
+      version: ${{ github.ref_name }}
+    permissions:
+      contents: read
+      id-token: write
+

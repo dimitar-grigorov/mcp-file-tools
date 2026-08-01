@@ -1,12 +1,20 @@
 name: Publish to MCP Registry
 
+# No `release: published` trigger: GoReleaser creates the release with the
+# workflow's GITHUB_TOKEN, and GitHub suppresses workflow triggers from
+# GITHUB_TOKEN events - so that trigger never fired (v2.0.1 and v3.0.0 were
+# silently never published). Release.yml calls this workflow directly instead.
 on:
-  release:
-    types: [published]   # auto-publish after GoReleaser creates the release
+  workflow_call:         # chained from release.yml after GoReleaser
+    inputs:
+      version:
+        description: 'Version tag to publish (e.g., v3.0.0)'
+        required: true
+        type: string
   workflow_dispatch:     # manual re-publish of a specific tag
     inputs:
       version:
-        description: 'Version tag to publish (e.g., v1.4.8)'
+        description: 'Version tag to publish (e.g., v3.0.0)'
         required: true
         type: string
 
@@ -18,7 +26,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     env:
-      VERSION_TAG: ${{ inputs.version || github.event.release.tag_name }}
+      VERSION_TAG: ${{ inputs.version }}
       MCP_PUBLISHER_VERSION: 1.8.0
       MCP_PUBLISHER_SHA256: 1370446bbe74d562608e8005a6ccce02d146a661fbd78674e11cc70b9618d6cf
     steps:
