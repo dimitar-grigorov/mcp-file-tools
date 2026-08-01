@@ -299,6 +299,7 @@ The server can be configured via environment variables:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `MCP_DEFAULT_ENCODING` | Default encoding for `write_file` on **new** files when none specified. Existing files keep their detected encoding. Set to `cp1251` to restore the pre-2.0.0 default. | `utf-8` |
+| `MCP_DEFAULT_LINE_ENDINGS` | Line endings for `write_file` on **new** files (`crlf`/`lf`). Existing files keep their own style regardless. | unset (write unchanged) |
 | `MCP_MEMORY_THRESHOLD` | Memory threshold in bytes. Files smaller are loaded into memory for faster I/O; larger files use streaming. Also affects encoding detection mode. | `67108864` (64MB) |
 
 To override, set environment variables in your config (Claude Desktop example):

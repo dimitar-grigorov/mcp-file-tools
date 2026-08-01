@@ -8,14 +8,16 @@ import (
 	"log/slog"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
 )
 
 const (
 	// Environment variable names
-	EnvDefaultEncoding = "MCP_DEFAULT_ENCODING"
-	EnvMemoryThreshold = "MCP_MEMORY_THRESHOLD"
+	EnvDefaultEncoding   = "MCP_DEFAULT_ENCODING"
+	EnvMemoryThreshold   = "MCP_MEMORY_THRESHOLD"
+	EnvDefaultLineEnding = "MCP_DEFAULT_LINE_ENDINGS"
 
 	// Default values
 	DefaultEncoding = "utf-8"
@@ -36,6 +38,11 @@ type Config struct {
 	// Also gates encoding detection mode (full vs sample).
 	// Set via MCP_MEMORY_THRESHOLD. Default: 67108864 (64MB)
 	MemoryThreshold int64
+
+	// DefaultLineEndings is the fallback for write_file on a new file, or one with
+	// no line endings yet. Set via MCP_DEFAULT_LINE_ENDINGS ("crlf"/"lf").
+	// Empty means write the content unchanged.
+	DefaultLineEndings string
 }
 
 // Load reads configuration from environment variables with sensible defaults.
@@ -53,6 +60,17 @@ func Load() *Config {
 		} else {
 			slog.Warn("invalid MCP_DEFAULT_ENCODING, using default", "value", enc, "fallback", DefaultEncoding)
 		}
+	}
+
+	// Load default line endings from environment
+	switch strings.ToLower(strings.TrimSpace(os.Getenv(EnvDefaultLineEnding))) {
+	case "crlf":
+		cfg.DefaultLineEndings = "crlf"
+	case "lf":
+		cfg.DefaultLineEndings = "lf"
+	case "":
+	default:
+		slog.Warn("invalid MCP_DEFAULT_LINE_ENDINGS, ignoring", "value", os.Getenv(EnvDefaultLineEnding))
 	}
 
 	// Load memory threshold from environment

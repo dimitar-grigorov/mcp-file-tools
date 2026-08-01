@@ -17,6 +17,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   The tool count drops from 22 to 21.
 
+### Fixed
+
+- **`write_file` no longer leaves CRLF files with mixed line endings.**
+
+  It wrote `content` byte for byte, with no line-ending policy at all — while
+  `read_text_file` hands back `\r\n` intact and `edit_file` carefully restores
+  the original style. So the read → regenerate → `write_file` path corrupted a
+  CRLF file whenever the model emitted `\n` for the lines it rewrote, which is
+  what models naturally do. Intermittent by nature: `edit_file` was always safe,
+  so only full rewrites were affected.
+
+  `write_file` now converts content to the existing file's dominant style, and a
+  file that is already mixed gets repaired. New `lineEndings` parameter
+  (`preserve` default, `crlf`, `lf`, `asis`) and `MCP_DEFAULT_LINE_ENDINGS` for
+  new files.
+
+  **Behaviour change:** `write_file` is no longer byte-verbatim by default. Pass
+  `lineEndings: "asis"` for the old behaviour.
+
 ### Changed
 
 - **Upgraded to `modelcontextprotocol/go-sdk` v1.7.0** (MCP spec `2026-07-28`).

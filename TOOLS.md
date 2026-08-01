@@ -91,6 +91,19 @@ Write content to file. UTF-8 writes as-is; other encodings convert from UTF-8.
 - `content` (required): Content to write
 - `encoding` (optional): Target encoding. Defaults to the existing file's detected encoding; for a new file, to `MCP_DEFAULT_ENCODING` (`utf-8`)
 - `bom` (optional): `auto` (default — BOM for UTF-16 targets, keeps a BOM the file already had), `always`, `never`, `preserve`
+- `lineEndings` (optional): `preserve` (default), `crlf`, `lf`, `asis`
+
+**Line endings:**
+
+`preserve` converts the content to the existing file's dominant style before
+writing. This matters because a model rewriting a CRLF file usually emits `\n`
+for the lines it changes — written verbatim that leaves the file **mixed**.
+A file that is already mixed is repaired to whichever style is commoner.
+
+For a new file (or one with no line endings yet) the fallback is
+`MCP_DEFAULT_LINE_ENDINGS` (`crlf`/`lf`); unset, the content is written unchanged.
+
+Use `crlf`/`lf` to force a style, or `asis` for byte-for-byte writes.
 
 **BOM modes:**
 

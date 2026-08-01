@@ -23,6 +23,11 @@ func (h *Handler) HandleWriteFile(ctx context.Context, req *mcp.CallToolRequest,
 		return errorResult(err.Error()), WriteFileOutput{}, nil
 	}
 
+	eolPolicy, err := parseLineEndingPolicy(input.LineEndings)
+	if err != nil {
+		return errorResult(err.Error()), WriteFileOutput{}, nil
+	}
+
 	// Resolve encoding: explicit > preserve existing > configured default
 	encodingName, encodingFrom, err := h.resolveWriteEncoding(input.Encoding, v.Path)
 	if err != nil {
@@ -37,6 +42,12 @@ func (h *Handler) HandleWriteFile(ctx context.Context, req *mcp.CallToolRequest,
 	existing := existingBOM(v.Path)
 	if contentHadBOM {
 		existing = bomInfo{HasBOM: true, Type: canonicalCharset(encodingName)}
+	}
+
+	// Match the file's line endings; agents rewriting a CRLF file usually emit LF.
+	eolStyle := resolveLineEndingStyle(eolPolicy, v.Path, h.config.DefaultLineEndings)
+	if eolStyle != "" {
+		content = ConvertLineEndings(content, eolStyle)
 	}
 
 	var contentToWrite []byte

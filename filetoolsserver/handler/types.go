@@ -28,11 +28,13 @@ type ReadTextFileOutput struct {
 
 // WriteFileInput - encoding defaults to the existing file's encoding, else utf-8.
 // BOM: "auto" (default), "always", "never", "preserve".
+// LineEndings: "preserve" (default), "crlf", "lf", "asis".
 type WriteFileInput struct {
-	Path     string `json:"path"`
-	Content  string `json:"content"`
-	Encoding string `json:"encoding,omitempty"`
-	BOM      string `json:"bom,omitempty"`
+	Path        string `json:"path"`
+	Content     string `json:"content"`
+	Encoding    string `json:"encoding,omitempty"`
+	BOM         string `json:"bom,omitempty"`
+	LineEndings string `json:"lineEndings,omitempty"`
 }
 
 type WriteFileOutput struct {

@@ -34,6 +34,9 @@ var (
 
 	// ErrBOMPolicyInvalid is returned for an unknown bom policy, or one the encoding cannot satisfy.
 	ErrBOMPolicyInvalid = errkind.New(errkind.InvalidInput, "invalid bom policy")
+
+	// ErrLineEndingPolicyInvalid is returned for an unknown lineEndings policy.
+	ErrLineEndingPolicyInvalid = errkind.New(errkind.InvalidInput, "invalid lineEndings policy")
 )
 
 // Edit operation errors

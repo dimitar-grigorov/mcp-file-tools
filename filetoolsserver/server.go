@@ -229,6 +229,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 		Name: "write_file",
 		Description: "Write file with encoding conversion from UTF-8. PREFER THIS over built-in Write for non-UTF-8 files — converts UTF-8 content to target encoding, preserving legacy compatibility. Parameters: path (required), content (required), encoding (optional: defaults to an existing file's detected encoding, else utf-8), bom (optional: \"auto\" default — BOM for UTF-16 targets and keeps a BOM the file already had; \"always\", \"never\", \"preserve\"). Use after read_text_file to preserve original encoding. " +
 			"bom modes: \"auto\" writes a BOM for utf-16-* targets and otherwise keeps one only if the file already had a BOM of the same encoding; \"preserve\" keeps the existing BOM even when the encoding changed; \"never\" strips it; \"always\" fails on encodings that have no BOM (e.g. cp1251). " +
+			"lineEndings (optional): \"preserve\" default — content is converted to the existing file's style, so sending LF into a CRLF file will NOT leave it mixed. Also \"crlf\", \"lf\", or \"asis\" to write byte for byte. " +
 			`Example — strip a UTF-8 BOM that breaks PHP: {"path": "D:\\www\\index.php", "content": "<?php ...", "bom": "never"}`,
 		Annotations: &mcp.ToolAnnotations{
 			Title:           "Write File",
