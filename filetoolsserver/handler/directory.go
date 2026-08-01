@@ -42,9 +42,8 @@ func (h *Handler) HandleListDirectory(ctx context.Context, req *mcp.CallToolRequ
 	return &mcp.CallToolResult{}, ListDirectoryOutput{Files: files}, nil
 }
 
-// listDirectoryEntries filters and orders one directory's entries. Sorting by
-// name reads nothing beyond the name, so it costs no Info() call. stat is nil
-// outside tests.
+// listDirectoryEntries filters and orders one directory. Name sorting makes no
+// Info() call. stat is nil outside tests.
 func listDirectoryEntries(entries []fs.DirEntry, pattern, sortBy string, reverse bool, stat statFunc) ([]string, error) {
 	if stat == nil {
 		stat = statEntry

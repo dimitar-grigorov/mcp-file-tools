@@ -264,7 +264,6 @@ type ConvertEncodingOutput struct {
 
 // GrepInput for searching file contents with regex.
 // OutputMode: "content" (default), "files_with_matches", "count".
-// ContextBefore/ContextAfter apply to "content" only and are ignored elsewhere.
 type GrepInput struct {
 	Pattern       string   `json:"pattern"`
 	Paths         []string `json:"paths"`
@@ -296,8 +295,7 @@ type GrepFileCount struct {
 	Count int    `json:"count"`
 }
 
-// GrepOutput carries the fields for the requested output mode: Matches for
-// "content", Files for "files_with_matches", Counts for "count".
+// GrepOutput fills one field per output mode: Matches, Files or Counts.
 type GrepOutput struct {
 	Matches       []GrepMatch     `json:"matches"`
 	Files         []string        `json:"files,omitempty"`

@@ -10,29 +10,25 @@ import (
 	"sort"
 )
 
-// Sort modes for list_directory and search_files. Base order follows ls: name
-// ascending, mtime newest first, size largest first. reverse flips each.
+// Sort modes. Base order follows ls: name ascending, mtime newest, size largest.
 const (
 	sortByName  = "name"
 	sortByMtime = "mtime"
 	sortBySize  = "size"
 )
 
-// sortEntry is one result plus the keys it may be ordered on. mtime and size
-// stay zero when Info() failed, which puts the entry last in the base order.
+// sortEntry is one result plus its ordering keys.
 type sortEntry struct {
-	key   string // the returned string, and the tiebreaker
+	key   string // sort key and tiebreaker
 	value string // what the caller gets back
 	mtime int64
 	size  int64
 }
 
-// statFunc reads the sort keys off a directory entry. Both os.ReadDir entries
-// and filesystem.Entry satisfy fs.DirEntry, so one signature covers both callers.
+// statFunc reads sort keys off an entry; os.ReadDir and filesystem.Entry both fit.
 type statFunc func(fs.DirEntry) (mtime, size int64)
 
-// statEntry reads mtime and size. On Windows FindNextFile already carried them,
-// so Info() costs no syscall; elsewhere it is an lstat, hence the needsStat gate.
+// statEntry reads mtime and size. Free on Windows, an lstat elsewhere.
 func statEntry(e fs.DirEntry) (int64, int64) {
 	info, err := e.Info()
 	if err != nil {
@@ -55,8 +51,8 @@ func resolveSortBy(sortBy string) (string, error) {
 // needsStat reports whether the mode reads anything beyond the entry name.
 func needsStat(sortBy string) bool { return sortBy != sortByName }
 
-// sortLess reports whether a comes before b in the final output order.
-// The name tiebreaker makes it a total order, so reverse is just less(b, a).
+// sortLess reports whether a comes before b in output order. The name tiebreaker
+// makes it a total order, so reverse is just less(b, a).
 func sortLess(sortBy string, reverse bool) func(a, b sortEntry) bool {
 	base := func(a, b sortEntry) bool {
 		switch sortBy {
@@ -100,8 +96,8 @@ func (h *worstFirst) Pop() any {
 	return item
 }
 
-// topN keeps the best limit entries seen, in bounded memory. Sorting after a
-// cap would answer "the first N in walk order, sorted" — not the true top N.
+// topN keeps the best limit entries in bounded memory. Sorting after a cap would
+// answer "the first N in walk order, sorted" — not the true top N.
 type topN struct {
 	h     worstFirst
 	limit int

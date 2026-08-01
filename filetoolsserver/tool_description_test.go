@@ -10,8 +10,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// Claude Code truncates a tool description at 2KB, silently dropping whatever
-// follows. Keep every description under the limit.
+// Claude Code silently truncates a tool description at 2KB.
 const maxDescriptionBytes = 2048
 
 func listTools(t *testing.T) []*mcp.Tool {

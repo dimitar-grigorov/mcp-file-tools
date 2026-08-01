@@ -68,13 +68,9 @@ type searchOptions struct {
 	stat        statFunc
 }
 
-// searchFiles recursively searches for files matching the pattern.
-//
-// Sorting by name keeps the walk's early stop: walk order is near-lexical, so the
-// capped set is already close to the first maxResults names and the fast default
-// path costs no extra work. mtime and size cannot be capped that way — the newest
-// file may be the last one visited — so those walk the whole tree behind a bounded
-// heap and return the true top maxResults.
+// searchFiles recursively searches for files matching the pattern. Name keeps the
+// walk's early stop; mtime and size rank the whole tree behind a bounded heap,
+// since the newest file may be the last one visited.
 func searchFiles(ctx context.Context, rootPath string, sOpts searchOptions) ([]string, bool, error) {
 	opts := filesystem.Options{
 		AllowedDirs: sOpts.allowedDirs,

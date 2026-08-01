@@ -38,11 +38,10 @@ type grepOptions struct {
 	contextAfter  int
 	encoding      string
 	maxFileSize   int64
-	perFileLimit  int // 0 means no limit: count mode must see the whole file
+	perFileLimit  int // 0 = unlimited: count mode must see the whole file
 }
 
-// fileHits is one file's outcome. matches is filled in content mode only;
-// count is the number of matching lines, capped at 1 in files_with_matches.
+// fileHits is one file's outcome; matches is filled in content mode only.
 type fileHits struct {
 	matches []GrepMatch
 	count   int
@@ -185,7 +184,6 @@ func shouldIncludeFile(path string, include, exclude string) bool {
 
 // searchFiles searches all files with bounded concurrency, committing results in file
 // order so the truncated set is the same on every run, and stopping once the page is full.
-// Results before offset are counted and dropped; the mode decides what gets collected.
 func (h *Handler) searchFiles(ctx context.Context, files []string, opts grepOptions, maxMatches, offset int) GrepOutput {
 	out := GrepOutput{Matches: []GrepMatch{}}
 	skip, taken := offset, 0
@@ -233,9 +231,7 @@ func (h *Handler) searchFiles(ctx context.Context, files []string, opts grepOpti
 			return true
 		})
 
-	// totalMatches counts what the page actually reports: matching lines in content
-	// mode, paths in files_with_matches (one hit each, the search stopped there),
-	// and the summed per-file counts in count mode.
+	// totalMatches is what the page holds: lines, or paths, or the summed counts.
 	out.TotalMatches = taken
 	if opts.mode == outputModeCount {
 		out.TotalMatches = 0
@@ -246,8 +242,8 @@ func (h *Handler) searchFiles(ctx context.Context, files []string, opts grepOpti
 	return out
 }
 
-// searchSingleFile searches one file under the resolved options. In content mode it
-// collects matches; otherwise it only counts, so nothing is built to be thrown away.
+// searchSingleFile searches one file. Outside content mode it only counts, so
+// nothing is built to be thrown away.
 func searchSingleFile(path string, opts grepOptions) fileHits {
 	// Check file size - warn if large file will be loaded to memory
 	if info, err := os.Stat(path); err == nil && info.Size() > opts.maxFileSize {
@@ -270,7 +266,7 @@ func searchSingleFile(path string, opts grepOptions) fileHits {
 			continue
 		}
 		if opts.mode != outputModeContent {
-			// The path is all the caller needs; carry it on a bare match.
+			// The path is all the caller needs, so carry it on a bare match.
 			if hits.count == 0 {
 				hits.matches = []GrepMatch{{Path: path}}
 			}
@@ -308,8 +304,8 @@ func searchSingleFile(path string, opts grepOptions) fileHits {
 	return hits
 }
 
-// findLineMatches returns the match spans on a line: every occurrence when
-// matchesOnly extracts substrings, otherwise just the first — one match per line.
+// findLineMatches returns every occurrence when matchesOnly extracts substrings,
+// otherwise just the first — one match per line.
 func findLineMatches(opts grepOptions, line string) [][]int {
 	if opts.matchesOnly && opts.mode == outputModeContent {
 		return opts.re.FindAllStringIndex(line, -1)

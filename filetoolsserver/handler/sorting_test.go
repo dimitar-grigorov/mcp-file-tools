@@ -15,10 +15,6 @@ import (
 )
 
 // sortFixture writes files whose name, mtime and size orders all differ.
-//
-//	name:  a.txt  b.txt  c.txt
-//	mtime: c.txt (newest) b.txt a.txt
-//	size:  b.txt (largest) a.txt c.txt
 func sortFixture(t *testing.T) string {
 	t.Helper()
 	tempDir := t.TempDir()
@@ -190,8 +186,7 @@ func countingStat(n *int64) statFunc {
 	}
 }
 
-// Sorting by name must not stat anything: on Linux/macOS Info() is an lstat per
-// entry, so the default path has to stay as cheap as an unsorted walk.
+// Name sorting must not stat: Info() is an lstat per entry on Linux/macOS.
 func TestSortByName_MakesNoInfoCalls(t *testing.T) {
 	tempDir := sortFixture(t)
 	h := NewHandler([]string{tempDir})
@@ -270,8 +265,7 @@ func TestSort_InfoErrorKeepsEntry(t *testing.T) {
 	}
 }
 
-// Ranking has to happen before the cap: mtime must return the newest maxResults
-// files, not the first maxResults in walk order sorted among themselves.
+// Ranking must happen before the cap, not after it.
 func TestHandleSearchFiles_SortBeforeTruncation(t *testing.T) {
 	tempDir := t.TempDir()
 	h := NewHandler([]string{tempDir})
