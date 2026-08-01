@@ -36,7 +36,18 @@ func (h *Handler) HandleSearchFiles(ctx context.Context, req *mcp.CallToolReques
 	if maxResults <= 0 {
 		maxResults = defaultMaxResults
 	}
-	results, truncated, err := searchFiles(ctx, v.Path, input.Pattern, input.ExcludePatterns, h.ResolvedAllowedDirs(), maxResults)
+	sortBy, err := resolveSortBy(input.SortBy)
+	if err != nil {
+		return errorResult(err.Error()), SearchFilesOutput{}, nil
+	}
+	results, truncated, err := searchFiles(ctx, v.Path, searchOptions{
+		pattern:     input.Pattern,
+		exclude:     input.ExcludePatterns,
+		allowedDirs: h.ResolvedAllowedDirs(),
+		maxResults:  maxResults,
+		sortBy:      sortBy,
+		reverse:     input.Reverse,
+	})
 	if err != nil {
 		if err == context.Canceled || err == context.DeadlineExceeded {
 			return errorResult("search cancelled"), SearchFilesOutput{}, nil
@@ -46,38 +57,75 @@ func (h *Handler) HandleSearchFiles(ctx context.Context, req *mcp.CallToolReques
 	return &mcp.CallToolResult{}, SearchFilesOutput{Files: results, Truncated: truncated}, nil
 }
 
-// searchFiles recursively searches for files matching the pattern
-func searchFiles(ctx context.Context, rootPath, pattern string, excludePatterns, allowedDirs []string, maxResults int) ([]string, bool, error) {
-	var results []string
-	truncated := false
+// searchOptions is the resolved search policy. stat is nil outside tests.
+type searchOptions struct {
+	pattern     string
+	exclude     []string
+	allowedDirs []string
+	maxResults  int
+	sortBy      string
+	reverse     bool
+	stat        statFunc
+}
+
+// searchFiles recursively searches for files matching the pattern.
+//
+// Sorting by name keeps the walk's early stop: walk order is near-lexical, so the
+// capped set is already close to the first maxResults names and the fast default
+// path costs no extra work. mtime and size cannot be capped that way — the newest
+// file may be the last one visited — so those walk the whole tree behind a bounded
+// heap and return the true top maxResults.
+func searchFiles(ctx context.Context, rootPath string, sOpts searchOptions) ([]string, bool, error) {
 	opts := filesystem.Options{
-		AllowedDirs: allowedDirs,
+		AllowedDirs: sOpts.allowedDirs,
 		OnError: func(path string, _ int, err error) error {
 			slog.Debug("skipping path due to error", "path", path, "error", err)
 			return nil
 		},
 	}
+	stat := sOpts.stat
+	if stat == nil {
+		stat = statEntry
+	}
+	readKeys := needsStat(sOpts.sortBy)
+
+	var capped []sortEntry
+	top := newTopN(sOpts.maxResults, sOpts.sortBy, sOpts.reverse)
+	truncated := false
+
 	err := filesystem.Walk(ctx, rootPath, opts, func(e filesystem.Entry) (filesystem.Action, error) {
-		if shouldExcludePath(e.RelPath, excludePatterns) {
+		if shouldExcludePath(e.RelPath, sOpts.exclude) {
 			if e.IsDir() {
 				return filesystem.SkipDir, nil
 			}
 			return filesystem.Continue, nil
 		}
-		if matchGlobPattern(e.RelPath, pattern) {
-			results = append(results, e.Path)
-			if len(results) >= maxResults {
-				truncated = true
-				return filesystem.Stop, nil
-			}
+		if !matchGlobPattern(e.RelPath, sOpts.pattern) {
+			return filesystem.Continue, nil
+		}
+		entry := sortEntry{key: e.Path, value: e.Path}
+		if readKeys {
+			entry.mtime, entry.size = stat(e.DirEntry)
+			top.add(entry)
+			return filesystem.Continue, nil
+		}
+		capped = append(capped, entry)
+		if len(capped) >= sOpts.maxResults {
+			truncated = true
+			return filesystem.Stop, nil
 		}
 		return filesystem.Continue, nil
 	})
 	if err != nil {
 		return nil, false, err
 	}
-	if results == nil {
-		results = []string{}
+	if readKeys {
+		return top.values(), top.truncated(), nil
+	}
+	sortEntries(capped, sOpts.sortBy, sOpts.reverse)
+	results := make([]string, len(capped))
+	for i, entry := range capped {
+		results[i] = entry.value
 	}
 	return results, truncated, nil
 }

@@ -84,7 +84,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "list_directory",
-		Description: "List files and directories with optional glob pattern filtering (e.g., *.pas, *.dfm). Parameters: path (required), pattern (optional, default: *).",
+		Description: "List files and directories with optional glob pattern filtering (e.g., *.pas, *.dfm). Parameters: path (required), pattern (optional, default: *), sortBy (\"name\" default, \"mtime\" newest first, \"size\" largest first), reverse (bool, flips the order).",
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "List Directory",
 			ReadOnlyHint:  true,
@@ -93,8 +93,10 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 	}, handler.Wrap(logger, "list_directory", h.HandleListDirectory))
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "search_files",
-		Description: "Recursively search for files matching a glob pattern (*.ext or **/*.ext). Returns full paths. Parameters: path (required), pattern (required), excludePatterns, maxResults (default 10000).",
+		Name: "search_files",
+		Description: "Recursively search for files matching a glob pattern (*.ext or **/*.ext). Returns full paths. Parameters: path (required), pattern (required), excludePatterns, maxResults (default 10000), sortBy, reverse. " +
+			"sortBy: \"name\" (default, lexical), \"mtime\" (newest first) or \"size\" (largest first); reverse flips the order. With mtime or size the whole tree is ranked before the cap, so a truncated result really is the newest/largest maxResults files. " +
+			`Example: {"path": "D:\\proj", "pattern": "**/*.pas", "sortBy": "mtime"}`,
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "Search Files",
 			ReadOnlyHint:  true,

@@ -45,9 +45,12 @@ type WriteFileOutput struct {
 	LineEndings string `json:"lineEndings,omitempty"` // set when content was normalised
 }
 
+// ListDirectoryInput - SortBy is "name" (default), "mtime" or "size".
 type ListDirectoryInput struct {
 	Path    string `json:"path"`
 	Pattern string `json:"pattern,omitempty"` // glob pattern, e.g. *.pas
+	SortBy  string `json:"sortBy,omitempty"`
+	Reverse bool   `json:"reverse,omitempty"`
 }
 
 type ListDirectoryOutput struct {
@@ -110,12 +113,15 @@ type MoveFileOutput struct {
 	Message string `json:"message"`
 }
 
-// SearchFilesInput - pattern supports *.ext and **/*.ext syntax
+// SearchFilesInput - pattern supports *.ext and **/*.ext syntax.
+// SortBy is "name" (default), "mtime" or "size".
 type SearchFilesInput struct {
 	Path            string   `json:"path"`
 	Pattern         string   `json:"pattern"`
 	ExcludePatterns []string `json:"excludePatterns,omitempty"`
 	MaxResults      int      `json:"maxResults,omitempty"`
+	SortBy          string   `json:"sortBy,omitempty"`
+	Reverse         bool     `json:"reverse,omitempty"`
 }
 
 type SearchFilesOutput struct {

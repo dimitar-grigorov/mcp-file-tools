@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`search_files` and `list_directory` take `sortBy` and `reverse`.** `name`
+  (the default), `mtime` (newest first) or `size` (largest first), following
+  `ls`/`ls -t`/`ls -S`; `reverse` flips each. Results used to come back in walk
+  order — close to lexical, but not guaranteed — and the default is now an
+  explicit sort. `tree` is deliberately left alone.
+
+  `search_files` ranks the whole tree *before* applying `maxResults` when sorting
+  by `mtime` or `size`, behind a bounded heap, so a truncated result is genuinely
+  the newest or largest N rather than the first N found. `name` keeps the old
+  early stop, and stats nothing, so the default path costs exactly what it did.
+
 - **`grep_text_files` can answer without the match text.** New `outputMode`:
   `content` (the default, unchanged), `files_with_matches` (paths only) and
   `count` (matching lines per file).

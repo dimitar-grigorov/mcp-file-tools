@@ -212,6 +212,8 @@ List files and directories with optional pattern filtering.
 **Parameters:**
 - `path` (required): Path to directory
 - `pattern` (optional): Glob pattern like `*.pas` or `*.dfm` (default: `*`)
+- `sortBy` (optional): `name` (default), `mtime` or `size` — see [Ordering](#ordering)
+- `reverse` (optional): Flip the order
 
 **Example:**
 ```json
@@ -227,6 +229,9 @@ List files and directories with optional pattern filtering.
   "files": ["main.pas", "utils.pas", "forms.pas"]
 }
 ```
+
+Directories carry a `[DIR] ` prefix but sort on the bare name, so `[DIR] beta`
+lands between `alpha.pas` and `gamma.pas`.
 
 ### tree
 
@@ -324,6 +329,8 @@ Recursively search for files and directories matching a glob pattern.
 - `pattern` (required): Glob pattern (`*.txt` for current dir, `**/*.txt` for recursive)
 - `excludePatterns` (optional): Array of patterns to exclude
 - `maxResults` (optional): Maximum number of results to return (default: 10000)
+- `sortBy` (optional): `name` (default), `mtime` or `size` — see [Ordering](#ordering)
+- `reverse` (optional): Flip the order
 
 **Example:**
 ```json
@@ -343,6 +350,45 @@ Recursively search for files and directories matching a glob pattern.
   ]
 }
 ```
+
+#### Ordering
+
+`sortBy` applies to `search_files` and `list_directory`. `tree` is unsorted by
+design — its output is hierarchical, and mtime order across a hierarchy means
+nothing.
+
+| `sortBy` | Order | Reverse gives |
+|---|---|---|
+| `name` (default) | lexical, ascending | Z → A |
+| `mtime` | newest first | oldest first |
+| `size` | largest first | smallest first |
+
+This follows `ls`: `ls` is alphabetical, `ls -t` is newest first, `ls -S` is
+largest first, and `-r` flips each. So "what changed recently" is plain
+`sortBy: "mtime"`, no `reverse` needed. Ties break on name.
+
+Before this, results came back in **walk order** — close to lexical but not
+guaranteed, because a subdirectory's contents are emitted right after its own
+entry. The default is now an explicit sort.
+
+**`search_files` and `maxResults`.** How the cap interacts with the ordering
+depends on the field, and the difference matters:
+
+- `name` caps first, then sorts. The walk stops at `maxResults` as it always
+  has, and the returned subset is sorted. Walk order is already near-lexical, so
+  this stays the cheapest path — no stat calls, no full traversal.
+- `mtime` and `size` rank first, then cap. The newest file may be the last one
+  visited, so capping first would return "the first `maxResults` files in walk
+  order, sorted by mtime" — the wrong answer to "what changed recently". These
+  walk the whole tree behind a bounded heap of `maxResults` entries, so memory
+  stays capped and a truncated result really is the newest/largest N.
+
+`truncated: true` means more files matched than were returned, in both cases.
+
+**Cost.** `name` reads nothing beyond the entry name. `mtime` and `size` call
+`Info()` on each matching entry: free on Windows, where `FindNextFile` already
+returned the metadata, but one `lstat` per match on Linux and macOS. An entry
+whose `Info()` fails is kept with a zero mtime/size and sorts last.
 
 ### grep_text_files
 
