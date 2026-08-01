@@ -47,7 +47,13 @@ Provides 20 tools for file operations with automatic encoding conversion:
 - [`list_allowed_directories`](TOOLS.md#list_allowed_directories) - Show accessible directories
 - [`check_for_updates`](TOOLS.md#check_for_updates) - Check whether a newer release is available
 
+Plus three [prompts](TOOLS.md#prompts) — `audit_encodings`, `fix_mojibake`,
+`migrate_to_utf8` — surfaced by clients as user commands.
+
 See [TOOLS.md](TOOLS.md) for detailed parameters and examples.
+
+**Out of scope:** binary/media reading (`read_media_file`). This is a *text*
+tool; agents read images with their built-in tools.
 
 ### Supported encodings
 
