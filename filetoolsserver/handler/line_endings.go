@@ -31,7 +31,6 @@ type LineEndingInfo struct {
 }
 
 // DetectLineEndings analyzes data and returns line ending information.
-// Works on byte slice for in-memory data.
 func DetectLineEndings(data []byte) LineEndingInfo {
 	info := LineEndingInfo{}
 

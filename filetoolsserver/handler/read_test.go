@@ -58,8 +58,7 @@ func TestHandleReadTextFile_CP1251(t *testing.T) {
 	h := NewHandler([]string{tempDir})
 	testFile := filepath.Join(tempDir, "test.txt")
 
-	// CP1251 bytes for "Здравей свят!" (Bulgarian "Hello world!")
-	// Encode "Здравей свят!" in CP1251 first
+	// "Здравей свят!" (Bulgarian "Hello world!") encoded as CP1251
 	enc, _ := encoding.Get("cp1251")
 	encoder := enc.NewEncoder()
 	cp1251Bytes, err := encoder.Bytes([]byte("Здравей свят!"))
@@ -131,8 +130,6 @@ func TestHandleReadTextFile_AutoDetectCP1251(t *testing.T) {
 	h := NewHandler([]string{tempDir})
 	testFile := filepath.Join(tempDir, "test.txt")
 
-	// Create a file with CP1251 Cyrillic content
-	// More Cyrillic text for better detection
 	cyrillicText := "Здравей свят! Това е тест за автоматично разпознаване на кодирането."
 	enc, ok := encoding.Get("cp1251")
 	if !ok {

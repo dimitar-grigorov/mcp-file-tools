@@ -443,8 +443,7 @@ func TestHandleWriteFile_PreservesExistingCP1251(t *testing.T) {
 	h := NewHandler([]string{tempDir})
 	testFile := filepath.Join(tempDir, "cyrillic.txt")
 
-	// Create an existing file with CP1251 content (Russian text)
-	// "Привет мир" in CP1251
+	// "Привет мир" (Russian) encoded as CP1251
 	cp1251Content := []byte{0xCF, 0xF0, 0xE8, 0xE2, 0xE5, 0xF2, 0x20, 0xEC, 0xE8, 0xF0}
 	if err := os.WriteFile(testFile, cp1251Content, 0644); err != nil {
 		t.Fatal(err)

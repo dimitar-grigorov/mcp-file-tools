@@ -12,8 +12,6 @@ import (
 )
 
 func TestIsPathWithinAllowedDirectories_BasicCases(t *testing.T) {
-	// Skip on Windows - these tests use Unix paths
-	// The Windows-specific tests cover the same logic with Windows paths
 	if runtime.GOOS == "windows" {
 		t.Skip("Skipping Unix path tests on Windows - see TestIsPathWithinAllowedDirectories_WindowsPaths")
 	}

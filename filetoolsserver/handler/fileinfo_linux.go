@@ -11,8 +11,7 @@ import (
 	"time"
 )
 
-// getFileTimes returns created, accessed, and modified times for a file on Linux
-// Note: Linux doesn't have a true creation time, so we use ctime (status change time) as a fallback
+// getFileTimes returns created, accessed, and modified times for a file on Linux.
 func getFileTimes(stat os.FileInfo) (created, accessed, modified time.Time) {
 	modified = stat.ModTime()
 

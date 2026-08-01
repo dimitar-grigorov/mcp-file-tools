@@ -21,8 +21,8 @@ func cancelled(ctx context.Context) *mcp.CallToolResult {
 	}
 }
 
-// shouldLoadEntireFile returns true if the file is small enough to load into memory.
-// Returns (shouldLoad, fileSize). On stat error, defaults to true (load into memory).
+// shouldLoadEntireFile reports whether path is small enough to load into memory,
+// and its size. Defaults to true on stat error.
 func (h *Handler) shouldLoadEntireFile(path string) (bool, int64) {
 	info, err := os.Stat(path)
 	if err != nil {
