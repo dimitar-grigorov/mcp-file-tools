@@ -6,6 +6,17 @@ versions see the [GitHub releases](https://github.com/dimitar-grigorov/mcp-file-
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **`move_file` now sets `destructiveHint: true`.** It was `false`, which the spec
+  defines as "performs only additive updates" — but a move removes the source path,
+  so undoing one requires knowing where the file came from. Clients use this hint to
+  decide what needs confirmation, and a move was being presented as safe as a copy.
+  This aligns with the reference filesystem server. `copy_file` and
+  `create_directory` stay `false`; they only add.
+
 ## [3.0.0] - 2026-08-01
 
 ### Removed — BREAKING

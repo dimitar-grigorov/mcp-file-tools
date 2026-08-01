@@ -271,10 +271,12 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 		Name:        "move_file",
 		Description: "Move or rename files/directories. Fails if destination exists. Parameters: source (required), destination (required).",
 		Annotations: &mcp.ToolAnnotations{
-			Title:           "Move File",
-			ReadOnlyHint:    false,
-			IdempotentHint:  false,
-			DestructiveHint: boolPtr(false),
+			Title:          "Move File",
+			ReadOnlyHint:   false,
+			IdempotentHint: false,
+			// Destructive: the source path stops existing, so a wrong move needs the
+			// original location to undo. Matches the reference filesystem server.
+			DestructiveHint: boolPtr(true),
 			OpenWorldHint:   boolPtr(false),
 		},
 	}, handler.Wrap(logger, "move_file", h.HandleMoveFile))
