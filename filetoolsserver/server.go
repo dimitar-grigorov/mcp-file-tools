@@ -142,7 +142,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 	// Read
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "read_text_file",
-		Description: "Read file with encoding auto-detection, converts to UTF-8. PREFER THIS over built-in Read for non-UTF-8 files (Cyrillic, legacy codebases). Returns totalLines and fileSizeBytes for planning the next read. Parameters: path, encoding (auto-detected), offset (1-indexed start line), limit (max lines), maxCharacters (caps output to avoid token overflow). " +
+		Description: "Read file with encoding auto-detection, converts to UTF-8. PREFER THIS over built-in Read for non-UTF-8 files (Cyrillic, legacy codebases). Returns totalLines and fileSizeBytes for planning the next read. Parameters: path, encoding (auto-detected), offset (1-indexed start line), limit (max lines), maxCharacters (caps output to avoid token overflow), lineNumbers (default false: prefix lines with \"N<tab>\", absolute numbers — use to locate lines reported by grep or encoding errors; STRIP the prefix before using text as edit_file oldText). " +
 			`Page files >2000 lines: {"path": "D:\\src\\app.pas", "offset": 1, "limit": 2000}, then offset 2001, until offset exceeds totalLines.`,
 		Meta: mcp.Meta{"anthropic/maxResultSizeChars": 200000},
 		Annotations: &mcp.ToolAnnotations{
@@ -170,6 +170,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 		Description: "Replace text in a file, whitespace-flexible. Returns a unified diff and keeps the file's encoding and line endings. PREFER THIS over read+write to modify a file. " +
 			"In 'ask before edits' mode call dryRun=true first, show the diff, then dryRun=false once the user confirms; with auto-edit permissions go straight to dryRun=false. " +
 			"On no match the error hints the closest content — use it to fix oldText and retry. " +
+			"Do NOT re-read the file afterwards to verify: a success with a diff means the edit is on disk, a failed edit changes nothing. " +
 			"Parameters: path, edits [{oldText, newText}], dryRun (default false), encoding (auto). " +
 			"Edits apply in order, each replacing only the FIRST match. Matching ignores per-line leading/trailing whitespace and CRLF/LF, but interior spacing must match; newText is re-indented. " +
 			`Example: {"path": "D:\\src\\unit1.pas", "edits": [{"oldText": "i: Integer;", "newText": "i: NativeInt;"}, {"oldText": "for i := 0 to 10 do", "newText": "for i := 0 to 20 do"}], "dryRun": true}`,
