@@ -299,6 +299,26 @@ type ManageBomOutput struct {
 	Changed  bool   `json:"changed"`
 }
 
+// ManageLineEndingsInput manages line endings in files.
+// Action: "detect" (report style), "convert" (rewrite to Style).
+// Style is required for "convert": "lf" or "crlf".
+type ManageLineEndingsInput struct {
+	Path     string `json:"path"`
+	Action   string `json:"action"`
+	Style    string `json:"style,omitempty"`
+	Encoding string `json:"encoding,omitempty"`
+}
+
+type ManageLineEndingsOutput struct {
+	Style             string `json:"style"` // detect: dominant style; convert: the new style
+	TotalLines        int    `json:"totalLines,omitempty"`
+	InconsistentLines []int  `json:"inconsistentLines,omitempty"`
+	OriginalStyle     string `json:"originalStyle,omitempty"`
+	LinesChanged      int    `json:"linesChanged,omitempty"`
+	Message           string `json:"message,omitempty"`
+	Changed           bool   `json:"changed,omitempty"`
+}
+
 // DetectLineEndingsOutput - Style is "crlf", "lf", "mixed", or "none"
 type DetectLineEndingsOutput struct {
 	Style             string `json:"style"`

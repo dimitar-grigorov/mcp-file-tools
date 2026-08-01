@@ -99,7 +99,7 @@ func (h *Handler) HandleReadTextFile(ctx context.Context, req *mcp.CallToolReque
 	var hints []string
 	if le := DetectLineEndings(data); le.Style == LineEndingMixed {
 		hints = append(hints, fmt.Sprintf(
-			"This file has MIXED line endings (%d CRLF, %d LF) — tell the user, and use change_line_endings to normalise it.",
+			`This file has MIXED line endings (%d CRLF, %d LF) — tell the user, and use manage_line_endings action="convert" to normalise it.`,
 			le.CRLFCount, le.LFCount))
 	}
 	if hint := h.plainUTF8HintFor(v.Path, encResult.name, existingBOM(v.Path).HasBOM); hint != "" {

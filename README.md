@@ -25,7 +25,7 @@ tool owns the file.
 
 ## What It Does
 
-Provides 21 tools for file operations with automatic encoding conversion:
+Provides 20 tools for file operations with automatic encoding conversion:
 - [`read_text_file`](TOOLS.md#read_text_file) - Read files with encoding auto-detection and conversion
 - [`read_multiple_files`](TOOLS.md#read_multiple_files) - Read multiple files concurrently with encoding support
 - [`write_file`](TOOLS.md#write_file) - Write files in specific encodings
@@ -38,8 +38,7 @@ Provides 21 tools for file operations with automatic encoding conversion:
 - [`grep_text_files`](TOOLS.md#grep_text_files) - Regex search in file contents with encoding support
 - [`detect_encoding`](TOOLS.md#detect_encoding) - Auto-detect file encoding with confidence score
 - [`convert_encoding`](TOOLS.md#convert_encoding) - Convert file between encodings
-- [`detect_line_endings`](TOOLS.md#detect_line_endings) - Detect line ending style (CRLF/LF/mixed)
-- [`change_line_endings`](TOOLS.md#change_line_endings) - Convert line endings to LF or CRLF
+- [`manage_line_endings`](TOOLS.md#manage_line_endings) - Detect or convert line endings (CRLF/LF/mixed)
 - [`manage_bom`](TOOLS.md#manage_bom) - Detect, strip, or add Unicode BOM
 - [`list_encodings`](TOOLS.md#list_encodings) - Show all supported encodings
 - [`get_file_info`](TOOLS.md#get_file_info) - Get file/directory metadata
@@ -71,7 +70,7 @@ Common aliases are accepted (`cp1251`, `latin1`, `gb2312`, `tis-620`, …) —
 
 UTF-32 is partially supported: LE and BE BOMs are detected, and
 [`manage_bom`](TOOLS.md#manage_bom) can add or strip them, but transcoding to or from
-UTF-32 is not implemented and [`change_line_endings`](TOOLS.md#change_line_endings)
+UTF-32 is not implemented and [`manage_line_endings`](TOOLS.md#manage_line_endings)
 refuses UTF-32 files rather than corrupting their 4-byte alignment.
 
 **Security:** All operations restricted to allowed directories only. Paths are resolved

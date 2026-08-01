@@ -24,7 +24,7 @@ Workflow:
 2. Read: read_text_file — encoding is auto-detected; no detect_encoding first
 3. Modify: edit_file — in place, keeps the encoding, dryRun=true to preview. write_file only for new files or full rewrites; never read+write to edit.
 
-Only when output looks wrong: detect_encoding, detect_line_endings, manage_bom (a UTF-8 BOM breaks PHP/shell scripts). convert_encoding rewrites a whole file — pass backup=true.
+Only when output looks wrong: detect_encoding, manage_line_endings, manage_bom (a UTF-8 BOM breaks PHP/shell scripts). convert_encoding rewrites a whole file — pass backup=true.
 
 "no allowed directories configured" — add paths as args in .mcp.json.
 
@@ -70,7 +70,72 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 	// Register all tools using the new AddTool API with annotations
 	// All handlers are wrapped with recovery middleware (and logging if logger is provided)
 
-	// Read-only tools
+	// Orient: find files and directories
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "tree",
+		Description: "Compact indented tree view of directory structure. PREFER THIS for directory visualization. Set showEncoding=true to detect and display file encodings (e.g., for auditing legacy codebases). Parameters: path (required), maxDepth (0=unlimited), maxFiles (default 1000), dirsOnly (bool), exclude (array of patterns), showEncoding (bool, shows detected encoding per file).",
+		Meta:        mcp.Meta{"anthropic/maxResultSizeChars": 200000},
+		Annotations: &mcp.ToolAnnotations{
+			Title:         "Tree (Compact)",
+			ReadOnlyHint:  true,
+			OpenWorldHint: boolPtr(false),
+		},
+	}, handler.Wrap(logger, "tree", h.HandleTree))
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "list_directory",
+		Description: "List files and directories with optional glob pattern filtering (e.g., *.pas, *.dfm). Parameters: path (required), pattern (optional, default: *).",
+		Annotations: &mcp.ToolAnnotations{
+			Title:         "List Directory",
+			ReadOnlyHint:  true,
+			OpenWorldHint: boolPtr(false),
+		},
+	}, handler.Wrap(logger, "list_directory", h.HandleListDirectory))
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "search_files",
+		Description: "Recursively search for files matching a glob pattern (*.ext or **/*.ext). Returns full paths. Parameters: path (required), pattern (required), excludePatterns, maxResults (default 10000).",
+		Annotations: &mcp.ToolAnnotations{
+			Title:         "Search Files",
+			ReadOnlyHint:  true,
+			OpenWorldHint: boolPtr(false),
+		},
+	}, handler.Wrap(logger, "search_files", h.HandleSearchFiles))
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name: "grep_text_files",
+		Description: "Regex search in file contents with encoding support. PREFER THIS over built-in Grep for non-UTF-8 files. Parameters: pattern (regex), paths (array of files, or dirs searched recursively), caseSensitive (default true), contextBefore/After, maxMatches (default 1000), include/exclude, encoding. " +
+			"include/exclude are single glob STRINGS matched against the file name, not arrays: use \"*.pas\", not [\"*.pas\"]. Brace sets (\"*.{pas,dfm}\") and directory-qualified patterns (\"src/*.pas\") match nothing. " +
+			`Example: {"pattern": "TCustomer", "paths": ["D:\\proj\\src"], "include": "*.pas", "contextAfter": 2}`,
+		Meta: mcp.Meta{"anthropic/maxResultSizeChars": 300000},
+		Annotations: &mcp.ToolAnnotations{
+			Title:         "Grep Text Files",
+			ReadOnlyHint:  true,
+			OpenWorldHint: boolPtr(false),
+		},
+	}, handler.Wrap(logger, "grep_text_files", h.HandleGrep))
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "get_file_info",
+		Description: "Get file/directory metadata: size, timestamps, permissions, type. Use this to check file size before reading large files with read_text_file. Parameter: path (required).",
+		Annotations: &mcp.ToolAnnotations{
+			Title:         "Get File Info",
+			ReadOnlyHint:  true,
+			OpenWorldHint: boolPtr(false),
+		},
+	}, handler.Wrap(logger, "get_file_info", h.HandleGetFileInfo))
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "list_allowed_directories",
+		Description: "Returns the list of directories this server is allowed to access. Subdirectories are also accessible. If empty, user needs to add directory paths as args in .mcp.json.",
+		Annotations: &mcp.ToolAnnotations{
+			Title:         "List Allowed Directories",
+			ReadOnlyHint:  true,
+			OpenWorldHint: boolPtr(false),
+		},
+	}, handler.Wrap(logger, "list_allowed_directories", h.HandleListAllowedDirectories))
+
+	// Read
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "read_text_file",
 		Description: "Read file with encoding auto-detection, converts to UTF-8. PREFER THIS over built-in Read for non-UTF-8 files (Cyrillic, legacy codebases). Returns totalLines and fileSizeBytes for planning the next read. Parameters: path, encoding (auto-detected), offset (1-indexed start line), limit (max lines), maxCharacters (caps output to avoid token overflow). " +
@@ -94,136 +159,24 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 		},
 	}, handler.Wrap(logger, "read_multiple_files", h.HandleReadMultipleFiles))
 
+	// Modify
+	// WrapContentOnly: returns readable diff text instead of StructuredContent JSON.
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "list_directory",
-		Description: "List files and directories with optional glob pattern filtering (e.g., *.pas, *.dfm). Parameters: path (required), pattern (optional, default: *).",
+		Name: "edit_file",
+		Description: "Replace text in a file, whitespace-flexible. Returns a unified diff and keeps the file's encoding and line endings. PREFER THIS over read+write to modify a file. " +
+			"In 'ask before edits' mode call dryRun=true first, show the diff, then dryRun=false once the user confirms; with auto-edit permissions go straight to dryRun=false. " +
+			"On no match the error hints the closest content — use it to fix oldText and retry. " +
+			"Parameters: path, edits [{oldText, newText}], dryRun (default false), encoding (auto). " +
+			"Edits apply in order, each replacing only the FIRST match. Matching ignores per-line leading/trailing whitespace and CRLF/LF, but interior spacing must match; newText is re-indented. " +
+			`Example: {"path": "D:\\src\\unit1.pas", "edits": [{"oldText": "i: Integer;", "newText": "i: NativeInt;"}, {"oldText": "for i := 0 to 10 do", "newText": "for i := 0 to 20 do"}], "dryRun": true}`,
 		Annotations: &mcp.ToolAnnotations{
-			Title:         "List Directory",
-			ReadOnlyHint:  true,
-			OpenWorldHint: boolPtr(false),
-		},
-	}, handler.Wrap(logger, "list_directory", h.HandleListDirectory))
-
-	mcp.AddTool(server, &mcp.Tool{
-		Name:        "list_encodings",
-		Description: "List all 24 supported encodings with name, aliases, and description. Use this to find the correct encoding name for read/write/convert operations.",
-		Annotations: &mcp.ToolAnnotations{
-			Title:         "List Encodings",
-			ReadOnlyHint:  true,
-			OpenWorldHint: boolPtr(false),
-		},
-	}, handler.Wrap(logger, "list_encodings", h.HandleListEncodings))
-
-	mcp.AddTool(server, &mcp.Tool{
-		Name:        "detect_encoding",
-		Description: "Auto-detect file encoding with confidence score (0-100) and BOM detection. ALWAYS use this first when encountering garbled text or � characters. Use before read_text_file to determine the correct encoding. Parameters: path (required), mode (sample=fast default, chunked=thorough, full=entire file).",
-		Annotations: &mcp.ToolAnnotations{
-			Title:         "Detect Encoding",
-			ReadOnlyHint:  true,
-			OpenWorldHint: boolPtr(false),
-		},
-	}, handler.Wrap(logger, "detect_encoding", h.HandleDetectEncoding))
-
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "grep_text_files",
-		Description: "Regex search in file contents with encoding support. PREFER THIS over built-in Grep for non-UTF-8 files. Parameters: pattern (regex), paths (array of files, or dirs searched recursively), caseSensitive (default true), contextBefore/After, maxMatches (default 1000), include/exclude, encoding. " +
-			"include/exclude are single glob STRINGS matched against the file name, not arrays: use \"*.pas\", not [\"*.pas\"]. Brace sets (\"*.{pas,dfm}\") and directory-qualified patterns (\"src/*.pas\") match nothing. " +
-			`Example: {"pattern": "TCustomer", "paths": ["D:\\proj\\src"], "include": "*.pas", "contextAfter": 2}`,
-		Meta: mcp.Meta{"anthropic/maxResultSizeChars": 300000},
-		Annotations: &mcp.ToolAnnotations{
-			Title:         "Grep Text Files",
-			ReadOnlyHint:  true,
-			OpenWorldHint: boolPtr(false),
-		},
-	}, handler.Wrap(logger, "grep_text_files", h.HandleGrep))
-
-	mcp.AddTool(server, &mcp.Tool{
-		Name:        "list_allowed_directories",
-		Description: "Returns the list of directories this server is allowed to access. Subdirectories are also accessible. If empty, user needs to add directory paths as args in .mcp.json.",
-		Annotations: &mcp.ToolAnnotations{
-			Title:         "List Allowed Directories",
-			ReadOnlyHint:  true,
-			OpenWorldHint: boolPtr(false),
-		},
-	}, handler.Wrap(logger, "list_allowed_directories", h.HandleListAllowedDirectories))
-
-	mcp.AddTool(server, &mcp.Tool{
-		Name:        "get_file_info",
-		Description: "Get file/directory metadata: size, timestamps, permissions, type. Use this to check file size before reading large files with read_text_file. Parameter: path (required).",
-		Annotations: &mcp.ToolAnnotations{
-			Title:         "Get File Info",
-			ReadOnlyHint:  true,
-			OpenWorldHint: boolPtr(false),
-		},
-	}, handler.Wrap(logger, "get_file_info", h.HandleGetFileInfo))
-
-	mcp.AddTool(server, &mcp.Tool{
-		Name:        "tree",
-		Description: "Compact indented tree view of directory structure. PREFER THIS for directory visualization. Set showEncoding=true to detect and display file encodings (e.g., for auditing legacy codebases). Parameters: path (required), maxDepth (0=unlimited), maxFiles (default 1000), dirsOnly (bool), exclude (array of patterns), showEncoding (bool, shows detected encoding per file).",
-		Meta:        mcp.Meta{"anthropic/maxResultSizeChars": 200000},
-		Annotations: &mcp.ToolAnnotations{
-			Title:         "Tree (Compact)",
-			ReadOnlyHint:  true,
-			OpenWorldHint: boolPtr(false),
-		},
-	}, handler.Wrap(logger, "tree", h.HandleTree))
-
-	mcp.AddTool(server, &mcp.Tool{
-		Name:        "search_files",
-		Description: "Recursively search for files matching a glob pattern (*.ext or **/*.ext). Returns full paths. Parameters: path (required), pattern (required), excludePatterns, maxResults (default 10000).",
-		Annotations: &mcp.ToolAnnotations{
-			Title:         "Search Files",
-			ReadOnlyHint:  true,
-			OpenWorldHint: boolPtr(false),
-		},
-	}, handler.Wrap(logger, "search_files", h.HandleSearchFiles))
-
-	mcp.AddTool(server, &mcp.Tool{
-		Name:        "detect_line_endings",
-		Description: "Detect line ending style (crlf/lf/mixed/none) and find inconsistent lines. Useful for diagnosing mixed line ending issues in cross-platform legacy codebases. Returns dominant style, total lines, and line numbers with minority endings. Parameters: path (required), encoding (optional, auto-detected including most BOM-less UTF-16 text — pass utf-16-le or utf-16-be if a very short or unusual file is misread).",
-		Annotations: &mcp.ToolAnnotations{
-			Title:         "Detect Line Endings",
-			ReadOnlyHint:  true,
-			OpenWorldHint: boolPtr(false),
-		},
-	}, handler.Wrap(logger, "detect_line_endings", h.HandleDetectLineEndings))
-
-	// Write tools
-	mcp.AddTool(server, &mcp.Tool{
-		Name:        "manage_bom",
-		Description: "Detect, strip, or add Unicode BOM (Byte Order Mark). UTF-8 BOM breaks PHP/shell scripts; UTF-16 files need BOMs. Parameters: path (required), action (required: \"detect\"|\"strip\"|\"add\"), encoding (required for \"add\": utf-8, utf-16-le, utf-16-be, utf-32-le, utf-32-be).",
-		Annotations: &mcp.ToolAnnotations{
-			Title:           "Manage BOM",
+			Title:           "Edit File",
 			ReadOnlyHint:    false,
-			IdempotentHint:  true,
+			IdempotentHint:  false,
 			DestructiveHint: boolPtr(true),
 			OpenWorldHint:   boolPtr(false),
 		},
-	}, handler.Wrap(logger, "manage_bom", h.HandleManageBom))
-
-	mcp.AddTool(server, &mcp.Tool{
-		Name:        "change_line_endings",
-		Description: "Convert line endings in a file to LF or CRLF. Use after detect_line_endings to fix mixed or wrong line endings. UTF-16 is converted per code unit and the BOM is preserved. Returns original style, new style, and number of lines changed. No-op if file already uses the target style. Parameters: path (required), style (required: \"lf\" or \"crlf\"), encoding (optional, auto-detected including most BOM-less UTF-16 text — pass utf-16-le or utf-16-be if a very short or unusual file is misread).",
-		Annotations: &mcp.ToolAnnotations{
-			Title:           "Change Line Endings",
-			ReadOnlyHint:    false,
-			IdempotentHint:  true,
-			DestructiveHint: boolPtr(true),
-			OpenWorldHint:   boolPtr(false),
-		},
-	}, handler.Wrap(logger, "change_line_endings", h.HandleChangeLineEndings))
-
-	mcp.AddTool(server, &mcp.Tool{
-		Name:        "create_directory",
-		Description: "Create a directory recursively (mkdir -p). Succeeds silently if already exists. Parameter: path (required).",
-		Annotations: &mcp.ToolAnnotations{
-			Title:           "Create Directory",
-			ReadOnlyHint:    false,
-			IdempotentHint:  true,
-			DestructiveHint: boolPtr(false),
-			OpenWorldHint:   boolPtr(false),
-		},
-	}, handler.Wrap(logger, "create_directory", h.HandleCreateDirectory))
+	}, handler.WrapContentOnly(logger, "edit_file", h.HandleEditFile))
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "write_file",
@@ -239,6 +192,80 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 			OpenWorldHint:   boolPtr(false),
 		},
 	}, handler.Wrap(logger, "write_file", h.HandleWriteFile))
+
+	// Encoding, line endings, BOM
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "detect_encoding",
+		Description: "Auto-detect file encoding with confidence score (0-100) and BOM detection. ALWAYS use this first when encountering garbled text or � characters. Use before read_text_file to determine the correct encoding. Parameters: path (required), mode (sample=fast default, chunked=thorough, full=entire file).",
+		Annotations: &mcp.ToolAnnotations{
+			Title:         "Detect Encoding",
+			ReadOnlyHint:  true,
+			OpenWorldHint: boolPtr(false),
+		},
+	}, handler.Wrap(logger, "detect_encoding", h.HandleDetectEncoding))
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name: "convert_encoding",
+		Description: "Convert a file from one encoding to another. A source BOM is stripped before decoding; a BOM contradicting an explicit 'from' is an error. No-op if the file already holds the target bytes. Parameters: path, to (target, required), from (omit to auto-detect — pass it only to override a misdetection), backup (write .bak first — IMPORTANT for irreversible conversions), bom (\"auto\" default — BOM for UTF-16 targets and keeps a same-encoding source BOM; \"always\", \"never\", \"preserve\"). " +
+			"A narrowing conversion (e.g. utf-8 to cp1251) fails rather than corrupting text when the target lacks characters. " +
+			`Example: {"path": "D:\\legacy\\data.txt", "to": "utf-8", "backup": true} detects the source and leaves data.txt.bak.`,
+		Annotations: &mcp.ToolAnnotations{
+			Title:           "Convert Encoding",
+			ReadOnlyHint:    false,
+			IdempotentHint:  true,
+			DestructiveHint: boolPtr(true),
+			OpenWorldHint:   boolPtr(false),
+		},
+	}, handler.Wrap(logger, "convert_encoding", h.HandleConvertEncoding))
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name: "manage_line_endings",
+		Description: "Detect or fix line endings. action=\"detect\" reports the dominant style (crlf/lf/mixed/none), total lines, and the line numbers that disagree — use it when a file looks inconsistent. action=\"convert\" rewrites the file to style, per code unit for UTF-16 and preserving its BOM; no-op if the file already matches. " +
+			"Parameters: path, action (\"detect\"|\"convert\"), style (\"lf\"|\"crlf\", required for convert), encoding (auto-detected, including most BOM-less UTF-16 — pass utf-16-le/utf-16-be if a very short or unusual file is misread). " +
+			`Example: {"path": "D:\src\unit1.pas", "action": "convert", "style": "crlf"}`,
+		Annotations: &mcp.ToolAnnotations{
+			Title:           "Manage Line Endings",
+			ReadOnlyHint:    false,
+			IdempotentHint:  true,
+			DestructiveHint: boolPtr(true),
+			OpenWorldHint:   boolPtr(false),
+		},
+	}, handler.Wrap(logger, "manage_line_endings", h.HandleManageLineEndings))
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "manage_bom",
+		Description: "Detect, strip, or add Unicode BOM (Byte Order Mark). UTF-8 BOM breaks PHP/shell scripts; UTF-16 files need BOMs. Parameters: path (required), action (required: \"detect\"|\"strip\"|\"add\"), encoding (required for \"add\": utf-8, utf-16-le, utf-16-be, utf-32-le, utf-32-be).",
+		Annotations: &mcp.ToolAnnotations{
+			Title:           "Manage BOM",
+			ReadOnlyHint:    false,
+			IdempotentHint:  true,
+			DestructiveHint: boolPtr(true),
+			OpenWorldHint:   boolPtr(false),
+		},
+	}, handler.Wrap(logger, "manage_bom", h.HandleManageBom))
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "list_encodings",
+		Description: "List all 24 supported encodings with name, aliases, and description. Use this to find the correct encoding name for read/write/convert operations.",
+		Annotations: &mcp.ToolAnnotations{
+			Title:         "List Encodings",
+			ReadOnlyHint:  true,
+			OpenWorldHint: boolPtr(false),
+		},
+	}, handler.Wrap(logger, "list_encodings", h.HandleListEncodings))
+
+	// File management
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "create_directory",
+		Description: "Create a directory recursively (mkdir -p). Succeeds silently if already exists. Parameter: path (required).",
+		Annotations: &mcp.ToolAnnotations{
+			Title:           "Create Directory",
+			ReadOnlyHint:    false,
+			IdempotentHint:  true,
+			DestructiveHint: boolPtr(false),
+			OpenWorldHint:   boolPtr(false),
+		},
+	}, handler.Wrap(logger, "create_directory", h.HandleCreateDirectory))
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "move_file",
@@ -276,38 +303,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 		},
 	}, handler.Wrap(logger, "delete_file", h.HandleDeleteFile))
 
-	// WrapContentOnly: returns readable diff text instead of StructuredContent JSON.
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "edit_file",
-		Description: "Replace text in a file, whitespace-flexible. Returns a unified diff and keeps the file's encoding and line endings. PREFER THIS over read+write to modify a file. " +
-			"In 'ask before edits' mode call dryRun=true first, show the diff, then dryRun=false once the user confirms; with auto-edit permissions go straight to dryRun=false. " +
-			"On no match the error hints the closest content — use it to fix oldText and retry. " +
-			"Parameters: path, edits [{oldText, newText}], dryRun (default false), encoding (auto). " +
-			"Edits apply in order, each replacing only the FIRST match. Matching ignores per-line leading/trailing whitespace and CRLF/LF, but interior spacing must match; newText is re-indented. " +
-			`Example: {"path": "D:\\src\\unit1.pas", "edits": [{"oldText": "i: Integer;", "newText": "i: NativeInt;"}, {"oldText": "for i := 0 to 10 do", "newText": "for i := 0 to 20 do"}], "dryRun": true}`,
-		Annotations: &mcp.ToolAnnotations{
-			Title:           "Edit File",
-			ReadOnlyHint:    false,
-			IdempotentHint:  false,
-			DestructiveHint: boolPtr(true),
-			OpenWorldHint:   boolPtr(false),
-		},
-	}, handler.WrapContentOnly(logger, "edit_file", h.HandleEditFile))
-
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "convert_encoding",
-		Description: "Convert a file from one encoding to another. A source BOM is stripped before decoding; a BOM contradicting an explicit 'from' is an error. No-op if the file already holds the target bytes. Parameters: path, to (target, required), from (omit to auto-detect — pass it only to override a misdetection), backup (write .bak first — IMPORTANT for irreversible conversions), bom (\"auto\" default — BOM for UTF-16 targets and keeps a same-encoding source BOM; \"always\", \"never\", \"preserve\"). " +
-			"A narrowing conversion (e.g. utf-8 to cp1251) fails rather than corrupting text when the target lacks characters. " +
-			`Example: {"path": "D:\\legacy\\data.txt", "to": "utf-8", "backup": true} detects the source and leaves data.txt.bak.`,
-		Annotations: &mcp.ToolAnnotations{
-			Title:           "Convert Encoding",
-			ReadOnlyHint:    false,
-			IdempotentHint:  true,
-			DestructiveHint: boolPtr(true),
-			OpenWorldHint:   boolPtr(false),
-		},
-	}, handler.Wrap(logger, "convert_encoding", h.HandleConvertEncoding))
-
+	// Server
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "check_for_updates",
 		Description: "Check if a newer version of mcp-file-tools is available. Returns current version, latest version, and update instructions if outdated. Uses cached result (max 1 GitHub API call per 2h). Call once at the start of each session.",

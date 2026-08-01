@@ -17,6 +17,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   The tool count drops from 22 to 21.
 
+- **`detect_line_endings` and `change_line_endings` merged into
+  `manage_line_endings`**, which takes an `action` of `"detect"` or `"convert"`
+  — the same shape `manage_bom` already used. Behaviour is unchanged; only the
+  entry point moved.
+
+  ```json
+  { "path": "…", "action": "detect" }
+  { "path": "…", "action": "convert", "style": "crlf" }
+  ```
+
+  Tool count 21 → 20. The merged tool is annotated as a writer, so `detect` no
+  longer carries a `readOnlyHint` — the same trade-off `manage_bom` makes.
+
 ### Fixed
 
 - **`write_file` no longer leaves CRLF files with mixed line endings.**

@@ -48,7 +48,7 @@ The response may carry a `hint` field: it reports a file that already has
 **mixed** line endings, and — once per file — notes that a plain utf-8 file with
 no BOM is better handled by the agent's own built-in tools.
 
-`totalLines` counts newline-terminated lines: a trailing newline does not add an empty final line, and an empty file is `0`. (Matches `detect_line_endings`.)
+`totalLines` counts newline-terminated lines: a trailing newline does not add an empty final line, and an empty file is `0`. (Matches `manage_line_endings`.)
 
 ### read_multiple_files
 
@@ -474,22 +474,26 @@ Auto-detected source, with a backup:
 }
 ```
 
-### detect_line_endings
+### manage_line_endings
 
-Detect line ending style (CRLF/LF/mixed) and find lines with inconsistent endings. Useful for diagnosing mixed line ending issues in legacy codebases.
+Detect or convert line endings. Mirrors `manage_bom`: one tool, an `action` parameter.
 
 **Parameters:**
-- `path` (required): Path to the file to analyze
+- `path` (required): Path to the file
+- `action` (required): `"detect"` or `"convert"`
+- `style` (required for `convert`): `"lf"` or `"crlf"`
 - `encoding` (optional): Auto-detected by default, including most BOM-less UTF-16 text. Pass `utf-16-le` or `utf-16-be` explicitly if a very short or unusual file is misdetected.
 
-**Example:**
+`convert` is a no-op if the file already uses the target style. UTF-16 files are
+converted per code unit and keep their BOM.
+
+**Detect:**
 ```json
 {
-  "path": "/path/to/file.pas"
+  "path": "/path/to/file.pas",
+  "action": "detect"
 }
 ```
-
-**Response:**
 ```json
 {
   "style": "mixed",
@@ -498,40 +502,33 @@ Detect line ending style (CRLF/LF/mixed) and find lines with inconsistent ending
 }
 ```
 
-**Style values:**
-- `crlf`: All lines use Windows line endings (\\r\\n)
-- `lf`: All lines use Unix line endings (\\n)
-- `mixed`: File has both CRLF and LF endings - `inconsistentLines` lists lines with minority style
-- `none`: File has no line endings (single line or empty)
-
-`totalLines` counts newline-terminated lines: a trailing newline does not add a phantom final line, and an empty file reports `0`. (Matches `read_text_file`.)
-
-### change_line_endings
-
-Convert line endings in a file to LF or CRLF. Use after `detect_line_endings` to fix mixed or wrong line endings. No-op if the file already uses the target style. UTF-16 files are converted per code unit and keep their BOM.
-
-**Parameters:**
-- `path` (required): Path to the file
-- `style` (required): Target line ending style (`"lf"` or `"crlf"`)
-- `encoding` (optional): Auto-detected by default, including most BOM-less UTF-16 text. Pass `utf-16-le` or `utf-16-be` explicitly if a very short or unusual file is misdetected.
-
-**Example:**
+**Convert:**
 ```json
 {
   "path": "/path/to/file.pas",
+  "action": "convert",
   "style": "lf"
 }
 ```
-
-**Response:**
 ```json
 {
-  "message": "Converted /path/to/file.pas from crlf to lf (3 lines changed)",
+  "style": "lf",
   "originalStyle": "crlf",
-  "newStyle": "lf",
-  "linesChanged": 3
+  "linesChanged": 3,
+  "changed": true,
+  "message": "Converted /path/to/file.pas from crlf to lf (3 lines changed)"
 }
 ```
+
+**Style values:**
+- `crlf`: All lines use Windows line endings (
+)
+- `lf`: All lines use Unix line endings (
+)
+- `mixed`: File has both - `inconsistentLines` lists lines with the minority style
+- `none`: File has no line endings (single line or empty)
+
+`totalLines` counts newline-terminated lines: a trailing newline does not add a phantom final line, and an empty file reports `0`. (Matches `read_text_file`.)
 
 ### manage_bom
 
@@ -645,5 +642,5 @@ disable the check.
 UTF-32 LE/BE BOMs are detected by [`detect_encoding`](#detect_encoding) and can be added
 or stripped by [`manage_bom`](#manage_bom), but UTF-32 is not a transcoding target:
 `convert_encoding` and the `encoding` parameter do not accept it, and
-[`change_line_endings`](#change_line_endings) refuses UTF-32 files rather than breaking
+[`manage_line_endings`](#manage_line_endings) refuses UTF-32 files rather than breaking
 their 4-byte alignment.

@@ -37,6 +37,12 @@ var (
 
 	// ErrLineEndingPolicyInvalid is returned for an unknown lineEndings policy.
 	ErrLineEndingPolicyInvalid = errkind.New(errkind.InvalidInput, "invalid lineEndings policy")
+
+	// ErrLineEndingActionInvalid is returned for an unknown manage_line_endings action.
+	ErrLineEndingActionInvalid = errkind.New(errkind.InvalidInput, `invalid action — valid: "detect", "convert"`)
+
+	// ErrLineEndingStyleRequired is returned when action="convert" arrives without a style.
+	ErrLineEndingStyleRequired = errkind.New(errkind.InvalidInput, `style is required for action="convert" — "lf" or "crlf"`)
 )
 
 // Edit operation errors
