@@ -1,5 +1,13 @@
 # Tools Reference
 
+## Large results
+
+The tools that can legitimately return a lot of text — `read_text_file`, `read_multiple_files`,
+`grep_text_files`, `tree`, `directory_tree` — declare `anthropic/maxResultSizeChars` in their
+`tools/list` `_meta`. Clients that honour it (Claude Code) raise their default result cap for
+those tools instead of spilling the overflow to a file reference, which would otherwise hide
+part of a tree or search result from the model. Every other tool keeps the client default.
+
 ## File Operations
 
 ### read_text_file
@@ -84,12 +92,30 @@ Write content to file. UTF-8 writes as-is; other encodings convert from UTF-8.
 - `encoding` (optional): Target encoding. Defaults to the existing file's detected encoding; for a new file, to `MCP_DEFAULT_ENCODING` (`utf-8`)
 - `bom` (optional): `auto` (default — BOM for UTF-16 targets, keeps a BOM the file already had), `always`, `never`, `preserve`
 
+**BOM modes:**
+
+| Mode | Behaviour |
+|---|---|
+| `auto` (default) | BOM for `utf-16-*` targets; otherwise keeps one only if the file already had a BOM of the *same* encoding |
+| `preserve` | Keeps the existing BOM even when the encoding changed |
+| `never` | Writes no BOM (use to strip a UTF-8 BOM that breaks PHP/shell scripts) |
+| `always` | Forces a BOM; fails on encodings that define none (e.g. `cp1251`) |
+
 **Example:**
 ```json
 {
   "path": "/path/to/file.pas",
   "content": "program Hello;\nbegin\n  writeln('Zdravei');\nend.",
   "encoding": "cp1251"
+}
+```
+
+Strip a UTF-8 BOM:
+```json
+{
+  "path": "D:\\www\\index.php",
+  "content": "<?php ...",
+  "bom": "never"
 }
 ```
 
@@ -113,11 +139,13 @@ Make line-based edits to a text file. Supports exact matching and whitespace-fle
 
 **Features:**
 - Exact text matching (first occurrence)
-- Whitespace-flexible matching (ignores leading whitespace differences)
+- Whitespace-flexible matching (ignores per-line leading *and* trailing whitespace; interior spacing must still match)
 - Preserves original indentation
-- CRLF line endings normalized to LF
+- CRLF line endings normalized to LF, so CRLF/LF differences never block a match
 - Atomic write (temp file + rename)
 - Fails on read-only files by default (set `forceWritable: true` only when user explicitly requests it)
+
+Edits apply in order, and each one replaces only the **first** match remaining at that point.
 
 **Example:**
 ```json
@@ -130,6 +158,18 @@ Make line-based edits to a text file. Supports exact matching and whitespace-fle
     }
   ],
   "dryRun": false
+}
+```
+
+Multiple edits in one call:
+```json
+{
+  "path": "D:\\src\\unit1.pas",
+  "edits": [
+    { "oldText": "i: Integer;", "newText": "i: NativeInt;" },
+    { "oldText": "for i := 0 to 10 do", "newText": "for i := 0 to 20 do" }
+  ],
+  "dryRun": true
 }
 ```
 
@@ -313,6 +353,12 @@ Search file contents using regex patterns with encoding support. Supports contex
 - `exclude` (optional): Glob pattern to exclude files (e.g., `*_test.go`)
 - `encoding` (optional): File encoding (auto-detected if omitted)
 
+Directories in `paths` are searched recursively; individual files are searched directly.
+
+`include`/`exclude` are single glob **strings**, not arrays, and are matched against the file
+name — use `"*.pas"`, not `["*.pas"]`. Brace sets (`*.{pas,dfm}`) and directory-qualified
+patterns (`src/*.pas`) are not supported by the underlying matcher and will match nothing.
+
 **Example:**
 ```json
 {
@@ -389,11 +435,24 @@ No write (and no backup) happens if the file already holds the target bytes — 
 - `backup` (optional): Create a `.bak` backup file before converting (default: false)
 - `bom` (optional): `auto` (default — BOM for UTF-16 targets, keeps a same-encoding source BOM), `always`, `never`, `preserve`
 
+Omit `from` to auto-detect; pass it only to override detection on a file that misdetects.
+A narrowing conversion (e.g. `utf-8` → `cp1251`) fails outright if the content contains
+characters the target encoding lacks, rather than writing corrupted text.
+
 **Example:**
 ```json
 {
   "path": "/path/to/file.pas",
   "from": "cp1251",
+  "to": "utf-8",
+  "backup": true
+}
+```
+
+Auto-detected source, with a backup:
+```json
+{
+  "path": "D:\\legacy\\data.txt",
   "to": "utf-8",
   "backup": true
 }
