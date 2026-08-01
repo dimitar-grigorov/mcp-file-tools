@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func TestHandleGrep_SimpleMatch(t *testing.T) {
@@ -172,6 +174,81 @@ func TestHandleGrep_ExcludePattern(t *testing.T) {
 	}
 }
 
+func TestHandleGrep_MultipleIncludes(t *testing.T) {
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+
+	for _, name := range []string{"form.pas", "form.dfm", "notes.txt"} {
+		if err := os.WriteFile(filepath.Join(tempDir, name), []byte("findme"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	result, output, err := h.HandleGrep(context.Background(), nil, GrepInput{
+		Pattern:  "findme",
+		Paths:    []string{tempDir},
+		Includes: []string{"*.pas", "*.dfm"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.IsError || output.TotalMatches != 2 {
+		t.Fatalf("got error=%v matches=%d, want success with 2 matches", result.IsError, output.TotalMatches)
+	}
+}
+
+func TestHandleGrep_MultipleExcludes(t *testing.T) {
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+
+	for _, name := range []string{"keep.txt", "old.bak", "scratch.tmp"} {
+		if err := os.WriteFile(filepath.Join(tempDir, name), []byte("findme"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	result, output, err := h.HandleGrep(context.Background(), nil, GrepInput{
+		Pattern:  "findme",
+		Paths:    []string{tempDir},
+		Excludes: []string{"*.bak", "*.tmp"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.IsError || output.TotalMatches != 1 {
+		t.Fatalf("got error=%v matches=%d, want success with 1 match", result.IsError, output.TotalMatches)
+	}
+}
+
+func TestHandleGrep_RejectsSingularAndPluralPatterns(t *testing.T) {
+	h := NewHandler([]string{t.TempDir()})
+	tests := []struct {
+		name  string
+		input GrepInput
+		want  string
+	}{
+		{"include", GrepInput{Include: "*.pas", Includes: []string{"*.dfm"}}, "include and includes cannot be used together"},
+		{"exclude", GrepInput{Exclude: "*.bak", Excludes: []string{"*.tmp"}}, "exclude and excludes cannot be used together"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.input.Pattern = "findme"
+			tc.input.Paths = h.ResolvedAllowedDirs()
+			result, _, err := h.HandleGrep(context.Background(), nil, tc.input)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !result.IsError {
+				t.Fatal("expected tool error")
+			}
+			got := result.Content[0].(*mcp.TextContent).Text
+			if got != tc.want {
+				t.Fatalf("error = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestHandleGrep_MaxMatches(t *testing.T) {
 	tempDir := t.TempDir()
 	h := NewHandler([]string{tempDir})
@@ -206,15 +283,16 @@ func TestHandleGrep_CP1251Encoding(t *testing.T) {
 	tempDir := t.TempDir()
 	h := NewHandler([]string{tempDir})
 
-	testFile := filepath.Join(tempDir, "test.txt")
+	testFile := filepath.Join(tempDir, "test.pas")
 	// CP1251 bytes for "Привет" (Russian "Hello")
 	cp1251Bytes := []byte{0xCF, 0xF0, 0xE8, 0xE2, 0xE5, 0xF2}
 	os.WriteFile(testFile, cp1251Bytes, 0644)
 
 	// Search for Cyrillic pattern (will be auto-detected)
 	result, output, err := h.HandleGrep(context.Background(), nil, GrepInput{
-		Pattern: "Привет",
-		Paths:   []string{testFile},
+		Pattern:  "Привет",
+		Paths:    []string{tempDir},
+		Includes: []string{"*.pas", "*.dfm"},
 	})
 	if err != nil {
 		t.Fatal(err)

@@ -55,6 +55,20 @@ func (h *Handler) HandleGrep(ctx context.Context, req *mcp.CallToolRequest, inpu
 	if len(input.Paths) == 0 {
 		return errorResult("paths is required"), GrepOutput{}, nil
 	}
+	if input.Include != "" && len(input.Includes) > 0 {
+		return errorResult("include and includes cannot be used together"), GrepOutput{}, nil
+	}
+	if input.Exclude != "" && len(input.Excludes) > 0 {
+		return errorResult("exclude and excludes cannot be used together"), GrepOutput{}, nil
+	}
+	includes := input.Includes
+	if input.Include != "" {
+		includes = []string{input.Include}
+	}
+	excludes := input.Excludes
+	if input.Exclude != "" {
+		excludes = []string{input.Exclude}
+	}
 	mode := input.OutputMode
 	if mode == "" {
 		mode = outputModeContent
@@ -91,7 +105,7 @@ func (h *Handler) HandleGrep(ctx context.Context, req *mcp.CallToolRequest, inpu
 	case outputModeFiles:
 		opts.perFileLimit = 1 // stop reading the moment the file qualifies
 	}
-	files := h.collectFiles(ctx, input.Paths, input.Include, input.Exclude, gitignoreDefault(input.RespectGitignore))
+	files := h.collectFiles(ctx, input.Paths, includes, excludes, gitignoreDefault(input.RespectGitignore))
 	if len(files) == 0 {
 		return &mcp.CallToolResult{}, GrepOutput{Matches: []GrepMatch{}, FilesSearched: 0}, nil
 	}
@@ -112,7 +126,7 @@ func compilePattern(pattern string, caseSensitive *bool) (*regexp.Regexp, error)
 }
 
 // collectFiles gathers all files to search from the given paths.
-func (h *Handler) collectFiles(ctx context.Context, paths []string, include, exclude string, gitignore bool) []string {
+func (h *Handler) collectFiles(ctx context.Context, paths, includes, excludes []string, gitignore bool) []string {
 	var files []string
 	seen := make(map[string]bool)
 	allowedDirs := h.ResolvedAllowedDirs()
@@ -144,13 +158,13 @@ func (h *Handler) collectFiles(ctx context.Context, paths []string, include, exc
 				if e.IsDir() {
 					return filesystem.Continue, nil
 				}
-				if shouldIncludeFile(e.Path, include, exclude) && !seen[e.Path] {
+				if shouldIncludeFile(e.Path, includes, excludes) && !seen[e.Path] {
 					seen[e.Path] = true
 					files = append(files, e.Path)
 				}
 				return filesystem.Continue, nil
 			})
-		} else if shouldIncludeFile(v.Path, include, exclude) && !seen[v.Path] {
+		} else if shouldIncludeFile(v.Path, includes, excludes) && !seen[v.Path] {
 			seen[v.Path] = true
 			files = append(files, v.Path)
 		}
@@ -158,29 +172,23 @@ func (h *Handler) collectFiles(ctx context.Context, paths []string, include, exc
 	return files
 }
 
-// shouldIncludeFile checks if a file matches include/exclude patterns.
-// Matches against both full path (with forward slashes) and basename.
-func shouldIncludeFile(path string, include, exclude string) bool {
+// shouldIncludeFile matches patterns against the basename.
+func shouldIncludeFile(path string, includes, excludes []string) bool {
 	base := filepath.Base(path)
-	normalized := filepath.ToSlash(path)
-	if exclude != "" {
-		if matchedBase, _ := filepath.Match(exclude, base); matchedBase {
-			return false
-		}
-		if matchedPath, _ := filepath.Match(exclude, normalized); matchedPath {
+	for _, pattern := range excludes {
+		if matched, _ := filepath.Match(pattern, base); matched {
 			return false
 		}
 	}
-	if include != "" {
-		if matchedBase, _ := filepath.Match(include, base); matchedBase {
-			return true
-		}
-		if matchedPath, _ := filepath.Match(include, normalized); matchedPath {
-			return true
-		}
-		return false
+	if len(includes) == 0 {
+		return true
 	}
-	return true
+	for _, pattern := range includes {
+		if matched, _ := filepath.Match(pattern, base); matched {
+			return true
+		}
+	}
+	return false
 }
 
 // searchFiles searches all files with bounded concurrency, committing results in file

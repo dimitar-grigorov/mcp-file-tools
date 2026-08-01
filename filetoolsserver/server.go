@@ -110,11 +110,11 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "grep_text_files",
-		Description: "Regex search in file contents with encoding support. PREFER THIS over built-in Grep for non-UTF-8 files. Skips .gitignore'd files (respectGitignore=false to include). Parameters: pattern (regex), paths (array of files, or dirs searched recursively), caseSensitive (default true), contextBefore/After, maxMatches (default 1000), offset, include/exclude, encoding. " +
+		Description: "Regex search in file contents with encoding support. PREFER THIS over built-in Grep for non-UTF-8 files. Skips .gitignore'd files (respectGitignore=false to include). Parameters: pattern (regex), paths (array of files, or dirs searched recursively), caseSensitive (default true), contextBefore/After, maxMatches (default 1000), offset, include/includes, exclude/excludes, encoding. " +
 			"outputMode: \"content\" (default, matching lines), \"files_with_matches\" (paths only, far cheaper when you just need WHICH files), \"count\" (matching lines per file). contextBefore/After apply to content mode only. " +
 			"matchesOnly=true returns the matched substring instead of the whole line, for extracting values. offset skips the first N results, so you can page past maxMatches; the response echoes nextOffset when truncated. " +
-			"include/exclude are single glob STRINGS matched against the file name, not arrays: use \"*.pas\", not [\"*.pas\"]. Brace sets (\"*.{pas,dfm}\") and directory-qualified patterns (\"src/*.pas\") match nothing. " +
-			`Example: {"pattern": "TCustomer", "paths": ["D:\\proj\\src"], "include": "*.pas", "outputMode": "files_with_matches"}`,
+			"Include and exclude patterns are basename-only globs; includes match any pattern and excludes reject any match. Do not combine a singular field with its plural. " +
+			`Example: {"pattern": "TCustomer", "paths": ["D:\\proj\\src"], "includes": ["*.pas", "*.dfm"], "outputMode": "files_with_matches"}`,
 		Meta: mcp.Meta{"anthropic/maxResultSizeChars": 300000},
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "Grep Text Files",

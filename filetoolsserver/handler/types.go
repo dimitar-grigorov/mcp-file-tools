@@ -278,6 +278,8 @@ type GrepInput struct {
 	MaxMatches       int      `json:"maxMatches,omitempty"` // defaults to 1000
 	Include          string   `json:"include,omitempty"`
 	Exclude          string   `json:"exclude,omitempty"`
+	Includes         []string `json:"includes,omitempty"`
+	Excludes         []string `json:"excludes,omitempty"`
 	Encoding         string   `json:"encoding,omitempty"`
 	OutputMode       string   `json:"outputMode,omitempty"`
 	MatchesOnly      bool     `json:"matchesOnly,omitempty"`      // text is the matched substring, not the line

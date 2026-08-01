@@ -421,20 +421,21 @@ Search file contents using regex patterns with encoding support. Supports contex
 - `offset` (optional): Skip the first N results, to page past `maxMatches`
 - `include` (optional): Glob pattern to include files (e.g., `*.go`)
 - `exclude` (optional): Glob pattern to exclude files (e.g., `*_test.go`)
+- `includes` (optional): Glob patterns; a file matching any is included
+- `excludes` (optional): Glob patterns; a file matching any is excluded
 - `encoding` (optional): File encoding (auto-detected if omitted)
 
 Directories in `paths` are searched recursively; individual files are searched directly.
 
-`include`/`exclude` are single glob **strings**, not arrays, and are matched against the file
-name — use `"*.pas"`, not `["*.pas"]`. Brace sets (`*.{pas,dfm}`) and directory-qualified
-patterns (`src/*.pas`) are not supported by the underlying matcher and will match nothing.
+Patterns are matched against the file name only. Do not combine `include` with `includes`,
+or `exclude` with `excludes`.
 
 **Example:**
 ```json
 {
   "pattern": "func\\s+\\w+",
   "paths": ["/path/to/project"],
-  "include": "*.go",
+  "includes": ["*.pas", "*.dfm"],
   "contextBefore": 1,
   "contextAfter": 2,
   "maxMatches": 100

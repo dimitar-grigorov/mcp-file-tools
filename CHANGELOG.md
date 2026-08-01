@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`grep_text_files` accepts `includes` and `excludes` arrays.** Patterns keep
+  their basename-only glob semantics; singular `include` and `exclude` still work.
+
 - **`edit_file` edits take optional `similarity`** (0.0-1.0) for bounded,
   line-based fuzzy matching when whitespace or comments drift.
 
