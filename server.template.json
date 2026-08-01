@@ -122,12 +122,8 @@
       "description": "Auto-detect file encoding with confidence score and BOM detection"
     },
     {
-      "name": "detect_line_endings",
-      "description": "Detect line ending style (crlf/lf/mixed) and find inconsistent lines"
-    },
-    {
-      "name": "change_line_endings",
-      "description": "Convert line endings to LF or CRLF, preserving a UTF-16 BOM"
+      "name": "manage_line_endings",
+      "description": "Detect or convert line endings (crlf/lf/mixed), preserving a UTF-16 BOM"
     },
     {
       "name": "manage_bom",

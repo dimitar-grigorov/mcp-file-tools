@@ -6,7 +6,7 @@ versions see the [GitHub releases](https://github.com/dimitar-grigorov/mcp-file-
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [3.0.0] - 2026-08-01
 
 ### Removed — BREAKING
 
@@ -53,7 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`read_text_file` and `write_file` now return a `hint`** when there is
   something the agent should know: a file that already has mixed line endings
-  (with counts, and a pointer to `change_line_endings`), and — once per file per
+  (with counts, and a pointer to `manage_line_endings`), and — once per file per
   session — that a plain utf-8 file with no BOM is better served by the agent's
   own built-in tools, since this server adds nothing for it.
 
@@ -76,8 +76,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Roots and MCP logging are deprecated in `2026-07-28` with a 12-month window,
 and are retained for older clients.
-
-### Added
 
 - **Usage examples in the five most ambiguous tool descriptions** —
   `read_text_file` (offset/limit paging), `write_file` and `convert_encoding`
