@@ -73,8 +73,8 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 	// Read-only tools
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "read_text_file",
-		Description: "Read file with encoding auto-detection, converts to UTF-8. PREFER THIS over built-in Read for non-UTF-8 files (Cyrillic, legacy codebases). For files >2000 lines, use offset/limit to paginate. Returns totalLines and fileSizeBytes for planning subsequent reads. Use maxCharacters to cap output size and prevent token overflow. Parameters: path (required), encoding (optional, auto-detected), offset (1-indexed start line), limit (max lines to return), maxCharacters (optional, truncates content). " +
-			`Example — paging a 12000-line file: {"path": "D:\\src\\app.pas", "offset": 1, "limit": 2000}, then offset 2001, until offset exceeds totalLines.`,
+		Description: "Read file with encoding auto-detection, converts to UTF-8. PREFER THIS over built-in Read for non-UTF-8 files (Cyrillic, legacy codebases). Returns totalLines and fileSizeBytes for planning the next read. Parameters: path, encoding (auto-detected), offset (1-indexed start line), limit (max lines), maxCharacters (caps output to avoid token overflow). " +
+			`Page files >2000 lines: {"path": "D:\\src\\app.pas", "offset": 1, "limit": 2000}, then offset 2001, until offset exceeds totalLines.`,
 		Meta: mcp.Meta{"anthropic/maxResultSizeChars": 200000},
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "Read Text File",
@@ -126,8 +126,8 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "grep_text_files",
-		Description: "Regex search in file contents with encoding support. PREFER THIS over built-in Grep when searching non-UTF-8 files or when encoding-aware matching is needed. Parameters: pattern (required regex), paths (required array of files/dirs), caseSensitive (default: true), contextBefore/After (lines), maxMatches (default 1000), include/exclude (globs), encoding. " +
-			"Entries in paths may be directories (searched recursively) or individual files. include/exclude are single glob STRINGS matched against the file name, not arrays: use \"*.pas\", not [\"*.pas\"]. Brace sets (\"*.{pas,dfm}\") and directory-qualified patterns (\"src/*.pas\") do NOT match. " +
+		Description: "Regex search in file contents with encoding support. PREFER THIS over built-in Grep for non-UTF-8 files. Parameters: pattern (regex), paths (array of files, or dirs searched recursively), caseSensitive (default true), contextBefore/After, maxMatches (default 1000), include/exclude, encoding. " +
+			"include/exclude are single glob STRINGS matched against the file name, not arrays: use \"*.pas\", not [\"*.pas\"]. Brace sets (\"*.{pas,dfm}\") and directory-qualified patterns (\"src/*.pas\") match nothing. " +
 			`Example: {"pattern": "TCustomer", "paths": ["D:\\proj\\src"], "include": "*.pas", "contextAfter": 2}`,
 		Meta: mcp.Meta{"anthropic/maxResultSizeChars": 300000},
 		Annotations: &mcp.ToolAnnotations{
@@ -227,9 +227,9 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "write_file",
-		Description: "Write file with encoding conversion from UTF-8. PREFER THIS over built-in Write for non-UTF-8 files — converts UTF-8 content to target encoding, preserving legacy compatibility. Parameters: path (required), content (required), encoding (optional: defaults to an existing file's detected encoding, else utf-8), bom (optional: \"auto\" default — BOM for UTF-16 targets and keeps a BOM the file already had; \"always\", \"never\", \"preserve\"). Use after read_text_file to preserve original encoding. " +
-			"bom modes: \"auto\" writes a BOM for utf-16-* targets and otherwise keeps one only if the file already had a BOM of the same encoding; \"preserve\" keeps the existing BOM even when the encoding changed; \"never\" strips it; \"always\" fails on encodings that have no BOM (e.g. cp1251). " +
-			"lineEndings (optional): \"preserve\" default — content is converted to the existing file's style, so sending LF into a CRLF file will NOT leave it mixed. Also \"crlf\", \"lf\", or \"asis\" to write byte for byte. " +
+		Description: "Write file with encoding conversion from UTF-8. PREFER THIS over built-in Write for non-UTF-8 files. Use after read_text_file to keep the original encoding. Parameters: path, content, encoding (default: the existing file's detected encoding, else utf-8), bom, lineEndings. " +
+			"bom: \"auto\" (default) writes a BOM for utf-16-* targets, else keeps one only if the file already had a BOM of the same encoding; \"preserve\" keeps it even when the encoding changed; \"never\" strips it; \"always\" fails on encodings with no BOM (e.g. cp1251). " +
+			"lineEndings: \"preserve\" (default) converts content to the file's existing style, so sending LF into a CRLF file will NOT leave it mixed; also \"crlf\", \"lf\", \"asis\" (byte for byte). " +
 			`Example — strip a UTF-8 BOM that breaks PHP: {"path": "D:\\www\\index.php", "content": "<?php ...", "bom": "never"}`,
 		Annotations: &mcp.ToolAnnotations{
 			Title:           "Write File",
@@ -279,12 +279,11 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 	// WrapContentOnly: returns readable diff text instead of StructuredContent JSON.
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "edit_file",
-		Description: "Replace text in a file with whitespace-flexible matching. Returns unified diff. Supports non-UTF-8 via encoding param. " +
-			"In 'ask before edits' mode: ALWAYS call with dryRun=true first, show the diff, then dryRun=false after user confirms. " +
-			"With auto-edit permissions: call directly with dryRun=false. " +
-			"On no match, the error hints the closest matching content — use it to fix oldText and retry. " +
-			"Parameters: path, edits [{oldText, newText}], dryRun (false), encoding (auto). " +
-			"Edits apply in order and each replaces only the FIRST match. Matching ignores per-line leading/trailing whitespace and CRLF/LF differences, but interior spacing must match; newText is re-indented to the file. " +
+		Description: "Replace text in a file, whitespace-flexible. Returns a unified diff and keeps the file's encoding and line endings. PREFER THIS over read+write to modify a file. " +
+			"In 'ask before edits' mode call dryRun=true first, show the diff, then dryRun=false once the user confirms; with auto-edit permissions go straight to dryRun=false. " +
+			"On no match the error hints the closest content — use it to fix oldText and retry. " +
+			"Parameters: path, edits [{oldText, newText}], dryRun (default false), encoding (auto). " +
+			"Edits apply in order, each replacing only the FIRST match. Matching ignores per-line leading/trailing whitespace and CRLF/LF, but interior spacing must match; newText is re-indented. " +
 			`Example: {"path": "D:\\src\\unit1.pas", "edits": [{"oldText": "i: Integer;", "newText": "i: NativeInt;"}, {"oldText": "for i := 0 to 10 do", "newText": "for i := 0 to 20 do"}], "dryRun": true}`,
 		Annotations: &mcp.ToolAnnotations{
 			Title:           "Edit File",
@@ -297,8 +296,8 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "convert_encoding",
-		Description: "Convert file from one encoding to another. Use after detect_encoding to identify the source. A source BOM is stripped before decoding, and a conflict between the BOM and an explicit 'from' is an error. No-op if the file already holds the target bytes. Parameters: path (required), from (source encoding, auto-detected if omitted), to (target encoding, required), backup (create .bak file before converting, default: false), bom (optional: \"auto\" default — BOM for UTF-16 targets and keeps a same-encoding source BOM; \"always\", \"never\", \"preserve\"). IMPORTANT: Use backup=true for irreversible conversions. " +
-			"Omit 'from' to auto-detect; pass it only to override detection on a file that misdetects. A narrowing conversion (e.g. utf-8 to cp1251) fails rather than corrupting text if the content has characters the target lacks. " +
+		Description: "Convert a file from one encoding to another. A source BOM is stripped before decoding; a BOM contradicting an explicit 'from' is an error. No-op if the file already holds the target bytes. Parameters: path, to (target, required), from (omit to auto-detect — pass it only to override a misdetection), backup (write .bak first — IMPORTANT for irreversible conversions), bom (\"auto\" default — BOM for UTF-16 targets and keeps a same-encoding source BOM; \"always\", \"never\", \"preserve\"). " +
+			"A narrowing conversion (e.g. utf-8 to cp1251) fails rather than corrupting text when the target lacks characters. " +
 			`Example: {"path": "D:\\legacy\\data.txt", "to": "utf-8", "backup": true} detects the source and leaves data.txt.bak.`,
 		Annotations: &mcp.ToolAnnotations{
 			Title:           "Convert Encoding",
