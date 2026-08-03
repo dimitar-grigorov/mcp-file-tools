@@ -10,6 +10,8 @@ builds:
     binary: mcp-file-tools
     env:
       - CGO_ENABLED=0
+    # Reproducible builds: same tag, same bytes.
+    mod_timestamp: '{{ .CommitTimestamp }}'
     goos:
       - linux
       - windows
