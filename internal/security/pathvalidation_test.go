@@ -441,6 +441,51 @@ func TestValidatePath_AllowsMissingPathThroughSafeSymlink(t *testing.T) {
 	}
 }
 
+// An allowed dir given as an alias (macOS /var for /private/var) is stored resolved,
+// so requests spelled with the alias must still validate.
+func TestValidatePath_AllowsAliasSpellingOfAllowedDir(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipping symlink tests on Windows - see pathvalidation_windows_test.go")
+	}
+
+	tempDir := t.TempDir()
+	real := filepath.Join(tempDir, "real")
+	if err := os.Mkdir(real, 0755); err != nil {
+		t.Fatal(err)
+	}
+	alias := filepath.Join(tempDir, "alias")
+	if err := os.Symlink(real, alias); err != nil {
+		t.Fatal(err)
+	}
+	existing := filepath.Join(real, "file.txt")
+	if err := os.WriteFile(existing, []byte("x"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// NormalizeAllowedDirs stores the resolved root, as it would for /var -> /private/var.
+	allowedDirs, err := NormalizeAllowedDirs([]string{alias})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, requested := range []string{
+		filepath.Join(alias, "file.txt"),
+		filepath.Join(alias, "missing", "new.txt"),
+	} {
+		if _, err := ValidatePath(requested, allowedDirs); err != nil {
+			t.Errorf("ValidatePath(%q) = %v, want success", requested, err)
+		}
+	}
+
+	outside := filepath.Join(tempDir, "outside.txt")
+	if err := os.WriteFile(outside, []byte("x"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ValidatePath(outside, allowedDirs); !errors.Is(err, ErrPathDenied) {
+		t.Errorf("ValidatePath(%q) = %v, want ErrPathDenied", outside, err)
+	}
+}
+
 func TestValidatePath_PathTraversal(t *testing.T) {
 	tempDir := t.TempDir()
 	allowedDir := filepath.Join(tempDir, "allowed")

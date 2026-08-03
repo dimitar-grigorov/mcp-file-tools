@@ -76,7 +76,7 @@ func ValidatePath(requestedPath string, allowedDirs []string) (string, error) {
 			absolute = expanded
 			normalized = normalizePath(absolute)
 		}
-		if !IsPathWithinAllowedDirectories(normalized, allowedDirs) {
+		if !IsPathWithinAllowedDirectories(normalized, allowedDirs) && !resolvesInside(absolute, allowedDirs) {
 			return "", fmt.Errorf("%w: %s", ErrPathDenied, absolute)
 		}
 	}
@@ -102,6 +102,18 @@ func ValidatePath(requestedPath string, allowedDirs []string) (string, error) {
 		return absolute, nil
 	}
 	return resolvedPath, nil
+}
+
+// resolvesInside is the lexical gate's last resort: allowed dirs are stored resolved,
+// so a platform alias spelling (macOS /var for /private/var) only matches once resolved.
+// Safe because it can only reach content that is genuinely inside an allowed dir —
+// the resolved check below stays authoritative. Errors mean "not inside".
+func resolvesInside(absolute string, allowedDirs []string) bool {
+	resolved, _, err := resolvePathAllowMissing(absolute)
+	if err != nil {
+		return false
+	}
+	return IsPathWithinAllowedDirectories(normalizePath(resolved), allowedDirs)
 }
 
 // resolvePathAllowMissing resolves the nearest existing ancestor and re-projects the

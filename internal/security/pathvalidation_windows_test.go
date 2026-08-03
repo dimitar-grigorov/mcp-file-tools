@@ -57,6 +57,43 @@ func TestValidatePath_AllowsMissingPathThroughSafeJunction(t *testing.T) {
 	}
 }
 
+// Same alias case as TestValidatePath_AllowsAliasSpellingOfAllowedDir, over a junction.
+func TestValidatePath_AllowsJunctionSpellingOfAllowedDir(t *testing.T) {
+	tempDir := t.TempDir()
+	real := filepath.Join(tempDir, "real")
+	if err := os.Mkdir(real, 0755); err != nil {
+		t.Fatal(err)
+	}
+	alias := filepath.Join(tempDir, "alias")
+	createJunctionForTest(t, real, alias)
+	if err := os.WriteFile(filepath.Join(real, "file.txt"), []byte("x"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// The root is stored resolved, as it would be for an aliased root.
+	allowedDirs, err := NormalizeAllowedDirs([]string{real})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, requested := range []string{
+		filepath.Join(alias, "file.txt"),
+		filepath.Join(alias, "missing", "new.txt"),
+	} {
+		if _, err := ValidatePath(requested, allowedDirs); err != nil {
+			t.Errorf("ValidatePath(%q) = %v, want success", requested, err)
+		}
+	}
+
+	outside := filepath.Join(tempDir, "outside.txt")
+	if err := os.WriteFile(outside, []byte("x"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ValidatePath(outside, allowedDirs); !errors.Is(err, ErrPathDenied) {
+		t.Errorf("ValidatePath(%q) = %v, want ErrPathDenied", outside, err)
+	}
+}
+
 func TestValidatePath_DriveRootAllowedDir(t *testing.T) {
 	tempDir := t.TempDir()
 	driveRoot := filepath.VolumeName(tempDir) + `\`
