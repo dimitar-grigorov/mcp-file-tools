@@ -99,21 +99,21 @@ func TestUpdateAllowedDirectoriesFromRoots_UnixPath(t *testing.T) {
 
 func TestFileURIToPath(t *testing.T) {
 	tests := []struct {
-		name string
-		uri  string
-		want string
-		skip string // GOOS to skip on
+		name   string
+		uri    string
+		want   string
+		onlyOS string // GOOS this case is specific to; empty runs everywhere
 	}{
-		{name: "Windows drive letter", uri: "file:///C:/Users/test", want: "C:/Users/test", skip: "linux"},
-		{name: "Unix absolute path", uri: "file:///home/user/project", want: "/home/user/project", skip: "windows"},
+		{name: "Windows drive letter", uri: "file:///C:/Users/test", want: "C:/Users/test", onlyOS: "windows"},
+		{name: "Unix absolute path", uri: "file:///home/user/project", want: "/home/user/project"},
 		{name: "not a file URI", uri: "/some/path", want: "/some/path"},
 		{name: "empty string", uri: "", want: ""},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.skip == runtime.GOOS {
-				t.Skipf("skipping on %s", runtime.GOOS)
+			if tt.onlyOS != "" && tt.onlyOS != runtime.GOOS {
+				t.Skipf("case is %s-specific, running on %s", tt.onlyOS, runtime.GOOS)
 			}
 			got := fileURIToPath(tt.uri)
 			if got != tt.want {
