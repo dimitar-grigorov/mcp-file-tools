@@ -781,6 +781,10 @@ Returns directories the server is allowed to access. If empty, add paths as args
 Checks whether a newer release is available. No parameters. Set `MCP_NO_UPDATE_CHECK=1` to
 disable the check.
 
+Returns `currentVersion`, `latestVersion`, `installMethod` (`plugin` when the Claude Code
+plugin launcher started the server, otherwise `manual`), and `updateMessage` when an update
+exists — with the update steps that apply to that install and client.
+
 ## Supported Encodings
 
 | Name | Aliases | Description |

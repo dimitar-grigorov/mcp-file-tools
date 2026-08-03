@@ -6,6 +6,21 @@ versions see the [GitHub releases](https://github.com/dimitar-grigorov/mcp-file-
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Update notices now match how the server was installed.** The message told
+  every user to close Claude Code and re-download the binary, which is wrong for
+  the plugin (it ignores a hand-placed binary) and wrong for Codex and other
+  clients. Plugin installs get the `claude plugin update` commands; manual
+  installs get re-download steps naming their own client.
+
+### Added
+
+- **`check_for_updates` returns `installMethod`** (`plugin` or `manual`), so
+  "how is this installed?" has a factual answer.
+
 ## [3.2.0] - 2026-08-01
 
 ### Added

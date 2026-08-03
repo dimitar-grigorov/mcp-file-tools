@@ -7,6 +7,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/dimitar-grigorov/mcp-file-tools/internal/install"
 	"github.com/dimitar-grigorov/mcp-file-tools/internal/updater"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -21,14 +22,16 @@ type CheckUpdateOutput struct {
 	CurrentVersion string `json:"currentVersion"`
 	LatestVersion  string `json:"latestVersion"`
 	UpdateMessage  string `json:"updateMessage,omitempty"`
+	InstallMethod  string `json:"installMethod"`
 }
 
 // NewCheckUpdateHandler returns a handler that checks for newer versions.
 // Uses cached result by default (max 1 GitHub API call per 30 min).
 // Set force=true to bypass cache.
-func NewCheckUpdateHandler(version string) mcp.ToolHandlerFor[CheckUpdateInput, CheckUpdateOutput] {
+func (h *Handler) NewCheckUpdateHandler(version string) mcp.ToolHandlerFor[CheckUpdateInput, CheckUpdateOutput] {
 	return func(ctx context.Context, req *mcp.CallToolRequest, input CheckUpdateInput) (*mcp.CallToolResult, CheckUpdateOutput, error) {
-		msg := updater.Check(ctx, version, input.Force)
+		env := h.installEnv(req.Session)
+		msg := updater.Check(ctx, version, input.Force, env)
 		latest := updater.CachedLatestVersion()
 		if latest == "" {
 			latest = version
@@ -38,17 +41,32 @@ func NewCheckUpdateHandler(version string) mcp.ToolHandlerFor[CheckUpdateInput, 
 			CurrentVersion: version,
 			LatestVersion:  latest,
 			UpdateMessage:  msg,
+			InstallMethod:  string(env.Method),
 		}, nil
 	}
 }
 
+// installEnv describes this setup so update steps match it.
+func (h *Handler) installEnv(session *mcp.ServerSession) install.Env {
+	env := install.Env{
+		Method:    install.DetectMethod(),
+		RootsOnly: !h.HasCLIDirs(),
+	}
+	if session != nil {
+		if params := session.InitializeParams(); params != nil && params.ClientInfo != nil {
+			env.Client = install.DetectClient(params.ClientInfo.Name)
+		}
+	}
+	return env
+}
+
 // CheckForUpdatesAsync checks for updates in the background and notifies via MCP logging.
 // Called once on server initialization, before any tool calls.
-func CheckForUpdatesAsync(session *mcp.ServerSession, version string) {
+func (h *Handler) CheckForUpdatesAsync(session *mcp.ServerSession, version string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	if msg := updater.Check(ctx, version, false); msg != "" {
+	if msg := updater.Check(ctx, version, false, h.installEnv(session)); msg != "" {
 		//lint:ignore SA1019 logging deprecated in 2026-07-28, still reaches older clients
 		_ = session.Log(ctx, &mcp.LoggingMessageParams{
 			Level:  "notice",

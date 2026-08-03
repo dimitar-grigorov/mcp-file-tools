@@ -9,6 +9,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	installmode "github.com/dimitar-grigorov/mcp-file-tools/internal/install"
 )
 
 const (
@@ -60,6 +62,8 @@ func run() (int, error) {
 func serve(server string) (int, error) {
 	cmd := exec.Command(server, os.Args[1:]...)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+	// The marker lets the server print plugin update steps instead of binary ones.
+	cmd.Env = append(os.Environ(), installmode.EnvLauncher+"=1")
 
 	if err := cmd.Run(); err != nil {
 		var exit *exec.ExitError

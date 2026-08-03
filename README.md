@@ -257,7 +257,10 @@ a prompt takes one more rule — see [docs/extra.md](docs/extra.md#auto-approvin
 
 ### Update
 
-The server checks for updates automatically and notifies you through tool responses when a newer version is available. To update:
+The server checks for updates automatically and notifies you through tool responses when a
+newer version is available; the notice carries the steps for your install. Plugin installs
+update through [Updating the plugin](#updating-the-plugin) — a re-downloaded binary is
+ignored there. For a manual install:
 
 1. Close all Claude Code sessions (the binary is locked while running)
 2. Re-download the binary:

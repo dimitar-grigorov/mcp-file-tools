@@ -100,6 +100,12 @@ func (h *Handler) GetAllowedDirectories() []string {
 	return dirs
 }
 
+// HasCLIDirs reports whether any directory came from CLI args, as opposed to all
+// access arriving through MCP roots.
+func (h *Handler) HasCLIDirs() bool {
+	return len(h.cliDirs) > 0
+}
+
 // ResolvedAllowedDirs returns allowed directories with symlinks resolved.
 func (h *Handler) ResolvedAllowedDirs() []string {
 	return security.ResolveAllowedDirs(h.GetAllowedDirectories())

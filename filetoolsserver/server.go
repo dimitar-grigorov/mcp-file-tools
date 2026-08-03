@@ -324,7 +324,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 			Title:        "Check for Updates",
 			ReadOnlyHint: true,
 		},
-	}, handler.Wrap(logger, "check_for_updates", handler.NewCheckUpdateHandler(Version)))
+	}, handler.Wrap(logger, "check_for_updates", h.NewCheckUpdateHandler(Version)))
 
 	return server
 }

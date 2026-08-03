@@ -14,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/dimitar-grigorov/mcp-file-tools/internal/install"
 )
 
 const (
@@ -39,7 +41,8 @@ type cache struct {
 // Check checks for updates and returns a notification message if available.
 // Returns empty string if: no update, disabled via MCP_NO_UPDATE_CHECK=1, dev version, or error.
 // If force is true, the cache is bypassed and a fresh check is performed.
-func Check(ctx context.Context, currentVersion string, force bool) string {
+// env selects the update steps; a zero Env yields client-neutral ones.
+func Check(ctx context.Context, currentVersion string, force bool, env install.Env) string {
 	// Skip if disabled or running dev build
 	if os.Getenv("MCP_NO_UPDATE_CHECK") == "1" || currentVersion == "dev" || currentVersion == "" {
 		return ""
@@ -68,13 +71,42 @@ func Check(ctx context.Context, currentVersion string, force bool) string {
 	}
 
 	if isNewerVersion(latestVersion, currentVersion) {
-		return fmt.Sprintf(
-			"mcp-file-tools update available: %s → %s\n"+
-				"To update, close all Claude Code sessions, then re-download the binary.\n"+
-				"Instructions: %s#update",
-			currentVersion, latestVersion, RepoURL)
+		return fmt.Sprintf("mcp-file-tools update available: %s → %s\n%s",
+			currentVersion, latestVersion, updateSteps(env))
 	}
 	return ""
+}
+
+// updateSteps returns the steps that actually apply to this install. Getting them
+// wrong is worse than generic: the plugin ignores a re-downloaded binary, and a
+// manual install ignores plugin commands.
+func updateSteps(env install.Env) string {
+	if env.Method == install.Plugin {
+		return "Update the plugin:\n" +
+			"  claude plugin marketplace update mcp-file-tools\n" +
+			"  claude plugin update mcp-file-tools@mcp-file-tools\n" +
+			"Instructions: " + RepoURL + "#updating-the-plugin"
+	}
+
+	steps := "To update, re-download the binary over the existing one"
+	switch env.Client {
+	case install.ClaudeCode:
+		steps += " after closing all Claude Code sessions (the binary is locked while running)."
+	case install.Codex:
+		steps += " after closing all Codex sessions; the codex mcp entry keeps working."
+	default:
+		steps += " after closing the MCP client (the binary may be locked while running)."
+	}
+	steps += "\nInstructions: " + RepoURL + "#update"
+
+	// Only when the plugin would grant the same access — a manual install with CLI
+	// directories would lose them, so it never sees this.
+	if env.Client == install.ClaudeCode && env.RootsOnly {
+		steps += "\nThis install takes its directories from the workspace, so the Claude Code " +
+			"plugin (" + RepoURL + "#claude-code-plugin-recommended) would reach the same " +
+			"files and update itself. Switching is optional."
+	}
+	return steps
 }
 
 // fetchLatestVersion queries GitHub API for the latest release tag

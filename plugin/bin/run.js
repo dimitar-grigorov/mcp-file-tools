@@ -60,7 +60,11 @@ async function main() {
 
   // Hand our stdio straight to the server so it speaks MCP on this process's pipes.
   // Directories come from the client via the MCP roots protocol, so no args needed.
-  const child = spawn(bin, [], { stdio: 'inherit' });
+  // The marker lets the server print plugin update steps instead of binary ones.
+  const child = spawn(bin, [], {
+    stdio: 'inherit',
+    env: { ...process.env, MCP_FILE_TOOLS_VIA_LAUNCHER: '1' },
+  });
   child.on('exit', (code, signal) => {
     if (signal) process.kill(process.pid, signal);
     else process.exit(code ?? 0);
