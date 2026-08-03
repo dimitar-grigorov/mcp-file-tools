@@ -100,8 +100,7 @@ func (h *Handler) GetAllowedDirectories() []string {
 	return dirs
 }
 
-// HasCLIDirs reports whether any directory came from CLI args, as opposed to all
-// access arriving through MCP roots.
+// HasCLIDirs reports whether any directory came from CLI args rather than roots.
 func (h *Handler) HasCLIDirs() bool {
 	return len(h.cliDirs) > 0
 }

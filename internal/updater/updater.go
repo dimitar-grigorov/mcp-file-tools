@@ -77,9 +77,8 @@ func Check(ctx context.Context, currentVersion string, force bool, env install.E
 	return ""
 }
 
-// updateSteps returns the steps that actually apply to this install. Getting them
-// wrong is worse than generic: the plugin ignores a re-downloaded binary, and a
-// manual install ignores plugin commands.
+// updateSteps returns only the steps that work for this install: the plugin
+// ignores a re-downloaded binary, and a manual install ignores plugin commands.
 func updateSteps(env install.Env) string {
 	if env.Method == install.Plugin {
 		return "Update the plugin:\n" +
@@ -99,8 +98,7 @@ func updateSteps(env install.Env) string {
 	}
 	steps += "\nInstructions: " + RepoURL + "#update"
 
-	// Only when the plugin would grant the same access — a manual install with CLI
-	// directories would lose them, so it never sees this.
+	// Skipped when CLI directories exist, since the plugin would lose them.
 	if env.Client == install.ClaudeCode && env.RootsOnly {
 		steps += "\nThis install takes its directories from the workspace, so the Claude Code " +
 			"plugin (" + RepoURL + "#claude-code-plugin-recommended) would reach the same " +
