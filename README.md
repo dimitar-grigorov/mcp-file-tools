@@ -229,23 +229,20 @@ Alternatively, create a **per-project config** by adding `.mcp.json` to your pro
 
 **Note:** The `type: "stdio"` field is required. The `args` array specifies allowed directories — the VSCode extension does not automatically add the workspace directory, so you must list all directories you want to access. To add more directories later, re-run the `claude mcp add` command with all directories listed (it overwrites the previous config).
 
-**OpenAI Codex CLI**
+### OpenAI Codex CLI
 
-Codex does not have an `mcp add` command -- you need to edit `~/.codex/config.toml` manually.
+For this server, the Codex equivalent is a direct MCP command; no manual TOML editing
+is needed.
 
 Windows (PowerShell):
 ```powershell
-# Download
 mkdir -Force "$env:LOCALAPPDATA\Programs\mcp-file-tools"
 iwr "https://github.com/dimitar-grigorov/mcp-file-tools/releases/latest/download/mcp-file-tools_windows_amd64.exe" -OutFile "$env:LOCALAPPDATA\Programs\mcp-file-tools\mcp-file-tools.exe"
+codex mcp add file-tools -- "$env:LOCALAPPDATA\Programs\mcp-file-tools\mcp-file-tools.exe" "D:\Projects"
 ```
 
-Then add to `~/.codex/config.toml`:
-```toml
-[mcp_servers.file-tools]
-command = "C:\\Users\\YOUR_NAME\\AppData\\Local\\Programs\\mcp-file-tools\\mcp-file-tools.exe"
-args = ["D:\\Projects"]
-```
+Run `codex mcp list` to verify it, then start a new Codex session. Add more directory
+arguments to grant access outside the current project.
 
 ### Auto-approve tools (Claude Code)
 
