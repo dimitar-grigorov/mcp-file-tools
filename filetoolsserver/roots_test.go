@@ -162,6 +162,37 @@ func TestUpdateAllowedDirectoriesFromRoots_MergesWithCLIBaseline(t *testing.T) {
 	}
 }
 
+// A client that drops its roots must lose that access, keeping the CLI baseline.
+func TestUpdateAllowedDirectoriesFromRoots_EmptyListRevokesDynamicRoots(t *testing.T) {
+	cliDir := t.TempDir()
+	rootDir := t.TempDir()
+
+	h := handler.NewHandler([]string{cliDir})
+	updateAllowedDirectoriesFromRoots(h, []string{"file:///" + filepath.ToSlash(rootDir)})
+	if got := h.GetAllowedDirectories(); len(got) != 2 {
+		t.Fatalf("expected 2 directories after merge, got %d: %v", len(got), got)
+	}
+
+	updateAllowedDirectoriesFromRoots(h, nil)
+
+	got := h.GetAllowedDirectories()
+	if len(got) != 1 {
+		t.Fatalf("expected only the CLI baseline, got %d: %v", len(got), got)
+	}
+	if resolved, _ := filepath.EvalSymlinks(got[0]); resolved != mustEvalSymlinks(t, cliDir) {
+		t.Errorf("remaining directory = %q, want CLI baseline %q", resolved, cliDir)
+	}
+}
+
+func mustEvalSymlinks(t *testing.T, path string) string {
+	t.Helper()
+	resolved, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return resolved
+}
+
 func TestUpdateAllowedDirectoriesFromRoots_DedupsBaseline(t *testing.T) {
 	tempDir1 := t.TempDir()
 

@@ -104,11 +104,9 @@ func updateAllowedDirectoriesFromRoots(h *handler.Handler, rootURIs []string) {
 		}
 	}
 
-	if len(validatedDirs) > 0 {
-		merged := h.MergeAllowedDirectories(validatedDirs)
-		slog.Debug("merged allowed directories from MCP roots",
-			"roots", validatedDirs, "merged", merged)
-	} else {
-		slog.Debug("no valid root directories provided by client")
-	}
+	// Merge unconditionally: an empty or fully invalid list must revoke roots the
+	// client granted earlier, leaving only the CLI baseline.
+	merged := h.MergeAllowedDirectories(validatedDirs)
+	slog.Debug("merged allowed directories from MCP roots",
+		"roots", validatedDirs, "merged", merged)
 }
