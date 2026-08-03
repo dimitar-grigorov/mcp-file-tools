@@ -76,17 +76,12 @@ func WithConfig(cfg *config.Config) Option {
 // NewHandler creates a new Handler with allowed directories and optional configuration.
 // If no config is provided via WithConfig, default configuration is used.
 func NewHandler(allowedDirs []string, opts ...Option) *Handler {
-	// Normalize the CLI baseline so it dedups reliably against normalized roots.
-	cliDirs, err := security.NormalizeAllowedDirs(allowedDirs)
-	if err != nil {
-		cliDirs = make([]string, len(allowedDirs))
-		copy(cliDirs, allowedDirs)
-	}
+	cliDirs := normalizeAllowedDirs(allowedDirs)
 
 	h := &Handler{
 		config:      config.Load(), // Load defaults from environment
 		cliDirs:     cliDirs,
-		allowedDirs: allowedDirs,
+		allowedDirs: append([]string(nil), cliDirs...),
 	}
 
 	for _, opt := range opts {
@@ -114,7 +109,22 @@ func (h *Handler) ResolvedAllowedDirs() []string {
 func (h *Handler) UpdateAllowedDirectories(newDirs []string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	h.allowedDirs = newDirs
+	h.allowedDirs = normalizeAllowedDirs(newDirs)
+}
+
+// normalizeAllowedDirs canonicalizes every dir so later validations compare like
+// with like — a Windows 8.3 root would otherwise never match a long request path.
+// Per dir, so one unusable path doesn't discard the rest.
+func normalizeAllowedDirs(dirs []string) []string {
+	normalized := make([]string, 0, len(dirs))
+	for _, dir := range dirs {
+		if one, err := security.NormalizeAllowedDirs([]string{dir}); err == nil && len(one) == 1 {
+			normalized = append(normalized, one[0])
+			continue
+		}
+		normalized = append(normalized, dir)
+	}
+	return normalized
 }
 
 // MergeAllowedDirectories sets the allowed directories to the deduped union of the
@@ -123,9 +133,10 @@ func (h *Handler) MergeAllowedDirectories(newDirs []string) []string {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	seen := make(map[string]struct{}, len(h.cliDirs)+len(newDirs))
-	merged := make([]string, 0, len(h.cliDirs)+len(newDirs))
-	for _, dirs := range [][]string{h.cliDirs, newDirs} {
+	normalizedNew := normalizeAllowedDirs(newDirs)
+	seen := make(map[string]struct{}, len(h.cliDirs)+len(normalizedNew))
+	merged := make([]string, 0, len(h.cliDirs)+len(normalizedNew))
+	for _, dirs := range [][]string{h.cliDirs, normalizedNew} {
 		for _, dir := range dirs {
 			if _, ok := seen[dir]; ok {
 				continue

@@ -4,6 +4,8 @@
 package handler
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/dimitar-grigorov/mcp-file-tools/internal/config"
@@ -58,19 +60,37 @@ func TestGetAllowedDirectories_ReturnsCopy(t *testing.T) {
 }
 
 func TestUpdateAllowedDirectories(t *testing.T) {
-	h := NewHandler([]string{"/tmp"})
+	h := NewHandler([]string{t.TempDir()})
 
-	newDirs := []string{"/home", "/var", "/opt"}
+	newDirs := []string{t.TempDir(), t.TempDir(), t.TempDir()}
 	h.UpdateAllowedDirectories(newDirs)
+	want := normalizeAllowedDirs(newDirs)
 
 	got := h.GetAllowedDirectories()
-	if len(got) != len(newDirs) {
-		t.Fatalf("expected %d dirs, got %d", len(newDirs), len(got))
+	if len(got) != len(want) {
+		t.Fatalf("expected %d dirs, got %d", len(want), len(got))
 	}
 
-	for i, d := range newDirs {
+	for i, d := range want {
 		if got[i] != d {
-			t.Errorf("dir[%d] = %q, want %q", i, got[i], d)
+			t.Errorf("dir[%d] = %q, want canonical %q", i, got[i], d)
+		}
+	}
+}
+
+// A short (8.3) root must accept requests spelled with the long path, and vice versa.
+func TestValidatePath_ShortAndLongAllowedDirSpelling(t *testing.T) {
+	root := t.TempDir()
+	canonical := normalizeAllowedDirs([]string{root})[0]
+	file := filepath.Join(canonical, "file.txt")
+	if err := os.WriteFile(file, []byte("x"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, configured := range []string{root, canonical} {
+		h := NewHandler([]string{configured})
+		if _, err := h.validatePath(file); err != nil {
+			t.Errorf("root %q: validatePath(%q) = %v, want success", configured, file, err)
 		}
 	}
 }
