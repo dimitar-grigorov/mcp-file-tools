@@ -6,7 +6,7 @@ versions see the [GitHub releases](https://github.com/dimitar-grigorov/mcp-file-
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [3.3.0] - 2026-08-03
 
 ### Changed
 
@@ -20,6 +20,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`check_for_updates` returns `installMethod`** (`plugin` or `manual`), so
   "how is this installed?" has a factual answer.
+
+### Fixed
+
+- **An allowed directory reached by an alias no longer denies every path under
+  it.** macOS hands clients `/var`, `/tmp` and `/etc` roots that resolve to
+  `/private/*`; the stored root was the resolved form, so requests spelled the
+  way the client sent them were refused. Resolved containment still decides what
+  is reachable.
+- **A Windows 8.3 short path as an allowed directory no longer denies
+  everything under it.** A root such as `C:\Users\DIMITA~1.GRI` never matched a
+  long request path, because only the CLI baseline was canonicalized and not the
+  active set.
+- **An empty client roots list now revokes the roots that client granted
+  earlier**, instead of leaving them authorized for the life of the process.
+  Directories from CLI args are unaffected.
 
 ## [3.2.0] - 2026-08-01
 
