@@ -1,5 +1,7 @@
 # MCP File Tools
 
+[![MCP Toplist](https://mcptoplist.com/badge/io.github.dimitar-grigorov%2Fmcp-file-tools.svg)](https://mcptoplist.com/server/io.github.dimitar-grigorov%2Fmcp-file-tools)
+
 [![Go Report Card](https://goreportcard.com/badge/github.com/dimitar-grigorov/mcp-file-tools)](https://goreportcard.com/report/github.com/dimitar-grigorov/mcp-file-tools)
 [![Release](https://img.shields.io/github/v/release/dimitar-grigorov/mcp-file-tools)](https://github.com/dimitar-grigorov/mcp-file-tools/releases/latest)
 [![License: GPL-3.0](https://img.shields.io/github/license/dimitar-grigorov/mcp-file-tools)](LICENSE)
