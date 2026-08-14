@@ -87,3 +87,7 @@ Do not write code or extra steps for these:
 If a project should default to a legacy encoding for **new** files, set
 `MCP_DEFAULT_ENCODING` (for example `cp1251`) in the project's `.mcp.json` rather
 than passing `encoding` on every call. Existing files keep their own encoding either way.
+
+This matters most for Delphi 2007 and older, which read UTF-8 only when it carries a BOM:
+a UTF-8 file without one is silently treated as ANSI. Adding a Cyrillic literal to a
+previously ASCII-only unit is the one case that can change a file's encoding.

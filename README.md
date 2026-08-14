@@ -146,7 +146,7 @@ Windows (PowerShell, not CMD):
 ```powershell
 mkdir -Force "$env:LOCALAPPDATA\Programs\mcp-file-tools"
 iwr "https://github.com/dimitar-grigorov/mcp-file-tools/releases/latest/download/mcp-file-tools_windows_amd64.exe" -OutFile "$env:LOCALAPPDATA\Programs\mcp-file-tools\mcp-file-tools.exe"
-claude mcp add --scope user file-tools -- "$env:LOCALAPPDATA\Programs\mcp-file-tools\mcp-file-tools.exe" "D:\Projects"
+claude mcp add --scope user file-tools -- "$env:LOCALAPPDATA\Programs\mcp-file-tools\mcp-file-tools.exe" "C:\Projects"
 ```
 
 Linux / macOS (swap the asset name from the table for your platform):
@@ -169,7 +169,7 @@ claude mcp add --scope user file-tools -- $(go env GOPATH)/bin/mcp-file-tools ~/
 
 ```powershell
 # Windows PowerShell
-claude mcp add --scope user file-tools -- "$(go env GOPATH)\bin\mcp-file-tools.exe" "D:\Projects"
+claude mcp add --scope user file-tools -- "$(go env GOPATH)\bin\mcp-file-tools.exe" "C:\Projects"
 ```
 
 ### Other Clients
@@ -210,7 +210,7 @@ If you already ran `claude mcp add --scope user` from the installation steps abo
 
 To configure separately for VSCode only:
 ```powershell
-claude mcp add --scope user file-tools -- "%LOCALAPPDATA%\Programs\mcp-file-tools\mcp-file-tools.exe" "D:\Projects"
+claude mcp add --scope user file-tools -- "%LOCALAPPDATA%\Programs\mcp-file-tools\mcp-file-tools.exe" "C:\Projects"
 ```
 
 Alternatively, create a **per-project config** by adding `.mcp.json` to your project root:
@@ -239,7 +239,7 @@ Windows (PowerShell):
 ```powershell
 mkdir -Force "$env:LOCALAPPDATA\Programs\mcp-file-tools"
 iwr "https://github.com/dimitar-grigorov/mcp-file-tools/releases/latest/download/mcp-file-tools_windows_amd64.exe" -OutFile "$env:LOCALAPPDATA\Programs\mcp-file-tools\mcp-file-tools.exe"
-codex mcp add file-tools -- "$env:LOCALAPPDATA\Programs\mcp-file-tools\mcp-file-tools.exe" "D:\Projects"
+codex mcp add file-tools -- "$env:LOCALAPPDATA\Programs\mcp-file-tools\mcp-file-tools.exe" "C:\Projects"
 ```
 
 Run `codex mcp list` to verify it, then start a new Codex session. Add more directory
@@ -341,6 +341,11 @@ the old behaviour:
 
 Commit that in the legacy repo's `.mcp.json` rather than setting it per machine, and
 everyone working in that repo gets the right default with no local setup.
+
+**Delphi 2007 and older** read UTF-8 only when it carries a BOM, so a UTF-8 file without one
+is silently treated as ANSI. Set `cp1251` (or your own ANSI code page) for such a repo and
+new Cyrillic literals land in the encoding the IDE expects. Files that already exist keep
+their own encoding either way, and no tool adds a BOM to them.
 
 ## Development
 

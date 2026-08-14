@@ -32,9 +32,18 @@ make build
 
 Interactive debug: `npx @modelcontextprotocol/inspector go run ./cmd/mcp-file-tools -- /path/to/dir`
 
+```bash
+# Re-record the tool schemas after an intended description or parameter change
+UPDATE_TOOL_SNAPSHOT=1 go test ./filetoolsserver/
+
+# Detection accuracy and throughput on a real legacy tree. Manual only: behind a
+# build tag, so no CI run and no plain `go test ./...` can reach it.
+MCP_FILE_TOOLS_CORPUS=/path/to/sources go test -tags corpus ./internal/encoding/ -run Corpus -v
+```
+
 ## Conventions
 
-- **Tool descriptions are prompts.** The `Description` strings in `server.go` are what client models read to pick a tool. Wording changes there are behaviour changes — mirror them in `TOOLS.md`.
+- **Tool descriptions are prompts.** The `Description` strings in `server.go` are what client models read to pick a tool. Wording changes there are behaviour changes — mirror them in `TOOLS.md`. `testdata/tools.snapshot.json` pins the whole `tools/list` payload, so any such change fails the build until you re-record it deliberately.
 - **Every path is validated.** New handlers resolve paths through `internal/security`, never `os` directly. Symlink and junction escapes are in scope.
 - **Adding a tool:** handler in `filetoolsserver/handler/`, registration with annotations in `server.go`, entry in `TOOLS.md`, line in the README tool list.
 
