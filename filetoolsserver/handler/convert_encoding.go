@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
@@ -46,12 +47,19 @@ func (h *Handler) HandleConvertEncoding(ctx context.Context, req *mcp.CallToolRe
 		return errorResult(fmt.Sprintf("unsupported target encoding: %s. Use list_encodings to see available encodings.", input.To)), ConvertEncodingOutput{}, nil
 	}
 
+	// A batch is the only slow case, so it is the only one worth reporting on.
+	var progress *progressReporter
+	if batch {
+		progress = newProgressReporter(req, len(paths))
+	}
+
 	results := make([]ConvertFileResult, 0, len(paths))
-	for _, p := range paths {
+	for i, p := range paths {
 		if r := cancelled(ctx); r != nil {
 			return r, ConvertEncodingOutput{}, nil
 		}
 		results = append(results, h.convertOne(p, input, policy, targetEncodingName))
+		progress.step(ctx, i+1, filepath.Base(p))
 	}
 
 	output := ConvertEncodingOutput{

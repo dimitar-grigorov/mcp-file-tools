@@ -10,10 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Ranked encoding candidates when detection cannot decide.** `detect_encoding` returns a
-  `candidates` list — best first, each flagged `supported` — when the verdict is under 80%
-  confident or outside the registry. `read_text_file` names them in `hint`, `convert_encoding`
-  in the error it raises instead of converting on an untrusted guess.
+- **Ranked encoding candidates when detection cannot decide.** `detect_encoding` returns
+  `candidates` (best first, each flagged `supported`) for a verdict under 80% confident or
+  outside the registry; `read_text_file` names them in `hint`, `convert_encoding` in its error.
+- **Progress notifications on a batch `convert_encoding`** — per file, capped at 100 per
+  call, only with a `progressToken`.
+- **Server title, description, website and icon** (SEP-973), the icon an inline data URI.
 
 ## [4.0.0] - 2026-08-14
 

@@ -706,6 +706,9 @@ When a file cannot be encoded, its result carries the offending characters as da
 prose — `unsupportedCount` plus an `unsupported` array of `{char, code, line, column}`. That is
 what makes a dry run over a whole project actionable.
 
+A batch reports **progress** per file if the call carried a `progressToken`, thinned to at
+most 100 notifications so a 5,000-file run does not flood the client.
+
 **Getting the file list:** `paths` takes explicit files, not directories or globs. Use
 `search_files` or `tree` to build the list first.
 
