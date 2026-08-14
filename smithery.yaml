@@ -1,5 +1,5 @@
 # Smithery configuration file: https://smithery.ai/docs/config#smitheryyaml
-# Non-UTF-8 file encoding server: auto-detects 24 encodings (CP1251, CP1252, KOI8, ISO-8859, UTF-16, GBK/GB18030) and writes back in the file's original encoding, BOM and line endings intact.
+# Non-UTF-8 file encoding server: auto-detects legacy charsets (CP1251, CP1252, KOI8, ISO-8859, UTF-16, GBK/GB18030) and writes back in the file's original encoding, BOM and line endings intact.
 
 runtime: container
 

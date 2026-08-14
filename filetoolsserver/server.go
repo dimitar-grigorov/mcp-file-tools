@@ -321,7 +321,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 	// Server
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "check_for_updates",
-		Description: "Check if a newer version of mcp-file-tools is available. Returns current version, latest version, and update instructions if outdated. Uses cached result (max 1 GitHub API call per 2h). Call once at the start of each session.",
+		Description: "Check if a newer version of mcp-file-tools is available. Returns current version, latest version, and update instructions if outdated. Uses a cached result (max 1 GitHub API call per 30 min); force=true bypasses the cache. Call once at the start of each session.",
 		Annotations: &mcp.ToolAnnotations{
 			Title:        "Check for Updates",
 			ReadOnlyHint: true,

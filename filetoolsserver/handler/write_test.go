@@ -294,8 +294,8 @@ func TestHandleWriteFile_DefaultEncoding_NewFile_EnvOverride(t *testing.T) {
 	}
 }
 
-// Delete this test in 2.3.0 together with utf8DefaultNotice.
-func TestHandleWriteFile_UTF8TransitionNotice_RemoveIn230(t *testing.T) {
+// Delete in January 2027 together with utf8DefaultNotice.
+func TestHandleWriteFile_UTF8TransitionNotice(t *testing.T) {
 	const marker = "new files now default to utf-8"
 
 	writeNew := func(t *testing.T, h *Handler, dir, name string, in WriteFileInput) string {

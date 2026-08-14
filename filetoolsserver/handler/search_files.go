@@ -5,6 +5,7 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -50,7 +51,7 @@ func (h *Handler) HandleSearchFiles(ctx context.Context, req *mcp.CallToolReques
 		gitignore:   gitignoreDefault(input.RespectGitignore),
 	})
 	if err != nil {
-		if err == context.Canceled || err == context.DeadlineExceeded {
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 			return errorResult("search cancelled"), SearchFilesOutput{}, nil
 		}
 		return errorResult("search failed: " + err.Error()), SearchFilesOutput{}, nil
