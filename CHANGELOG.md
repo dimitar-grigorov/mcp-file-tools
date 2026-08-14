@@ -6,6 +6,27 @@ versions see the [GitHub releases](https://github.com/dimitar-grigorov/mcp-file-
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **`write_file` and `edit_file` stripped the CRLFs from UTF-16 files.** Both read
+  line endings off raw bytes, where the `00` between CR and LF hides every CRLF, so
+  "preserve" rewrote the file as LF. Detection now runs on decoded text, as
+  `change_line_endings` already did.
+- **`grep_text_files` searched with a silently wrong decode** when given an
+  `encoding` it could not resolve. It now detects per file and says so in `hint`.
+- **`grep_text_files` over-reported `filesSearched`** once a full page stopped the
+  search early.
+- **`search_files` reported `truncated` for a result set that exactly filled
+  `maxResults`.**
+- **`detect_encoding` with `mode="chunked"` broke a tie at random**, the winner
+  coming out of a map range. Ties now break by name.
+
+### Changed
+
+- One `Decode` behind every tool that reads encoded bytes.
+
 ## [3.4.1] - 2026-08-14
 
 ### Fixed

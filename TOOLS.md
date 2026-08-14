@@ -463,6 +463,13 @@ or `exclude` with `excludes`.
 }
 ```
 
+`filesSearched` counts the files actually read: a full page stops the search, so
+a truncated result reports fewer than it collected.
+
+An `encoding` the registry does not know does not fail the search — each file's
+encoding is detected instead, and the response carries a `hint` saying so.
+`list_encodings` prints the accepted names.
+
 #### Output modes
 
 `outputMode` decides what comes back, and how much of each file gets read.
