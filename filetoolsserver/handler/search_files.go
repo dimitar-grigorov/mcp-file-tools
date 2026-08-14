@@ -111,7 +111,9 @@ func searchFiles(ctx context.Context, rootPath string, sOpts searchOptions) ([]s
 			return filesystem.Continue, nil
 		}
 		capped = append(capped, entry)
-		if len(capped) >= sOpts.maxResults {
+		// One past the cap, so an exact fit is not reported as truncated.
+		if len(capped) > sOpts.maxResults {
+			capped = capped[:sOpts.maxResults]
 			truncated = true
 			return filesystem.Stop, nil
 		}
