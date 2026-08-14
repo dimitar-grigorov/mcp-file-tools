@@ -18,8 +18,7 @@ import (
 
 const defaultMaxFiles = 1000
 
-// HandleTree returns a compact indented tree view optimized for AI consumption.
-// Uses ~70-80% fewer tokens than JSON format.
+// HandleTree returns a compact indented tree view, far cheaper in tokens than JSON.
 func (h *Handler) HandleTree(ctx context.Context, req *mcp.CallToolRequest, input TreeInput) (*mcp.CallToolResult, TreeOutput, error) {
 	v := h.ValidatePath(input.Path)
 	if !v.Ok() {
@@ -41,9 +40,6 @@ func (h *Handler) HandleTree(ctx context.Context, req *mcp.CallToolRequest, inpu
 		dirsOnly:     input.DirsOnly,
 		exclude:      input.Exclude,
 		showEncoding: input.ShowEncoding,
-		fileCount:    0,
-		dirCount:     0,
-		truncated:    false,
 	}
 	var sb strings.Builder
 	opts := filesystem.Options{
@@ -115,8 +111,8 @@ func (s *treeState) visit(sb *strings.Builder) filesystem.Visitor {
 	}
 }
 
-// detectFileEncoding returns the detected encoding name for a file, or "" on error.
-// Uses sample mode for speed since this is called per-file in tree traversal.
+// detectFileEncoding returns the detected encoding name, or "" if the file could
+// not be read or the guess was too weak. Sample mode: this runs per file.
 func detectFileEncoding(path string) string {
 	result, err := encoding.DetectFromFile(path, "sample")
 	if err != nil || result.Confidence < encoding.MinConfidenceThreshold {

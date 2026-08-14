@@ -63,49 +63,24 @@ func (h *Handler) ValidatePath(path string) PathValidationResult {
 	return PathValidationResult{Path: validatedPath}
 }
 
-// ValidateSourceDest validates both source and destination paths.
+// ValidateSourceDest validates both paths of a two-path operation. The
+// destination is left zero when the source already failed.
 func (h *Handler) ValidateSourceDest(source, destination string) (PathValidationResult, PathValidationResult) {
-	srcResult := h.validateSourcePath(source)
+	srcResult := h.validateNamedPath(source, "source")
 	if !srcResult.Ok() {
 		return srcResult, PathValidationResult{}
 	}
-	return srcResult, h.validateDestPath(destination)
+	return srcResult, h.validateNamedPath(destination, "destination")
 }
 
-func (h *Handler) validateSourcePath(path string) PathValidationResult {
+// validateNamedPath is ValidatePath with the parameter's name in the empty-path
+// message, so a two-path tool says which of the two was missing.
+func (h *Handler) validateNamedPath(path, param string) PathValidationResult {
 	if path == "" {
 		return PathValidationResult{
-			Result: errorResult("source is required and must be a non-empty string"),
+			Result: errorResult(param + " is required and must be a non-empty string"),
 			Err:    ErrPathRequired,
 		}
 	}
-
-	validatedPath, err := h.validatePath(path)
-	if err != nil {
-		return PathValidationResult{
-			Result: errorResult(err.Error()),
-			Err:    err,
-		}
-	}
-
-	return PathValidationResult{Path: validatedPath}
-}
-
-func (h *Handler) validateDestPath(path string) PathValidationResult {
-	if path == "" {
-		return PathValidationResult{
-			Result: errorResult("destination is required and must be a non-empty string"),
-			Err:    ErrPathRequired,
-		}
-	}
-
-	validatedPath, err := h.validatePath(path)
-	if err != nil {
-		return PathValidationResult{
-			Result: errorResult(err.Error()),
-			Err:    err,
-		}
-	}
-
-	return PathValidationResult{Path: validatedPath}
+	return h.ValidatePath(path)
 }

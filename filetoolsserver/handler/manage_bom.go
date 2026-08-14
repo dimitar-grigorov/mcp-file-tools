@@ -29,12 +29,7 @@ func (h *Handler) HandleManageBom(ctx context.Context, req *mcp.CallToolRequest,
 		return v.Result, ManageBomOutput{}, nil
 	}
 
-	action := strings.ToLower(input.Action)
-	if action != "detect" && action != "strip" && action != "add" {
-		return errorResult(`action must be "detect", "strip", or "add"`), ManageBomOutput{}, nil
-	}
-
-	switch action {
+	switch strings.ToLower(strings.TrimSpace(input.Action)) {
 	case "detect":
 		return h.bomDetect(v.Path)
 	case "strip":
@@ -49,8 +44,7 @@ func (h *Handler) HandleManageBom(ctx context.Context, req *mcp.CallToolRequest,
 		}
 		return h.bomAdd(ctx, v.Path, enc)
 	}
-	// unreachable
-	return errorResult("unexpected action"), ManageBomOutput{}, nil
+	return errorResult(`action must be "detect", "strip", or "add"`), ManageBomOutput{}, nil
 }
 
 // bomDetect reads the first 4 bytes and checks for a BOM.
@@ -122,13 +116,11 @@ func (h *Handler) bomAdd(ctx context.Context, path string, enc string) (*mcp.Cal
 		return errorResult(fmt.Sprintf("failed to read file: %v", err)), ManageBomOutput{}, nil
 	}
 
-	// Check if file already has a BOM
 	if existingResult, found := encoding.DetectBOM(data); found {
 		return errorResult(fmt.Sprintf("file already has a %s BOM — strip it first if you want to change it", existingResult.Charset)), ManageBomOutput{}, nil
 	}
 
 	bomBytes := encoding.BOMBytesFor(enc)
-	// Prepend BOM
 	withBOM := make([]byte, len(bomBytes)+len(data))
 	copy(withBOM, bomBytes)
 	copy(withBOM[len(bomBytes):], data)

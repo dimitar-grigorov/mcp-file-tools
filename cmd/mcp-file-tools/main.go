@@ -36,22 +36,18 @@ func main() {
 	}
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level})))
 
-	// Set version from build
 	filetoolsserver.Version = version
 
-	// Handle --version flag
 	if len(os.Args) == 2 && (os.Args[1] == "--version" || os.Args[1] == "-v") {
 		fmt.Println(version)
 		return
 	}
 
-	// Parse allowed directories from CLI arguments (optional)
-	allowedDirs := os.Args[1:]
-
-	// Normalize and validate allowed directories if provided
+	// Remaining args are the allowed directories; none is valid — a client may
+	// still supply them over the roots protocol.
 	var normalized []string
 	var err error
-	if len(allowedDirs) > 0 {
+	if allowedDirs := os.Args[1:]; len(allowedDirs) > 0 {
 		normalized, err = security.NormalizeAllowedDirs(allowedDirs)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -64,7 +60,6 @@ func main() {
 	// MCP_DEFAULT_ENCODING/MCP_MEMORY_THRESHOLD from the environment.
 	server := filetoolsserver.NewServer(normalized, nil, nil)
 
-	// Run server on stdio transport
 	ctx := context.Background()
 	if err := server.Run(ctx, &mcp.StdioTransport{}); err != nil {
 		fmt.Fprintf(os.Stderr, "Server error: %v\n", err)
