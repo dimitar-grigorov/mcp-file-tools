@@ -37,6 +37,7 @@ type grepOptions struct {
 	contextBefore int
 	contextAfter  int
 	encoding      string
+	fallback      string // configured default, when detection decides nothing
 	maxFileSize   int64
 	perFileLimit  int // 0 = unlimited: count mode must see the whole file
 }
@@ -94,6 +95,7 @@ func (h *Handler) HandleGrep(ctx context.Context, req *mcp.CallToolRequest, inpu
 		mode:        mode,
 		matchesOnly: input.MatchesOnly,
 		encoding:    input.Encoding,
+		fallback:    h.fallbackEncoding(),
 		maxFileSize: h.config.MemoryThreshold,
 	}
 	switch mode {
@@ -261,7 +263,7 @@ func searchSingleFile(path string, opts grepOptions) fileHits {
 		return fileHits{}
 	}
 	// Decode first: UTF-16 text is full of NUL bytes, so classify the decoded text.
-	content, detectedEncoding := decodeFileContent(data, opts.encoding)
+	content, detectedEncoding := decodeFileContent(data, opts.encoding, opts.fallback)
 	if content == "" || isBinaryText(content) {
 		return fileHits{}
 	}
@@ -353,43 +355,50 @@ func isBinaryText(content string) bool {
 	return runeCount > 0 && controlCount*10 >= runeCount
 }
 
-// detectGrepEncoding resolves the encoding to search with. Valid UTF-8 bytes beat an
-// untrusted guess: chardet mislabels short mixed-script UTF-8 as a single-byte charset.
-func detectGrepEncoding(data []byte) string {
+// detectGrepEncoding picks the search encoding; valid UTF-8 beats a weak guess.
+func detectGrepEncoding(data []byte, fallback string) string {
 	detection, trusted := encoding.DetectSample(data)
 	if detection.Charset == "" {
-		return "utf-8"
+		return fallback
 	}
 	if trusted || !utf8.Valid(data) {
 		return detection.Charset
 	}
-	return "utf-8"
+	return fallback
 }
 
-// decodeFileContent decodes file data to UTF-8 string.
-func decodeFileContent(data []byte, forcedEncoding string) (string, string) {
-	var encodingName string
+// decodeFileContent decodes file data to UTF-8, falling back the same way reads do.
+func decodeFileContent(data []byte, forcedEncoding, fallback string) (string, string) {
+	if fallback == "" {
+		fallback = "utf-8"
+	}
+	encodingName := fallback
 	if forcedEncoding != "" {
-		encodingName, _ = encoding.Canonical(forcedEncoding)
-		if encodingName == "" {
+		if canonical, ok := encoding.Canonical(forcedEncoding); ok {
+			encodingName = canonical
+		} else {
 			encodingName = strings.ToLower(forcedEncoding)
 		}
 	} else {
-		encodingName = detectGrepEncoding(data)
+		encodingName = detectGrepEncoding(data, fallback)
 	}
-	if encoding.IsUTF8(encodingName) {
-		return trimBOM(string(data)), encodingName
+	return decodeWithFallback(data, encodingName, fallback)
+}
+
+// decodeWithFallback decodes as name, retrying once as fallback if that fails.
+func decodeWithFallback(data []byte, name, fallback string) (string, string) {
+	if encoding.IsUTF8(name) {
+		return trimBOM(string(data)), name
 	}
-	enc, ok := encoding.Get(encodingName)
-	if !ok {
-		return trimBOM(string(data)), "utf-8"
+	if enc, ok := encoding.Get(name); ok {
+		if decoded, err := enc.NewDecoder().Bytes(data); err == nil {
+			return trimBOM(string(decoded)), name
+		}
 	}
-	decoder := enc.NewDecoder()
-	decoded, err := decoder.Bytes(data)
-	if err != nil {
-		return trimBOM(string(data)), "utf-8"
+	if name == fallback || encoding.IsUTF8(fallback) {
+		return trimBOM(string(data)), fallback
 	}
-	return trimBOM(string(decoded)), encodingName
+	return decodeWithFallback(data, fallback, fallback)
 }
 
 // trimBOM drops a leading BOM so it doesn't shift line 1 columns or break ^ anchors.

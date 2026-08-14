@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/dimitar-grigorov/mcp-file-tools/internal/config"
+	"github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -484,5 +486,33 @@ func TestHandleGrep_SkipsControlHeavyFiles(t *testing.T) {
 	}
 	if output.TotalMatches != 1 {
 		t.Errorf("expected 1 match (skipping control-heavy file), got %d", output.TotalMatches)
+	}
+}
+
+// grep used a hardcoded utf-8 fallback, so cp1251 shops matched nothing here.
+func TestHandleGrep_UsesConfiguredDefaultEncoding(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "unit1.pas")
+
+	enc, _ := encoding.Get("cp1251")
+	body, err := encoding.Encode("  ShowMessage('Здравей');\n", enc, "cp1251")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, body, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	h := NewHandler([]string{dir}, WithConfig(&config.Config{
+		DefaultEncoding: "cp1251", MemoryThreshold: 1 << 26,
+	}))
+	_, out, err := h.HandleGrep(context.Background(), nil, GrepInput{
+		Pattern: "Здравей", Paths: []string{path},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.TotalMatches == 0 {
+		t.Errorf("no match for Cyrillic in a cp1251 file with MCP_DEFAULT_ENCODING=cp1251")
 	}
 }

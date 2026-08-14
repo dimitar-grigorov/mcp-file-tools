@@ -109,7 +109,7 @@ func TestDecodeFileContent(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, name := decodeFileContent(tt.data, tt.forced)
+			got, name := decodeFileContent(tt.data, tt.forced, "utf-8")
 			if got != tt.want {
 				t.Errorf("content = %q, want %q", got, tt.want)
 			}
