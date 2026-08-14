@@ -417,22 +417,17 @@ func decodeFileContent(data []byte, forcedEncoding, fallback string) (string, st
 }
 
 // decodeWithFallback decodes as name, retrying once as fallback if that fails.
+// The BOM is dropped so it doesn't shift line 1 columns or break ^ anchors.
 func decodeWithFallback(data []byte, name, fallback string) (string, string) {
 	if decoded, err := encoding.Decode(data, name); err == nil {
-		return trimBOM(decoded), name
+		content, _ := trimContentBOM(decoded)
+		return content, name
 	}
 	if name == fallback || encoding.IsUTF8(fallback) {
-		return trimBOM(string(data)), fallback
+		content, _ := trimContentBOM(string(data))
+		return content, fallback
 	}
 	return decodeWithFallback(data, fallback, fallback)
-}
-
-// trimBOM drops a leading BOM so it doesn't shift line 1 columns or break ^ anchors.
-func trimBOM(content string) string {
-	if r, size := utf8.DecodeRuneInString(content); r == 0xFEFF {
-		return content[size:]
-	}
-	return content
 }
 
 // getContextBefore returns N lines before the given line index.
