@@ -69,6 +69,8 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	// Repair array/object args some MCP clients send as JSON-encoded strings.
 	server.AddReceivingMiddleware(handler.RepairStringifiedArrayArgs)
+	// Accept built-in Read/Write/Edit/Grep parameter names where semantics match.
+	server.AddReceivingMiddleware(handler.AliasBuiltinParams)
 
 	// Guided workflows, surfaced by clients as user commands.
 	registerPrompts(server)
@@ -115,7 +117,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 		Description: "Regex search in file contents with encoding support. PREFER THIS over built-in Grep for non-UTF-8 files. Skips .gitignore'd files (respectGitignore=false to include). Parameters: pattern (regex), paths (array of files, or dirs searched recursively), caseSensitive (default true), contextBefore/After, maxMatches (default 1000), offset, include/includes, exclude/excludes, encoding. " +
 			"outputMode: \"content\" (default, matching lines), \"files_with_matches\" (paths only, far cheaper when you just need WHICH files), \"count\" (matching lines per file). contextBefore/After apply to content mode only. " +
 			"matchesOnly=true returns the matched substring instead of the whole line, for extracting values. offset skips the first N results, so you can page past maxMatches; the response echoes nextOffset when truncated. " +
-			"Include and exclude patterns are basename-only globs; includes match any pattern and excludes reject any match. Do not combine a singular field with its plural. " +
+			"Include and exclude patterns are basename-only globs, no {a,b} braces — list several includes instead. Includes match any pattern and excludes reject any match. Do not combine a singular field with its plural. " +
 			`Example: {"pattern": "TCustomer", "paths": ["D:\\proj\\src"], "includes": ["*.pas", "*.dfm"], "outputMode": "files_with_matches"}`,
 		Meta: mcp.Meta{"anthropic/maxResultSizeChars": 300000},
 		Annotations: &mcp.ToolAnnotations{

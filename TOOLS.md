@@ -14,6 +14,18 @@ part of a tree or search result from the model. Every other tool keeps the clien
 full syntax: negation, anchoring, dir-only, `**`) and skip `.git`. Pass
 `respectGitignore: false` to see everything. Trees without a `.gitignore` are unaffected.
 
+## Built-in name aliases
+
+Calls shaped like Claude Code's built-in Read/Write/Edit/Grep are translated where the
+semantics match exactly: `file_path`→`path`; Edit's flat `old_string`/`new_string`/
+`replace_all`→a one-entry `edits` array; for `grep_text_files`: `path`→`paths`,
+`-A`/`-B`→`contextAfter`/`contextBefore`, `-C`/`context`→both, `-i`→`caseSensitive`
+(inverted), `-o`→`matchesOnly`, `head_limit`→`maxMatches`, `output_mode`→`outputMode`;
+`-n` is dropped (matches always carry line numbers). An alias never overrides its
+canonical name. Grep's `glob` and `type` are **not** aliased: `include`/`includes`
+match the basename only, with no `{a,b}` braces — pass several `includes` patterns
+instead.
+
 ## File Operations
 
 ### read_text_file
@@ -449,8 +461,9 @@ Search file contents using regex patterns with encoding support. Supports contex
 
 Directories in `paths` are searched recursively; individual files are searched directly.
 
-Patterns are matched against the file name only. Do not combine `include` with `includes`,
-or `exclude` with `excludes`.
+Patterns are matched against the file name only, with no `{a,b}` braces — use `includes`
+for several extensions. Built-in Grep's `glob`/`type` are not supported. Do not combine
+`include` with `includes`, or `exclude` with `excludes`.
 
 **Example:**
 ```json

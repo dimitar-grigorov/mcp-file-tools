@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Built-in tool parameter names are accepted as aliases.** A call shaped like
+  Claude Code's Read/Write/Edit/Grep — `file_path`, flat `old_string`/`new_string`/
+  `replace_all`, `-A`/`-B`/`-C`/`-i`/`-o`, `head_limit`, `output_mode`, a single
+  grep `path` string — is translated where semantics match exactly, instead of
+  failing schema validation. Canonical names always win; Grep's `glob`/`type` stay
+  unsupported (basename-only `includes` instead).
+
 ### Fixed
 
 - **`write_file` and `edit_file` stripped the CRLFs from UTF-16 files.** Both read
