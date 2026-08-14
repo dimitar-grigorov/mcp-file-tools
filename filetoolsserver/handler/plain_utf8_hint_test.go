@@ -5,6 +5,7 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -28,6 +29,24 @@ func TestPlainUTF8Hint_OnlyOncePerFile(t *testing.T) {
 	_, second, _ := h.HandleReadTextFile(ctx, nil, ReadTextFileInput{Path: p})
 	if second.Hint != "" {
 		t.Errorf("expected no hint on the second read, got %q", second.Hint)
+	}
+}
+
+// The seen-set is keyed by path and never evicts, so it is capped; past the cap
+// the hint stops rather than the map growing for the life of the process.
+func TestPlainUTF8Hint_StopsAtCap(t *testing.T) {
+	h := NewHandler([]string{t.TempDir()})
+
+	for i := range plainUTF8HintCap {
+		if h.plainUTF8HintFor(fmt.Sprintf("/f%d.txt", i), "utf-8", false) == "" {
+			t.Fatalf("path %d got no hint, still under the cap", i)
+		}
+	}
+	if got := h.plainUTF8HintFor("/one-too-many.txt", "utf-8", false); got != "" {
+		t.Errorf("hint past the cap: %q", got)
+	}
+	if n := h.plainUTF8Count.Load(); n != plainUTF8HintCap {
+		t.Errorf("counted %d, want %d", n, plainUTF8HintCap)
 	}
 }
 
