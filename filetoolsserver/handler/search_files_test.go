@@ -129,6 +129,11 @@ func TestMatchGlobPattern(t *testing.T) {
 		{"dir/f.txt", "dir/**/f.txt", true},
 		{"src/x.go", "src/*.go", true},
 		{"src/sub/x.go", "src/*.go", false},
+		{"a/b.ts", "**/*.{ts,tsx}", true},
+		{"b.tsx", "*.{ts,tsx}", true},
+		{"a/b.js", "*.{ts,tsx}", false},
+		{"src/a.go", "{src,test}/*.go", true},
+		{"lib/a.go", "{src,test}/*.go", false},
 	}
 	for _, tt := range tests {
 		if got := matchGlobPattern(tt.path, tt.pattern); got != tt.want {

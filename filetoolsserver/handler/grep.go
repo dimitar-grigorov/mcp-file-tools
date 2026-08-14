@@ -70,6 +70,8 @@ func (h *Handler) HandleGrep(ctx context.Context, req *mcp.CallToolRequest, inpu
 	if input.Exclude != "" {
 		excludes = []string{input.Exclude}
 	}
+	includes = expandBasenameGlobs(includes)
+	excludes = expandBasenameGlobs(excludes)
 	mode := input.OutputMode
 	if mode == "" {
 		mode = outputModeContent
@@ -184,6 +186,21 @@ func (h *Handler) collectFiles(ctx context.Context, paths, includes, excludes []
 		}
 	}
 	return files
+}
+
+// expandBasenameGlobs expands {a,b} alternatives and drops a leading "**/",
+// which models used to path globs send out of habit.
+func expandBasenameGlobs(patterns []string) []string {
+	if len(patterns) == 0 {
+		return patterns
+	}
+	out := make([]string, 0, len(patterns))
+	for _, p := range patterns {
+		for _, e := range expandBraces(p) {
+			out = append(out, strings.TrimPrefix(e, "**/"))
+		}
+	}
+	return out
 }
 
 // shouldIncludeFile matches patterns against the basename.

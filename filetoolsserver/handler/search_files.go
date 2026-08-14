@@ -134,15 +134,50 @@ func searchFiles(ctx context.Context, rootPath string, sOpts searchOptions) ([]s
 }
 
 // matchGlobPattern matches a slash-separated path against a glob pattern.
-// "**" spans any number of segments. A pattern without a separator matches
-// on the basename alone, so "*.pas" finds files at any depth.
+// "**" spans any number of segments; "{a,b}" tries each alternative. A pattern
+// without a separator matches on the basename alone, so "*.pas" finds files
+// at any depth.
 func matchGlobPattern(path, pattern string) bool {
 	pattern = strings.TrimSuffix(filepath.ToSlash(pattern), "/")
+	if !strings.Contains(pattern, "{") {
+		return matchOnePattern(path, pattern)
+	}
+	for _, p := range expandBraces(pattern) {
+		if matchOnePattern(path, p) {
+			return true
+		}
+	}
+	return false
+}
+
+func matchOnePattern(path, pattern string) bool {
 	if !strings.Contains(pattern, "/") && !strings.Contains(pattern, "**") {
 		matched, err := filepath.Match(pattern, filepath.Base(path))
 		return err == nil && matched
 	}
 	return matchSegments(strings.Split(path, "/"), strings.Split(pattern, "/"))
+}
+
+// expandBraces expands the first {a,b} group and recurses, so "*.{ts,tsx}"
+// tries both alternatives. Nesting is not supported; expansion is capped.
+func expandBraces(pattern string) []string {
+	open := strings.IndexByte(pattern, '{')
+	if open < 0 {
+		return []string{pattern}
+	}
+	end := strings.IndexByte(pattern[open:], '}')
+	if end < 0 {
+		return []string{pattern}
+	}
+	end += open
+	var out []string
+	for _, alt := range strings.Split(pattern[open+1:end], ",") {
+		out = append(out, expandBraces(pattern[:open]+alt+pattern[end+1:])...)
+		if len(out) >= 64 {
+			break
+		}
+	}
+	return out
 }
 
 // matchSegments matches path segments against pattern segments; "**" spans

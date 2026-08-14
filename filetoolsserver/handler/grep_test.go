@@ -516,3 +516,22 @@ func TestHandleGrep_UsesConfiguredDefaultEncoding(t *testing.T) {
 		t.Errorf("no match for Cyrillic in a cp1251 file with MCP_DEFAULT_ENCODING=cp1251")
 	}
 }
+
+// Built-in Grep glob habits: {a,b} alternatives and a leading **/.
+func TestHandleGrep_IncludeBracesAndDoubleStarPrefix(t *testing.T) {
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+	for _, f := range []string{"a.ts", "b.tsx", "c.js"} {
+		os.WriteFile(filepath.Join(tempDir, f), []byte("hit\n"), 0644)
+	}
+
+	_, output, err := h.HandleGrep(context.Background(), nil, GrepInput{
+		Pattern: "hit", Paths: []string{tempDir}, Includes: []string{"**/*.{ts,tsx}"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if output.FilesMatched != 2 {
+		t.Errorf("filesMatched = %d, want 2: %+v", output.FilesMatched, output)
+	}
+}

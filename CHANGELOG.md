@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   grep `path` string — is translated where semantics match exactly, instead of
   failing schema validation. Canonical names always win; Grep's `glob`/`type` stay
   unsupported (basename-only `includes` instead).
+- **`{a,b}` glob alternatives.** `search_files` patterns and excludes and grep
+  `include`/`excludes` accept `*.{pas,dfm}`; grep basename globs also ignore a
+  leading `**/`. Both shapes previously matched nothing, silently.
 
 ### Fixed
 

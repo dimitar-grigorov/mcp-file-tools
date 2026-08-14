@@ -23,8 +23,7 @@ semantics match exactly: `file_path`→`path`; Edit's flat `old_string`/`new_str
 (inverted), `-o`→`matchesOnly`, `head_limit`→`maxMatches`, `output_mode`→`outputMode`;
 `-n` is dropped (matches always carry line numbers). An alias never overrides its
 canonical name. Grep's `glob` and `type` are **not** aliased: `include`/`includes`
-match the basename only, with no `{a,b}` braces — pass several `includes` patterns
-instead.
+match the basename only (`{a,b}` alternatives work).
 
 ## File Operations
 
@@ -375,7 +374,7 @@ Recursively search for files and directories matching a glob pattern.
 
 **Parameters:**
 - `path` (required): Root directory to search from
-- `pattern` (required): Glob pattern. `*.txt` matches at any depth; `**` spans directories and may appear several times (`src/**/test/**/*.go`)
+- `pattern` (required): Glob pattern. `*.txt` matches at any depth; `**` spans directories and may appear several times (`src/**/test/**/*.go`); `{a,b}` tries each alternative (`*.{pas,dfm}`)
 - `excludePatterns` (optional): Array of patterns to exclude
 - `maxResults` (optional): Maximum number of results to return (default: 10000)
 - `sortBy` (optional): `name` (default), `mtime` or `size` — see [Ordering](#ordering)
@@ -461,8 +460,8 @@ Search file contents using regex patterns with encoding support. Supports contex
 
 Directories in `paths` are searched recursively; individual files are searched directly.
 
-Patterns are matched against the file name only, with no `{a,b}` braces — use `includes`
-for several extensions. Built-in Grep's `glob`/`type` are not supported. Do not combine
+Patterns are matched against the file name only; `{a,b}` alternatives work and a leading
+`**/` is ignored. Built-in Grep's `glob`/`type` are not supported. Do not combine
 `include` with `includes`, or `exclude` with `excludes`.
 
 **Example:**

@@ -102,7 +102,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "search_files",
-		Description: "Recursively search for files matching a glob pattern (*.ext at any depth, **/*.ext, several ** allowed). Returns full paths. Skips .gitignore'd files (respectGitignore=false to include). Parameters: path (required), pattern (required), excludePatterns, maxResults (default 10000), sortBy, reverse. " +
+		Description: "Recursively search for files matching a glob pattern (*.ext at any depth, **/*.ext, several ** and {a,b} alternatives allowed). Returns full paths. Skips .gitignore'd files (respectGitignore=false to include). Parameters: path (required), pattern (required), excludePatterns, maxResults (default 10000), sortBy, reverse. " +
 			"sortBy: \"name\" (default, lexical), \"mtime\" (newest first) or \"size\" (largest first); reverse flips the order. Unlike the built-in Glob there is no mtime default — pass sortBy \"mtime\" for newest first. With mtime or size the whole tree is ranked before the cap, so a truncated result really is the newest/largest maxResults files. " +
 			`Example: {"path": "D:\\proj", "pattern": "**/*.pas", "sortBy": "mtime"}`,
 		Annotations: &mcp.ToolAnnotations{
@@ -117,7 +117,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 		Description: "Regex search in file contents with encoding support. PREFER THIS over built-in Grep for non-UTF-8 files. Skips .gitignore'd files (respectGitignore=false to include). Parameters: pattern (regex), paths (array of files, or dirs searched recursively), caseSensitive (default true), contextBefore/After, maxMatches (default 1000), offset, include/includes, exclude/excludes, encoding. " +
 			"outputMode: \"content\" (default, matching lines), \"files_with_matches\" (paths only, far cheaper when you just need WHICH files), \"count\" (matching lines per file). contextBefore/After apply to content mode only. " +
 			"matchesOnly=true returns the matched substring instead of the whole line, for extracting values. offset skips the first N results, so you can page past maxMatches; the response echoes nextOffset when truncated. " +
-			"Include and exclude patterns are basename-only globs, no {a,b} braces — list several includes instead. Includes match any pattern and excludes reject any match. Do not combine a singular field with its plural. " +
+			"Include and exclude patterns are basename-only globs; {a,b} alternatives work and a leading **/ is ignored. Includes match any pattern and excludes reject any match. Do not combine a singular field with its plural. " +
 			`Example: {"pattern": "TCustomer", "paths": ["D:\\proj\\src"], "includes": ["*.pas", "*.dfm"], "outputMode": "files_with_matches"}`,
 		Meta: mcp.Meta{"anthropic/maxResultSizeChars": 300000},
 		Annotations: &mcp.ToolAnnotations{
