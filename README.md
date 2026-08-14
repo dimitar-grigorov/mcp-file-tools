@@ -233,10 +233,12 @@ config rather than appending.
 
 ### OpenAI Codex CLI
 
-Download the binary as in [Manual install](#manual-install-other-mcp-clients-or-access-outside-your-workspace),
-then register it — Codex takes a direct MCP command, so no TOML editing is needed:
+Codex takes a direct MCP command, so no manual TOML editing is needed.
 
+Windows (PowerShell):
 ```powershell
+mkdir -Force "$env:LOCALAPPDATA\Programs\mcp-file-tools"
+iwr "https://github.com/dimitar-grigorov/mcp-file-tools/releases/latest/download/mcp-file-tools_windows_amd64.exe" -OutFile "$env:LOCALAPPDATA\Programs\mcp-file-tools\mcp-file-tools.exe"
 codex mcp add file-tools -- "$env:LOCALAPPDATA\Programs\mcp-file-tools\mcp-file-tools.exe" "D:\Projects"
 ```
 
@@ -261,10 +263,16 @@ newer version is available; the notice carries the steps for your install. Plugi
 update through [Updating the plugin](#updating-the-plugin) — a re-downloaded binary is
 ignored there.
 
-A manual install updates by re-running the download command from
-[Manual install](#manual-install-other-mcp-clients-or-access-outside-your-workspace) over
-the existing binary. Close all Claude Code sessions first: the binary is locked while
-running. The registration does not need repeating.
+For a manual install, re-download the binary over the existing one — the registration does
+not need repeating:
+
+1. Close all Claude Code sessions (the binary is locked while running)
+2. Re-download:
+
+```powershell
+iwr "https://github.com/dimitar-grigorov/mcp-file-tools/releases/latest/download/mcp-file-tools_windows_amd64.exe" `
+    -OutFile "$env:LOCALAPPDATA\Programs\mcp-file-tools\mcp-file-tools.exe"
+```
 
 To disable update checks, set the environment variable `MCP_NO_UPDATE_CHECK=1`.
 
@@ -304,20 +312,35 @@ The server can be configured via environment variables:
 | `MCP_DEFAULT_LINE_ENDINGS` | Line endings for `write_file` on **new** files (`crlf`/`lf`). Existing files keep their own style regardless. | unset (write unchanged) |
 | `MCP_MEMORY_THRESHOLD` | Memory threshold in bytes. Files smaller are loaded into memory for faster I/O; larger files use streaming. Also affects encoding detection mode. | `67108864` (64MB) |
 
-Set them with an `env` block alongside `command` and `args` in any of the configs above:
+Set them with an `env` block in your config (Claude Desktop example):
+
+```json
+{
+  "mcpServers": {
+    "file-tools": {
+      "command": "C:\\Users\\YOUR_NAME\\AppData\\Local\\Programs\\mcp-file-tools\\mcp-file-tools.exe",
+      "args": ["D:\\Projects"],
+      "env": {
+        "MCP_DEFAULT_ENCODING": "utf-8"
+      }
+    }
+  }
+}
+```
+
+### Legacy teams (pre-2.0.0 behaviour)
+
+Before 2.0.0 new files defaulted to `cp1251`; they now default to `utf-8`. Existing files
+are unaffected — their encoding is detected and preserved — so this only matters if your
+team **creates** new non-UTF-8 files, e.g. new Delphi units with Cyrillic literals. To keep
+the old behaviour:
 
 ```json
 "env": { "MCP_DEFAULT_ENCODING": "cp1251" }
 ```
 
-### Legacy teams (pre-2.0.0 behaviour)
-
-`MCP_DEFAULT_ENCODING` only affects files the server **creates** — a new Delphi unit with
-Cyrillic literals, say. Existing files keep their own detected encoding either way, so
-most teams never need it.
-
-Commit the `env` block above in the legacy repo's `.mcp.json` rather than setting it per
-machine, and everyone working in that repo gets the right default with no local setup.
+Commit that in the legacy repo's `.mcp.json` rather than setting it per machine, and
+everyone working in that repo gets the right default with no local setup.
 
 ## Development
 
@@ -352,12 +375,13 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | go run ./cmd
 ## Contributing
 
 **If it fits the scope and works, it gets merged.** Don't ask first — just send the PR.
-No CLA, no style review; `make test` and `make lint` passing is enough, and tests are
-welcome but never required. Scope, what gets pushed back on, and the exact commands are in
-[CONTRIBUTING.md](CONTRIBUTING.md).
 
-Don't want to write the fix? [Open an issue](https://github.com/dimitar-grigorov/mcp-file-tools/issues)
-with the file, its encoding, and what the tool did.
+- No CLA, no style review. `make test` and `make lint` passing is enough; tests are welcome, never required.
+- One-line fixes and half-finished features behind a flag are both fine.
+- Pushed back on (with a comment, not a close): out of scope, or breaking tool contracts other people's agents rely on.
+- Don't want to write the fix? [Open an issue](https://github.com/dimitar-grigorov/mcp-file-tools/issues) with the file, its encoding, and what the tool did.
+
+Details in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Forking
 
