@@ -121,3 +121,22 @@ func TestListEncodings(t *testing.T) {
 		t.Errorf("ListEncodings() returned %d items, want 25", len(items))
 	}
 }
+
+func TestDetectionResult_Conclusive(t *testing.T) {
+	tests := []struct {
+		name string
+		in   DetectionResult
+		want bool
+	}{
+		{"confident and known", DetectionResult{Charset: "windows-1251", Confidence: 90}, true},
+		{"ascii is no evidence", DetectionResult{Charset: "ascii", Confidence: 100}, false},
+		{"empty charset", DetectionResult{Charset: "", Confidence: 100}, false},
+		{"below threshold", DetectionResult{Charset: "windows-1251", Confidence: MinConfidenceThreshold - 1}, false},
+		{"not in the registry", DetectionResult{Charset: "macroman", Confidence: 99}, false},
+	}
+	for _, tt := range tests {
+		if got := tt.in.Conclusive(); got != tt.want {
+			t.Errorf("%s: Conclusive() = %v, want %v", tt.name, got, tt.want)
+		}
+	}
+}

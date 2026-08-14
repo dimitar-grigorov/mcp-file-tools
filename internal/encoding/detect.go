@@ -40,6 +40,16 @@ type DetectionResult struct {
 	HasBOM     bool
 }
 
+// Conclusive reports whether the result settles which encoding to use. "ascii"
+// never does: it fits every encoding here, so it is no evidence, not a match.
+func (d DetectionResult) Conclusive() bool {
+	if d.Charset == "" || d.Charset == "ascii" || d.Confidence < MinConfidenceThreshold {
+		return false
+	}
+	_, ok := Get(d.Charset)
+	return ok
+}
+
 // DetectBOM checks for Unicode BOMs; UTF-32 goes before UTF-16 (shared prefixes).
 func DetectBOM(data []byte) (DetectionResult, bool) {
 	if len(data) >= 4 {
