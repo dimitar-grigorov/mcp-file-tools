@@ -217,10 +217,10 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "convert_encoding",
-		Description: "Convert files from one encoding to another. A source BOM is stripped before decoding; a BOM contradicting an explicit 'from' is an error. No-op if a file already holds the target bytes. Parameters: path (one file) OR paths (array, a batch — never both), to (target, required), from (omit to auto-detect — pass it only to override a misdetection), backup (write .bak first — IMPORTANT for irreversible conversions), dryRun (report what would change, write nothing), bom (\"auto\" default — BOM for UTF-16 targets and keeps a same-encoding source BOM; \"always\", \"never\", \"preserve\"). " +
-			"A narrowing conversion (e.g. utf-8 to cp1251) fails rather than corrupting text, and names the characters the target lacks with their line and column. " +
-			"In a batch one bad file does not stop the rest: each gets an entry in results. Use dryRun over a whole project first to see which files would lose characters. " +
-			`Examples: {"path": "D:\\legacy\\data.txt", "to": "utf-8", "backup": true} detects the source and leaves data.txt.bak. ` +
+		Description: "Convert files between encodings. Parameters: path (one file) OR paths (a batch — never both), to (required), from (omit to auto-detect), backup (write .bak first), dryRun (report only), allowLowConfidence, bom (\"auto\" default, \"always\", \"never\", \"preserve\"). " +
+			"Refuses rather than corrupting: a narrowing conversion (utf-8 to cp1251) names the characters the target lacks with line and column, and an untrusted detection names its best guess — confirm it with from, or pass allowLowConfidence=true. " +
+			"A source BOM is stripped before decoding; one contradicting an explicit from is an error. No-op if the file already holds the target bytes. In a batch one bad file does not stop the rest. Run dryRun over a project first. " +
+			`Examples: {"path": "D:\\legacy\\data.txt", "to": "utf-8", "backup": true} leaves data.txt.bak; ` +
 			`{"paths": ["a.pas", "b.pas"], "to": "utf-8", "dryRun": true} previews a migration.`,
 		Annotations: &mcp.ToolAnnotations{
 			Title:           "Convert Encoding",
