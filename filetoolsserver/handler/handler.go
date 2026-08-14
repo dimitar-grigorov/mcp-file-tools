@@ -6,6 +6,7 @@ package handler
 import (
 	"os"
 	"sync"
+	"sync/atomic"
 
 	"github.com/dimitar-grigorov/mcp-file-tools/internal/config"
 	"github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
@@ -27,7 +28,11 @@ type Handler struct {
 
 	utf8NoticeOnce sync.Once // TODO(2027-01): remove with the utf-8 default transition notice
 	plainUTF8Seen  sync.Map  // path -> struct{}, for the built-in-tooling hint
+	plainUTF8Count atomic.Int64
 }
+
+// plainUTF8HintCap bounds the seen-set: a session past this has had the hint.
+const plainUTF8HintCap = 1024
 
 // Phrased as an instruction because models relay instructions and ignore trivia.
 const plainUTF8Hint = "This file is plain utf-8 with no BOM, so your built-in file tools handle it correctly — " +
@@ -38,9 +43,13 @@ func (h *Handler) plainUTF8HintFor(path, encodingName string, hasBOM bool) strin
 	if hasBOM || !encoding.IsUTF8(encodingName) {
 		return ""
 	}
+	if h.plainUTF8Count.Load() >= plainUTF8HintCap {
+		return ""
+	}
 	if _, seen := h.plainUTF8Seen.LoadOrStore(path, struct{}{}); seen {
 		return ""
 	}
+	h.plainUTF8Count.Add(1)
 	return plainUTF8Hint
 }
 
