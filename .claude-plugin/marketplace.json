@@ -9,7 +9,7 @@
       "name": "mcp-file-tools",
       "source": "./plugin",
       "description": "Filesystem MCP server for non-UTF-8 text: auto-detects 25 encodings (CP1251, CP1252, KOI8-R, ISO-8859, UTF-16, GBK/GB18030) and writes back in the file's original encoding, BOM and line endings intact.",
-      "version": "4.0.0",
+      "version": "4.1.0",
       "license": "GPL-3.0",
       "homepage": "https://github.com/dimitar-grigorov/mcp-file-tools"
     }
