@@ -48,9 +48,14 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 	}
 	h := handler.NewHandler(allowedDirs, handlerOpts...)
 
+	// Title, description and icon are what a client's server list shows.
 	impl := &mcp.Implementation{
-		Name:    "mcp-file-tools",
-		Version: Version,
+		Name:        "mcp-file-tools",
+		Title:       "MCP File Tools",
+		Description: fmt.Sprintf("File operations across %d text encodings, with BOM and line-ending repair for legacy codebases.", encoding.Count()),
+		Version:     Version,
+		WebsiteURL:  "https://github.com/dimitar-grigorov/mcp-file-tools",
+		Icons:       []mcp.Icon{{Source: serverIconDataURI, MIMEType: "image/svg+xml", Sizes: []string{"any"}}},
 	}
 
 	serverOpts := &mcp.ServerOptions{
