@@ -33,13 +33,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      # A manual dispatch can outrun GoReleaser, which uploads the release assets
+      # minutes after the tag lands. Wait for them rather than 404 on the race.
       - name: Download checksums
         run: |
           set -euo pipefail
-          curl -fSL --retry 3 --retry-all-errors \
-            "https://github.com/${{ github.repository }}/releases/download/${VERSION_TAG}/checksums.txt" \
-            -o checksums.txt
-          cat checksums.txt
+          url="https://github.com/${{ github.repository }}/releases/download/${VERSION_TAG}/checksums.txt"
+          for attempt in $(seq 1 30); do
+            if curl -fsSL "$url" -o checksums.txt; then
+              cat checksums.txt
+              exit 0
+            fi
+            echo "no checksums.txt on ${VERSION_TAG} yet (${attempt}/30) — is the Release workflow still running?"
+            sleep 10
+          done
+          echo "::error::${VERSION_TAG} still has no checksums.txt after 5 minutes. Check that the release exists and GoReleaser finished."
+          exit 1
 
       - name: Generate server.json
         run: |
