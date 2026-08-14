@@ -158,12 +158,19 @@ func detectLegacy(data []byte) DetectionResult {
 		return DetectionResult{}
 	}
 
-	charset := strings.ToLower(detected.Encoding)
-	confidence := int(detected.Confidence * 100)
-
-	// BOM-less UTF-16 is accepted only by the structural classifier above.
-	if charset == "utf-16-le" || charset == "utf-16-be" || charset == "utf-16le" || charset == "utf-16be" {
+	charset, confidence := correctCharset(strings.ToLower(detected.Encoding), int(detected.Confidence*100), data)
+	if charset == "" {
 		return DetectionResult{}
+	}
+	return DetectionResult{Charset: charset, Confidence: confidence}
+}
+
+// correctCharset fixes up one chardet verdict, shared by the single-verdict path
+// and the ranked candidate list. An empty name means the verdict is unusable.
+func correctCharset(charset string, confidence int, data []byte) (string, int) {
+	// BOM-less UTF-16 is accepted only by the structural classifier.
+	if charset == "utf-16-le" || charset == "utf-16-be" || charset == "utf-16le" || charset == "utf-16be" {
+		return "", 0
 	}
 
 	switch charset {
@@ -172,21 +179,21 @@ func detectLegacy(data []byte) DetectionResult {
 	case "iso-8859-1", "latin-1", "latin1", "windows-1252", "cp1252":
 		// chardet often mislabels GBK as single-byte Latin; correct it.
 		if looksLikeGBK(data) {
-			return DetectionResult{Charset: "gbk", Confidence: min(confidence, gbkConfidenceCap)}
+			return "gbk", min(confidence, gbkConfidenceCap)
 		}
 	case "maccyrillic", "x-mac-cyrillic":
 		// chardet confuses MacCyrillic with Windows-1251; keep whichever decodes better.
 		if cyrillicLetters(data, charmap.Windows1251) >= cyrillicLetters(data, charmap.MacintoshCyrillic) {
-			return DetectionResult{Charset: "windows-1251", Confidence: confidence}
+			return "windows-1251", confidence
 		}
 	}
 
 	// Valid multi-byte UTF-8 outweighs a single-byte guess: legacy text is virtually never valid UTF-8.
 	if isSingleByteCharset(charset) && hasMultiByteUTF8(data) {
-		return DetectionResult{Charset: "utf-8", Confidence: max(confidence, utf8FallbackConfidence)}
+		return "utf-8", max(confidence, utf8FallbackConfidence)
 	}
 
-	return DetectionResult{Charset: charset, Confidence: confidence}
+	return charset, confidence
 }
 
 // isSingleByteCharset reports whether name is a registered single-byte codec.

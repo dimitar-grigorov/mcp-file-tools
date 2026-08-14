@@ -31,9 +31,48 @@ func (h *Handler) HandleDetectEncoding(ctx context.Context, req *mcp.CallToolReq
 		return errorResult("could not detect encoding"), DetectEncodingOutput{}, nil
 	}
 
-	return &mcp.CallToolResult{}, DetectEncodingOutput{
+	output := DetectEncodingOutput{
 		Encoding:   result.Charset,
 		Confidence: result.Confidence,
 		HasBOM:     result.HasBOM,
-	}, nil
+	}
+	if inDoubt(result) {
+		output.Candidates = rankedCandidates(v.Path, mode, result.Charset)
+	}
+
+	return &mcp.CallToolResult{}, output, nil
+}
+
+// inDoubt: a low-confidence guess, or a charset the registry cannot read.
+// Anything else is settled, and ranking costs a second detection pass.
+func inDoubt(result encoding.DetectionResult) bool {
+	if result.HasBOM {
+		return false
+	}
+	if result.Confidence < encoding.HighConfidenceThreshold {
+		return true
+	}
+	_, supported := encoding.Get(result.Charset)
+	return !supported
+}
+
+// rankedCandidates is nil when the detector's one answer is the one reported.
+func rankedCandidates(path string, mode string, detected string) []EncodingCandidate {
+	ranked, err := encoding.CandidatesFromFile(path, mode)
+	if err != nil {
+		return nil
+	}
+	if len(ranked) == 1 && encoding.SameCharset(ranked[0].Charset, detected) {
+		return nil
+	}
+
+	out := make([]EncodingCandidate, 0, len(ranked))
+	for _, candidate := range ranked {
+		out = append(out, EncodingCandidate{
+			Encoding:   candidate.Charset,
+			Confidence: candidate.Confidence,
+			Supported:  candidate.Supported,
+		})
+	}
+	return out
 }

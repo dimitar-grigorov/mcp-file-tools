@@ -148,11 +148,13 @@ func (h *Handler) convertOne(path string, input ConvertEncodingInput, policy bom
 				"source encoding looks like %s but detection is only %d%% confident (needs %d%%). "+
 					"Pass from=%q to confirm it, a different encoding to override it, or allowLowConfidence=true to accept the guess.",
 				detection.Charset, detection.Confidence, encoding.MinConfidenceThreshold, detection.Charset)
+			res.Error += alternativesSuffix(data, detection.Charset)
 			return res
 		}
 		sourceEncodingName = detection.Charset
 		if _, ok := encoding.Get(sourceEncodingName); !ok {
 			res.Error = fmt.Sprintf("detected encoding %s is not supported. Please specify 'from' parameter.", sourceEncodingName)
+			res.Error += alternativesSuffix(data, sourceEncodingName)
 			return res
 		}
 	}

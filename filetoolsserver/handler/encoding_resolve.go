@@ -137,6 +137,12 @@ func (h *Handler) resolveEncoding(inputEncoding string, filePath string) (encodi
 			note = detection.Charset + " (low confidence, using " + fallback + ")"
 		}
 		result.setFallback(fallback, note)
+		if alternatives := alternativeEncodings(filePath, detectionMode, fallback); alternatives != "" {
+			result.fallbackHint = fmt.Sprintf(
+				"Encoding detection was inconclusive, so the file was read as %s and non-ASCII text may be garbled — tell the user. "+
+					"If it looks wrong, retry read_text_file with encoding set to one of: %s.",
+				fallback, alternatives)
+		}
 	}
 
 	enc, ok := encoding.Get(result.name)
@@ -149,11 +155,32 @@ func (h *Handler) resolveEncoding(inputEncoding string, filePath string) (encodi
 			"Detected encoding %s is not supported, so the file was read as %s and non-ASCII text may be garbled — tell the user. "+
 				"If it looks wrong, retry read_text_file with an explicit encoding.",
 			detection.Charset, fallback)
+		if alternatives := alternativeEncodings(filePath, detectionMode, detection.Charset); alternatives != "" {
+			result.fallbackHint += " Ranked alternatives: " + alternatives + "."
+		}
 	} else {
 		result.encoder = enc
 	}
 
 	return result, nil
+}
+
+// alternativeEncodings ranks what to retry with; empty when nothing to suggest.
+func alternativeEncodings(filePath string, mode string, exclude string) string {
+	ranked, err := encoding.CandidatesFromFile(filePath, mode)
+	if err != nil {
+		return ""
+	}
+	return encoding.FormatCandidates(encoding.SupportedAlternatives(ranked, exclude))
+}
+
+// alternativesSuffix appends the same list to an error, so a refusal says what to try.
+func alternativesSuffix(data []byte, exclude string) string {
+	alternatives := encoding.FormatCandidates(encoding.SupportedAlternatives(encoding.CandidatesFromSample(data), exclude))
+	if alternatives == "" {
+		return ""
+	}
+	return " Other candidates: " + alternatives + "."
 }
 
 // setFallback switches to name and resolves its encoder; note replaces the report.

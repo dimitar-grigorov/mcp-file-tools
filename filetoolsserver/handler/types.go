@@ -71,9 +71,17 @@ type DetectEncodingInput struct {
 }
 
 type DetectEncodingOutput struct {
+	Encoding   string              `json:"encoding"`
+	Confidence int                 `json:"confidence"`
+	HasBOM     bool                `json:"has_bom"`
+	Candidates []EncodingCandidate `json:"candidates,omitempty"` // only when the verdict is in doubt
+}
+
+// EncodingCandidate is one ranked alternative for a file detection could not settle.
+type EncodingCandidate struct {
 	Encoding   string `json:"encoding"`
 	Confidence int    `json:"confidence"`
-	HasBOM     bool   `json:"has_bom"`
+	Supported  bool   `json:"supported"` // false: cannot be passed as an encoding parameter
 }
 
 type ListAllowedDirectoriesInput struct{}

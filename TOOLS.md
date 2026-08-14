@@ -596,6 +596,25 @@ Detect the encoding of a file with confidence percentage. Useful for diagnosing 
 }
 ```
 
+`candidates` is added only when the verdict is in doubt — under 80% confident, or a charset
+outside the [supported list](#supported-encodings). `supported: false` marks a name the
+other tools cannot accept, so pick the next one:
+
+```json
+{
+  "encoding": "big5",
+  "confidence": 99,
+  "has_bom": false,
+  "candidates": [
+    { "encoding": "big5", "confidence": 99, "supported": false },
+    { "encoding": "iso-8859-1", "confidence": 73, "supported": true }
+  ]
+}
+```
+
+`read_text_file` puts the same ranking in `hint` when it fell back, `convert_encoding` in
+the error when it refuses an untrusted guess.
+
 ### convert_encoding
 
 Convert a file from one encoding to another. Reads in source encoding, writes in target encoding.
