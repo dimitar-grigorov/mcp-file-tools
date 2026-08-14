@@ -568,9 +568,13 @@ No write (and no backup) happens if the file already holds the target bytes — 
 - `to` (required): Target encoding
 - `backup` (optional): Create a `.bak` backup file before converting (default: false)
 - `dryRun` (optional): Report what would change and write nothing (default: false)
+- `allowLowConfidence` (optional): Convert even when the auto-detected source is below the confidence threshold (default: false)
 - `bom` (optional): `auto` (default — BOM for UTF-16 targets, keeps a same-encoding source BOM), `always`, `never`, `preserve`
 
 Omit `from` to auto-detect; pass it only to override detection on a file that misdetects.
+An untrusted detection stops the conversion rather than guessing: a bad guess writes
+nonsense that then detects as valid UTF-8, so the original encoding is no longer
+recoverable. The error names the best guess.
 A narrowing conversion (e.g. `utf-8` → `cp1251`) fails outright if the content contains
 characters the target encoding lacks, rather than writing corrupted text — and the error
 names those characters with their line and column, so you can decide what to do about them.

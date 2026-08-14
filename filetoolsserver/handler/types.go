@@ -234,6 +234,8 @@ type ConvertEncodingInput struct {
 	Backup bool     `json:"backup,omitempty"`
 	BOM    string   `json:"bom,omitempty"`
 	DryRun bool     `json:"dryRun,omitempty"`
+	// AllowLowConfidence converts on a detection below the trust threshold.
+	AllowLowConfidence bool `json:"allowLowConfidence,omitempty"`
 }
 
 // ConvertFileResult is one file's outcome within a batch conversion.

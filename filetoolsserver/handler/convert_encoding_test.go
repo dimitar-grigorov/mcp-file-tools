@@ -4,10 +4,14 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
 )
 
 func TestHandleConvertEncoding_UTF8ToCP1251(t *testing.T) {
@@ -199,4 +203,78 @@ func TestHandleConvertEncoding_GB2312AliasResolves(t *testing.T) {
 	if result.IsError {
 		t.Error("expected gb2312 alias to resolve, got error")
 	}
+}
+
+// lowConfidenceSource is bytes chardet cannot place.
+func lowConfidenceSource(t *testing.T) []byte {
+	t.Helper()
+	data := make([]byte, 0, 512)
+	for i := range 256 {
+		data = append(data, byte(0x80+i%0x60), byte(0xC0+i%0x30))
+	}
+	if _, trusted := encoding.DetectSample(data); trusted {
+		t.Skip("fixture is detected confidently, nothing to test")
+	}
+	return data
+}
+
+func TestHandleConvertEncoding_LowConfidenceNeedsConfirmation(t *testing.T) {
+	write := func(t *testing.T) (*Handler, string) {
+		t.Helper()
+		dir := t.TempDir()
+		path := filepath.Join(dir, "unknown.dat")
+		if err := os.WriteFile(path, lowConfidenceSource(t), 0644); err != nil {
+			t.Fatal(err)
+		}
+		return NewHandler([]string{dir}), path
+	}
+	ctx := context.Background()
+
+	t.Run("refuses and names the guess", func(t *testing.T) {
+		h, path := write(t)
+		before, _ := os.ReadFile(path)
+
+		res, _, err := h.HandleConvertEncoding(ctx, nil, ConvertEncodingInput{Path: path, To: "utf-8"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !res.IsError {
+			t.Fatal("expected a low-confidence conversion to be refused")
+		}
+		msg := extractTextFromResult(res.Content)
+		for _, want := range []string{"confident", "from=", "allowLowConfidence"} {
+			if !strings.Contains(msg, want) {
+				t.Errorf("error should mention %q, got: %s", want, msg)
+			}
+		}
+		if after, _ := os.ReadFile(path); !bytes.Equal(before, after) {
+			t.Error("the file was modified despite the refusal")
+		}
+	})
+
+	t.Run("allowLowConfidence converts", func(t *testing.T) {
+		h, path := write(t)
+		res, _, err := h.HandleConvertEncoding(ctx, nil, ConvertEncodingInput{
+			Path: path, To: "utf-8", AllowLowConfidence: true,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if res.IsError {
+			t.Errorf("allowLowConfidence should convert, got: %s", extractTextFromResult(res.Content))
+		}
+	})
+
+	t.Run("explicit from converts", func(t *testing.T) {
+		h, path := write(t)
+		res, _, err := h.HandleConvertEncoding(ctx, nil, ConvertEncodingInput{
+			Path: path, To: "utf-8", From: "cp1251",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if res.IsError {
+			t.Errorf("an explicit from should convert, got: %s", extractTextFromResult(res.Content))
+		}
+	})
 }

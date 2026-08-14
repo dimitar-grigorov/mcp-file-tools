@@ -137,9 +137,17 @@ func (h *Handler) convertOne(path string, input ConvertEncodingInput, policy bom
 			return res
 		}
 	} else {
-		detection, _ := encoding.DetectSample(data)
+		detection, trusted := encoding.DetectSample(data)
 		if detection.Charset == "" {
 			res.Error = "could not detect source encoding. Please specify 'from' parameter."
+			return res
+		}
+		// A bad guess writes nonsense that then detects as valid utf-8.
+		if !trusted && !input.AllowLowConfidence {
+			res.Error = fmt.Sprintf(
+				"source encoding looks like %s but detection is only %d%% confident (needs %d%%). "+
+					"Pass from=%q to confirm it, a different encoding to override it, or allowLowConfidence=true to accept the guess.",
+				detection.Charset, detection.Confidence, encoding.MinConfidenceThreshold, detection.Charset)
 			return res
 		}
 		sourceEncodingName = detection.Charset
