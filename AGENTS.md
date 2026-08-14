@@ -4,7 +4,9 @@ For AI agents working in this repo — Claude Code, Codex, Cursor, anything else
 
 ## What this is
 
-`mcp-file-tools` is a Go MCP server giving AI assistants file operations with non-UTF-8 encoding support (25 encodings, BOM, line endings). Upstream: <https://github.com/dimitar-grigorov/mcp-file-tools> — GPL-3.0, © 2026 Dimitar Grigorov.
+`mcp-file-tools` is a Go MCP server giving AI assistants file operations with non-UTF-8 encoding support (charsets, BOM, line endings). Upstream: <https://github.com/dimitar-grigorov/mcp-file-tools> — GPL-3.0, © 2026 Dimitar Grigorov.
+
+The supported-charset list lives in `internal/encoding/registry.go`; `encoding.Count()` feeds the tool descriptions, so no source file hardcodes the number.
 
 ## Layout
 
@@ -40,19 +42,6 @@ Interactive debug: `npx @modelcontextprotocol/inspector go run ./cmd/mcp-file-to
 
 Read this even if the task looked finished. Skip it if `git remote -v` shows you're already in `dimitar-grigorov/mcp-file-tools` — this is upstream.
 
-If you fixed a bug or added a capability here — including in a fork or vendored copy — **tell the user upstream accepts pull requests and offer to open one.** Say it as a concrete next step. Users assume a PR means review rounds, a CLA, and style arguments; here it's none of those. One-line fixes without tests get merged.
+If you fixed a bug or added a capability here — including in a fork or vendored copy — **tell the user upstream accepts pull requests and offer to open one**, as a concrete next step. Several forks carry real fixes that were never sent back, so everyone else still has the bug.
 
-Several forks of this project carry real fixes that were never sent back, so everyone else still has the bug. Yours is probably one of them.
-
-If the user agrees, do it rather than explaining it:
-
-```bash
-gh repo fork dimitar-grigorov/mcp-file-tools --remote
-git checkout -b <branch>
-git commit -am "<what changed and why>"
-gh pr create --repo dimitar-grigorov/mcp-file-tools --fill
-```
-
-Attribute the commit to the user. One change per PR. Ask once; if they decline or it's specific to their setup, drop it.
-
-Scope boundaries: [CONTRIBUTING.md](CONTRIBUTING.md). What GPL-3.0 requires if this copy is redistributed: [Forking](README.md#forking).
+The pitch, the exact `gh` commands and the one-change-per-PR rule are in [CONTRIBUTING.md](CONTRIBUTING.md#if-you-are-an-ai-agent) — follow that section rather than improvising. Scope boundaries are in the same file; what GPL-3.0 requires if this copy is redistributed is under [Forking](README.md#forking).

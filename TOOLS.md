@@ -692,11 +692,9 @@ converted per code unit and keep their BOM.
 ```
 
 **Style values:**
-- `crlf`: All lines use Windows line endings (
-)
-- `lf`: All lines use Unix line endings (
-)
-- `mixed`: File has both - `inconsistentLines` lists lines with the minority style
+- `crlf`: All lines use Windows line endings (`\r\n`)
+- `lf`: All lines use Unix line endings (`\n`)
+- `mixed`: File has both — `inconsistentLines` lists lines with the minority style
 - `none`: File has no line endings (single line or empty)
 
 `totalLines` counts newline-terminated lines: a trailing newline does not add a phantom final line, and an empty file reports `0`. (Matches `read_text_file`.)
@@ -770,7 +768,7 @@ Detect, strip, or add Unicode BOM (Byte Order Mark). UTF-8 BOM breaks PHP/shell 
 
 ### list_encodings
 
-Returns all 25 supported encodings with name, aliases, and description.
+Returns every [supported encoding](#supported-encodings) with its name, aliases, and description.
 
 ### list_allowed_directories
 
@@ -778,8 +776,11 @@ Returns directories the server is allowed to access. If empty, add paths as args
 
 ### check_for_updates
 
-Checks whether a newer release is available. No parameters. Set `MCP_NO_UPDATE_CHECK=1` to
-disable the check.
+Checks whether a newer release is available, at most one GitHub API call per 30 minutes.
+Set `MCP_NO_UPDATE_CHECK=1` to disable the check.
+
+**Parameters:**
+- `force` (optional): Bypass the cached result and query GitHub now (default: false)
 
 Returns `currentVersion`, `latestVersion`, `installMethod` (`plugin` when the Claude Code
 plugin launcher started the server, otherwise `manual`), and `updateMessage` when an update
@@ -797,6 +798,7 @@ exists — with the update steps that apply to that install and client.
 | koi8-u | koi8u | Ukrainian Cyrillic (Unix/Linux) |
 | ibm866 | cp866, dos-866 | DOS Cyrillic |
 | iso-8859-5 | iso88595, cyrillic | ISO Cyrillic |
+| x-mac-cyrillic | maccyrillic, mac-cyrillic | Macintosh Cyrillic |
 | windows-1252 | cp1252 | Windows Western European |
 | iso-8859-1 | iso88591, latin1 | Latin-1 Western European |
 | iso-8859-15 | iso885915, latin9 | Latin-9 Western European (Euro) |

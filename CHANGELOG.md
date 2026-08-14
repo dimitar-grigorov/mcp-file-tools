@@ -149,7 +149,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Transitional:** the first `write_file` creating a new file under the
   built-in default appends a one-line notice about the utf-8 change.
-  **Removed in 2.3.0.**
+  **Runs to the end of 2026.**
 - `make lint` runs `staticcheck` at the same pinned version as CI.
 
 ### Fixed

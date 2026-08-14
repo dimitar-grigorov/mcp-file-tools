@@ -90,8 +90,6 @@ func BOMSize(charset string) int {
 	return len(b)
 }
 
-// --- Primary API (file-based, streaming) ---
-
 // DetectFromFile detects encoding via streaming I/O; modes: sample (~384KB), chunked, full.
 func DetectFromFile(path string, mode string) (DetectionResult, error) {
 	file, err := os.Open(path)
@@ -296,8 +294,6 @@ func joinDetectionSamples(samples []byteSample) []byte {
 	}
 	return joined
 }
-
-// --- Internal streaming implementation ---
 
 func detectFromReader(r io.ReaderAt, size int64, mode string) (DetectionResult, error) {
 	switch mode {

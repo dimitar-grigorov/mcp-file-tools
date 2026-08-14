@@ -131,7 +131,6 @@ func (h *Handler) collectFiles(ctx context.Context, paths, includes, excludes []
 	seen := make(map[string]bool)
 	allowedDirs := h.ResolvedAllowedDirs()
 	for _, path := range paths {
-		// Check for cancellation between paths
 		select {
 		case <-ctx.Done():
 			return files
@@ -254,7 +253,6 @@ func (h *Handler) searchFiles(ctx context.Context, files []string, opts grepOpti
 // searchSingleFile searches one file. Outside content mode it only counts, so
 // nothing is built to be thrown away.
 func searchSingleFile(path string, opts grepOptions) fileHits {
-	// Check file size - warn if large file will be loaded to memory
 	if info, err := os.Stat(path); err == nil && info.Size() > opts.maxFileSize {
 		slog.Warn("loading large file into memory", "path", path, "size", info.Size(), "threshold", opts.maxFileSize)
 	}

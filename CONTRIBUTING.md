@@ -28,7 +28,7 @@ Commented, not closed:
 
 ```bash
 make test    # go test -race ./...
-make lint    # go vet ./... && go fmt ./...
+make lint    # go vet, go fmt, staticcheck (same pinned version as CI)
 ```
 
 Both passing is enough. Skipped tests are fine — just say so. Match the surrounding style.

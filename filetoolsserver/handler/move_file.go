@@ -21,13 +21,12 @@ func (h *Handler) HandleMoveFile(ctx context.Context, req *mcp.CallToolRequest, 
 		return dst.Result, MoveFileOutput{}, nil
 	}
 
-	// Check if source exists
 	if _, err := os.Stat(src.Path); os.IsNotExist(err) {
 		return errorResult(fmt.Sprintf("source does not exist: %s", input.Source)), MoveFileOutput{}, nil
 	}
 
-	// Check if destination already exists. Lstat, so a dangling symlink counts as
-	// present. A destination created between here and the rename is still clobbered.
+	// Lstat, so a dangling symlink counts as present. A destination created
+	// between here and the rename is still clobbered.
 	if _, err := os.Lstat(dst.Path); err == nil {
 		return errorResult(fmt.Sprintf("destination already exists: %s", input.Destination)), MoveFileOutput{}, nil
 	} else if !os.IsNotExist(err) {

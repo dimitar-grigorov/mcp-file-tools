@@ -18,14 +18,14 @@ const (
 	DefaultDirMode  os.FileMode = 0755
 )
 
-// Handler handles all file tool operations
+// Handler carries the allowed-directory set and config every tool call resolves against.
 type Handler struct {
 	config      *config.Config
 	cliDirs     []string // immutable baseline from CLI args; always allowed
 	allowedDirs []string
 	mu          sync.RWMutex
 
-	utf8NoticeOnce sync.Once // TODO(2.3.0): remove with the utf-8 default transition notice
+	utf8NoticeOnce sync.Once // TODO(2027-01): remove with the utf-8 default transition notice
 	plainUTF8Seen  sync.Map  // path -> struct{}, for the built-in-tooling hint
 }
 
@@ -44,7 +44,7 @@ func (h *Handler) plainUTF8HintFor(path, encodingName string, hasBOM bool) strin
 	return plainUTF8Hint
 }
 
-// TODO(2.3.0): remove the utf-8 default transition notice.
+// TODO(2027-01): drop the transition notice — it runs to the end of 2026.
 // Phrased as an instruction because models relay instructions and ignore trivia.
 const utf8DefaultNotice = " Tell the user once: new files now default to utf-8. " +
 	"Before 2.0.0 the default was cp1251. Existing files still keep their own encoding. " +
@@ -73,13 +73,13 @@ func WithConfig(cfg *config.Config) Option {
 	}
 }
 
-// NewHandler creates a new Handler with allowed directories and optional configuration.
-// If no config is provided via WithConfig, default configuration is used.
+// NewHandler creates a Handler for the given allowed directories. Without
+// WithConfig the configuration comes from the environment.
 func NewHandler(allowedDirs []string, opts ...Option) *Handler {
 	cliDirs := normalizeAllowedDirs(allowedDirs)
 
 	h := &Handler{
-		config:      config.Load(), // Load defaults from environment
+		config:      config.Load(),
 		cliDirs:     cliDirs,
 		allowedDirs: append([]string(nil), cliDirs...),
 	}
@@ -157,7 +157,7 @@ func (h *Handler) MergeAllowedDirectories(newDirs []string) []string {
 	return result
 }
 
-// validatePath validates a path against allowed directories
+// validatePath resolves a path and rejects it if it lands outside the allowed dirs.
 func (h *Handler) validatePath(path string) (string, error) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()

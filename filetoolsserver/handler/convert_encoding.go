@@ -129,7 +129,6 @@ func (h *Handler) convertOne(path string, input ConvertEncodingInput, policy bom
 		return res
 	}
 
-	// Resolve source encoding
 	var sourceEncodingName string
 	if input.From != "" {
 		sourceEncodingName = strings.ToLower(input.From)
@@ -160,7 +159,6 @@ func (h *Handler) convertOne(path string, input ConvertEncodingInput, policy bom
 		}
 	}
 
-	// Decode to UTF-8
 	var utf8Content string
 	if encoding.IsUTF8(sourceEncodingName) {
 		utf8Content = string(payload)
@@ -174,7 +172,6 @@ func (h *Handler) convertOne(path string, input ConvertEncodingInput, policy bom
 		utf8Content = string(decoded)
 	}
 
-	// Encode to target
 	var targetData []byte
 	if encoding.IsUTF8(targetEncodingName) {
 		targetData = []byte(utf8Content)

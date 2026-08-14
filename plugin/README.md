@@ -3,9 +3,11 @@
 Installs the [`mcp-file-tools`](https://github.com/dimitar-grigorov/mcp-file-tools)
 MCP server into Claude Code via `/plugin install`.
 
-The server provides filesystem operations on text that isn't UTF-8: it auto-detects 24
-encodings (CP1251, CP1252, KOI8-R, ISO-8859, UTF-16, GBK/GB18030, ...), hands Claude
-UTF-8, and writes back in the file's original encoding with BOM and line endings intact.
+The server provides filesystem operations on text that isn't UTF-8: it auto-detects legacy
+charsets (CP1251, CP1252, KOI8-R, ISO-8859, UTF-16, GBK/GB18030, ...), hands Claude UTF-8,
+and writes back in the file's original encoding with BOM and line endings intact. The
+[full list](https://github.com/dimitar-grigorov/mcp-file-tools#supported-encodings) is in
+the main README.
 
 ## Install
 

@@ -43,7 +43,6 @@ func (h *Handler) HandleCopyFile(ctx context.Context, req *mcp.CallToolRequest, 
 		return r, CopyFileOutput{}, nil
 	}
 
-	// Copy file with source permissions and timestamps preserved
 	if err := copyFile(src.Path, dst.Path, srcInfo.Mode().Perm(), srcInfo.ModTime()); err != nil {
 		return errorResult(fmt.Sprintf("failed to copy file: %v", err)), CopyFileOutput{}, nil
 	}

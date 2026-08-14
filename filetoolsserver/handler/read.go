@@ -16,7 +16,7 @@ import (
 	textEncoding "golang.org/x/text/encoding"
 )
 
-// encodingResult holds the result of encoding resolution
+// encodingResult is the outcome of resolving which encoding to read a file with.
 type encodingResult struct {
 	encoder            textEncoding.Encoding
 	name               string
@@ -32,7 +32,6 @@ func (h *Handler) HandleReadTextFile(ctx context.Context, req *mcp.CallToolReque
 		return v.Result, ReadTextFileOutput{}, nil
 	}
 
-	// Get file size early for the output
 	fileInfo, err := os.Stat(v.Path)
 	if err != nil {
 		return errorResult(fmt.Sprintf("failed to stat file: %v", err)), ReadTextFileOutput{}, nil
@@ -72,10 +71,9 @@ func (h *Handler) HandleReadTextFile(ctx context.Context, req *mcp.CallToolReque
 		content = addLineNumbers(content, startLine)
 	}
 
-	// Apply maxCharacters truncation (counts Unicode runes, not bytes)
+	// maxCharacters counts runes, not bytes, and cuts on a rune boundary.
 	truncated := false
 	if input.MaxCharacters != nil && *input.MaxCharacters > 0 && utf8.RuneCountInString(content) > *input.MaxCharacters {
-		// Truncate at rune boundary
 		runeCount := 0
 		byteIdx := 0
 		for byteIdx < len(content) && runeCount < *input.MaxCharacters {
@@ -130,7 +128,6 @@ const (
 
 // resolveWriteEncoding returns encoding for writes: explicit > existing file > config default.
 func (h *Handler) resolveWriteEncoding(inputEncoding string, filePath string) (string, encodingSource, error) {
-	// 1. Explicit encoding always wins
 	if inputEncoding != "" {
 		encodingName := strings.ToLower(inputEncoding)
 		if _, ok := encoding.Get(encodingName); !ok {
@@ -139,24 +136,20 @@ func (h *Handler) resolveWriteEncoding(inputEncoding string, filePath string) (s
 		return encodingName, encodingFromRequest, nil
 	}
 
-	// 2. If file exists, detect and preserve its encoding
 	fileExists := false
 	if _, err := os.Stat(filePath); err == nil {
 		fileExists = true
 		detected, err := encoding.DetectFromFile(filePath, "sample")
 		// "ascii" fits every encoding we support, so it's inconclusive, not a match.
 		if err == nil && detected.Confidence >= encoding.MinConfidenceThreshold && detected.Charset != "ascii" {
-			// Validate the detected encoding is supported
 			if _, ok := encoding.Get(detected.Charset); ok {
 				slog.Debug("preserving existing file encoding", "path", filePath, "encoding", detected.Charset, "confidence", detected.Confidence)
 				return detected.Charset, encodingFromExisting, nil
 			}
 		}
-		// Detection failed, ascii, or low confidence - fall through to default
 		slog.Debug("encoding detection inconclusive, using default", "path", filePath, "detected", detected.Charset, "confidence", detected.Confidence)
 	}
 
-	// 3. New file or detection failed - use configured default
 	if fileExists {
 		return h.config.DefaultEncoding, encodingFromFallback, nil
 	}
@@ -165,7 +158,6 @@ func (h *Handler) resolveWriteEncoding(inputEncoding string, filePath string) (s
 
 // resolveEncodingFromData returns encoding from loaded data: explicit > auto-detect.
 func (h *Handler) resolveEncodingFromData(inputEncoding string, data []byte, filePath string) (string, error) {
-	// 1. Explicit encoding always wins
 	if inputEncoding != "" {
 		encodingName := strings.ToLower(inputEncoding)
 		if _, ok := encoding.Get(encodingName); !ok {
@@ -174,7 +166,7 @@ func (h *Handler) resolveEncodingFromData(inputEncoding string, data []byte, fil
 		return encodingName, nil
 	}
 
-	// 2. Auto-detect from loaded data ("ascii" is inconclusive - see resolveWriteEncoding)
+	// "ascii" is inconclusive here too — see resolveWriteEncoding.
 	detected := encoding.Detect(data)
 	if detected.Confidence >= encoding.MinConfidenceThreshold && detected.Charset != "ascii" {
 		if _, ok := encoding.Get(detected.Charset); ok {
@@ -183,7 +175,6 @@ func (h *Handler) resolveEncodingFromData(inputEncoding string, data []byte, fil
 		}
 	}
 
-	// 3. Fall back to configured default, same as resolveWriteEncoding's existing-file branch
 	slog.Debug("encoding detection inconclusive, using configured default", "path", filePath, "detected", detected.Charset, "confidence", detected.Confidence, "default", h.config.DefaultEncoding)
 	return h.config.DefaultEncoding, nil
 }
@@ -193,7 +184,6 @@ func (h *Handler) resolveEncoding(inputEncoding string, filePath string) (encodi
 	result := encodingResult{}
 
 	if inputEncoding != "" {
-		// Use explicitly specified encoding
 		result.name = strings.ToLower(inputEncoding)
 		enc, ok := encoding.Get(result.name)
 		if !ok {
@@ -203,17 +193,15 @@ func (h *Handler) resolveEncoding(inputEncoding string, filePath string) (encodi
 		return result, nil
 	}
 
-	// Determine detection mode based on file size
+	// Sample a file too large to hold in memory; read the rest in full.
 	detectionMode := "full"
 	if loadToMemory, _ := h.shouldLoadEntireFile(filePath); !loadToMemory {
 		detectionMode = "sample"
 	}
 
-	// Auto-detect encoding
 	result.autoDetected = true
 	detection, err := encoding.DetectFromFile(filePath, detectionMode)
 	if err != nil {
-		// Detection failed, fall back to UTF-8
 		result.name = "utf-8"
 		result.detectedEncoding = "detection failed, using utf-8"
 		result.encoder = nil
@@ -226,17 +214,14 @@ func (h *Handler) resolveEncoding(inputEncoding string, filePath string) (encodi
 	if trusted && detection.Charset != "" {
 		result.name = detection.Charset
 	} else {
-		// Fall back to UTF-8 if detection is not confident enough
 		result.name = "utf-8"
 		if detection.Charset != "" {
 			result.detectedEncoding = detection.Charset + " (low confidence, using utf-8)"
 		}
 	}
 
-	// Validate the detected/fallback encoding
 	enc, ok := encoding.Get(result.name)
 	if !ok {
-		// Unsupported detected encoding, fall back to UTF-8
 		slog.Warn("detected encoding not supported, reading as utf-8", "path", filePath, "detected", detection.Charset, "confidence", detection.Confidence)
 		result.encoder = nil
 		result.name = "utf-8"
@@ -252,7 +237,7 @@ func (h *Handler) resolveEncoding(inputEncoding string, filePath string) (encodi
 	return result, nil
 }
 
-// decodeContent decodes the file data to UTF-8 using the resolved encoding
+// decodeContent decodes file data to UTF-8 using the resolved encoding.
 func decodeContent(data []byte, encResult encodingResult) (string, error) {
 	if encoding.IsUTF8(encResult.name) {
 		return string(data), nil
@@ -320,16 +305,14 @@ func applyOffsetLimit(content string, offset, limit *int) (string, int, int) {
 		return "", 1, 0
 	}
 
-	// Default offset is 1 (first line)
 	startIdx := 0
 	if offset != nil && *offset > 1 {
-		startIdx = *offset - 1 // Convert 1-indexed to 0-indexed
+		startIdx = *offset - 1
 		if startIdx >= totalLines {
-			return "", totalLines + 1, totalLines // Empty result, past end
+			return "", totalLines + 1, totalLines // past the end
 		}
 	}
 
-	// Default limit is all remaining lines
 	endIdx := totalLines
 	if limit != nil && *limit > 0 && startIdx+*limit < endIdx {
 		endIdx = startIdx + *limit

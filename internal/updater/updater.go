@@ -43,7 +43,6 @@ type cache struct {
 // If force is true, the cache is bypassed and a fresh check is performed.
 // env selects the update steps; a zero Env yields client-neutral ones.
 func Check(ctx context.Context, currentVersion string, force bool, env install.Env) string {
-	// Skip if disabled or running dev build
 	if os.Getenv("MCP_NO_UPDATE_CHECK") == "1" || currentVersion == "dev" || currentVersion == "" {
 		return ""
 	}
@@ -51,7 +50,6 @@ func Check(ctx context.Context, currentVersion string, force bool, env install.E
 	cacheFile := getCacheFile()
 	latestVersion := ""
 
-	// Use cached result if within check interval (unless forced)
 	if !force {
 		if c := readCache(cacheFile); c != nil && time.Since(c.LastCheck) < CheckInterval {
 			latestVersion = c.LatestVersion
@@ -107,7 +105,7 @@ func updateSteps(env install.Env) string {
 	return steps
 }
 
-// fetchLatestVersion queries GitHub API for the latest release tag
+// fetchLatestVersion queries the GitHub API for the latest release tag.
 func fetchLatestVersion(ctx context.Context) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, UpdateCheckURL, nil)
 	if err != nil {
@@ -136,7 +134,7 @@ func fetchLatestVersion(ctx context.Context) (string, error) {
 	return strings.TrimPrefix(release.TagName, "v"), nil
 }
 
-// getCacheFile returns the path to the cache file in user's cache directory
+// getCacheFile returns the cache path, or "" when there is no user cache dir.
 func getCacheFile() string {
 	if dir, err := os.UserCacheDir(); err == nil {
 		return filepath.Join(dir, "mcp-file-tools", "update-check.json")
@@ -176,7 +174,7 @@ func writeCache(path, version string) {
 	_ = os.WriteFile(path, data, 0644)
 }
 
-// isNewerVersion compares semver versions (major.minor.patch)
+// isNewerVersion compares major.minor.patch; pre-release suffixes are ignored.
 func isNewerVersion(latest, current string) bool {
 	l, c := parseVersion(latest), parseVersion(current)
 	for i := 0; i < 3; i++ {
@@ -190,8 +188,8 @@ func isNewerVersion(latest, current string) bool {
 	return false
 }
 
-// parseVersion extracts [major, minor, patch] from version string
-// Handles: "1.2.3", "v1.2.3", "1.2.3-beta", "1.2", "1"
+// parseVersion extracts [major, minor, patch] from "1.2.3", "v1.2.3",
+// "1.2.3-beta", "1.2" or "1"; missing or unparsable parts are 0.
 func parseVersion(v string) [3]int {
 	v = strings.TrimPrefix(v, "v")
 	parts := strings.Split(v, ".")

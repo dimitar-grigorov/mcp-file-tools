@@ -12,8 +12,8 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// HandleReadMultipleFiles reads multiple files concurrently.
-// Individual file failures don't stop the operation - errors are reported per file.
+// HandleReadMultipleFiles reads files concurrently. A failure on one file is
+// reported in its own result rather than failing the batch.
 func (h *Handler) HandleReadMultipleFiles(ctx context.Context, req *mcp.CallToolRequest, input ReadMultipleFilesInput) (*mcp.CallToolResult, ReadMultipleFilesOutput, error) {
 	if len(input.Paths) == 0 {
 		return errorResult("paths array is required and must contain at least one path"), ReadMultipleFilesOutput{}, nil
@@ -67,7 +67,6 @@ func (h *Handler) readSingleFile(path, requestedEncoding string) FileReadResult 
 		return result
 	}
 
-	// Resolve encoding (detection mode based on file size vs MemoryThreshold)
 	encResult, err := h.resolveEncoding(requestedEncoding, v.Path)
 	if err != nil {
 		result.Error = err.Error()
@@ -75,7 +74,6 @@ func (h *Handler) readSingleFile(path, requestedEncoding string) FileReadResult 
 		return result
 	}
 
-	// Read file content for decoding
 	data, err := os.ReadFile(v.Path)
 	if err != nil {
 		result.Error, result.ErrorCode = mapOperationError(

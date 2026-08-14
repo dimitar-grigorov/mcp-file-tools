@@ -1,6 +1,6 @@
 # Publishing notes
 
-Internal notes on how this server is distributed. Not meant for the public repo.
+How this server is distributed — maintainer reference, not user documentation.
 
 ## Releasing
 

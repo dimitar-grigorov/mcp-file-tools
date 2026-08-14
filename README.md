@@ -19,13 +19,20 @@ tool owns the file.
 - **BOM and line endings are first-class** — add or strip a BOM, convert CRLF↔LF, and do it correctly on UTF-16, where a naive byte-level rewrite corrupts the file
 - **Sandboxed** — every path, including symlink and junction targets, is resolved and checked against the directories you allowed
 
-**Perfect for:** Delphi/Pascal projects, legacy VB6 apps, old PHP/HTML sites, config and data files whose encoding you can't tell from the filename.
+**Built for:** Delphi/Pascal units with Cyrillic UI text (Windows-1251), VB6 forms
+(Windows-1252), legacy PHP/HTML with localized content (CP1251, ISO-8859-1), and INI or
+data files whose encoding you can't tell from the filename.
+
+```
+User: Read config.ini and change the title to "Настройки"
+Claude: [read_text_file → cp1251 detected] → [edits UTF-8] → [write_file → back to cp1251]
+```
 
 > **PRs welcome and merged fast** — no CLA, no style review, one-line fixes count. Forked this to fix something? Please [send it back](#contributing) instead.
 
-## What It Does
+## Tools
 
-Provides 20 tools for file operations with automatic encoding conversion:
+20 tools — every one that touches text content is encoding-aware:
 - [`read_text_file`](TOOLS.md#read_text_file) - Read files with encoding auto-detection and conversion
 - [`read_multiple_files`](TOOLS.md#read_multiple_files) - Read multiple files concurrently with encoding support
 - [`write_file`](TOOLS.md#write_file) - Write files in specific encodings
@@ -33,7 +40,7 @@ Provides 20 tools for file operations with automatic encoding conversion:
 - [`copy_file`](TOOLS.md#copy_file) - Copy a file to a new location
 - [`delete_file`](TOOLS.md#delete_file) - Delete a file
 - [`list_directory`](TOOLS.md#list_directory) - Browse directories with pattern filtering
-- [`tree`](TOOLS.md#tree) - Compact indented tree view (85% fewer tokens than JSON)
+- [`tree`](TOOLS.md#tree) - Compact indented tree view, optionally annotated with each file's encoding
 - [`search_files`](TOOLS.md#search_files) - Recursively search for files matching glob patterns
 - [`grep_text_files`](TOOLS.md#grep_text_files) - Regex search in file contents with encoding support
 - [`detect_encoding`](TOOLS.md#detect_encoding) - Auto-detect file encoding with confidence score
@@ -57,8 +64,8 @@ tool; agents read images with their built-in tools.
 
 ### Supported encodings
 
-25 encodings, each usable for both reading and writing. Any of them can be named
-explicitly via the `encoding` parameter, or left to auto-detection.
+Every one below reads and writes. Name one explicitly via the `encoding` parameter, or
+leave it to auto-detection.
 
 | Script / region | Encodings |
 |---|---|
@@ -78,14 +85,6 @@ UTF-32 is partially supported: LE and BE BOMs are detected, and
 [`manage_bom`](TOOLS.md#manage_bom) can add or strip them, but transcoding to or from
 UTF-32 is not implemented and [`manage_line_endings`](TOOLS.md#manage_line_endings)
 refuses UTF-32 files rather than corrupting their 4-byte alignment.
-
-**Security:** All operations restricted to allowed directories only. Paths are resolved
-before the check, so a symlink or Windows junction pointing outside an allowed directory
-is rejected rather than followed.
-
-> **Upgrading to 2.0.0?** `write_file` now defaults **new** files to `utf-8` instead of
-> `cp1251`. Existing files keep their detected encoding and are unaffected. See the
-> [CHANGELOG](CHANGELOG.md) for the migration path.
 
 ## Installation
 
@@ -203,7 +202,7 @@ macOS / Linux:
 }
 ```
 
-The `args` array specifies allowed directories the server can access. Add as many directories as you need.
+`args` lists the directories the server may access — as many as you need.
 
 **VSCode / Cursor (Claude Code extension)**
 
@@ -227,17 +226,17 @@ Alternatively, create a **per-project config** by adding `.mcp.json` to your pro
 }
 ```
 
-**Note:** The `type: "stdio"` field is required. The `args` array specifies allowed directories — the VSCode extension does not automatically add the workspace directory, so you must list all directories you want to access. To add more directories later, re-run the `claude mcp add` command with all directories listed (it overwrites the previous config).
+**Note:** `type: "stdio"` is required here. The VSCode extension does not add the workspace
+directory by itself, so `args` must list every directory you want reachable. Adding one
+later means re-running `claude mcp add` with the full list — it overwrites the previous
+config rather than appending.
 
 ### OpenAI Codex CLI
 
-For this server, the Codex equivalent is a direct MCP command; no manual TOML editing
-is needed.
+Download the binary as in [Manual install](#manual-install-other-mcp-clients-or-access-outside-your-workspace),
+then register it — Codex takes a direct MCP command, so no TOML editing is needed:
 
-Windows (PowerShell):
 ```powershell
-mkdir -Force "$env:LOCALAPPDATA\Programs\mcp-file-tools"
-iwr "https://github.com/dimitar-grigorov/mcp-file-tools/releases/latest/download/mcp-file-tools_windows_amd64.exe" -OutFile "$env:LOCALAPPDATA\Programs\mcp-file-tools\mcp-file-tools.exe"
 codex mcp add file-tools -- "$env:LOCALAPPDATA\Programs\mcp-file-tools\mcp-file-tools.exe" "D:\Projects"
 ```
 
@@ -260,15 +259,12 @@ a prompt takes one more rule — see [docs/extra.md](docs/extra.md#auto-approvin
 The server checks for updates automatically and notifies you through tool responses when a
 newer version is available; the notice carries the steps for your install. Plugin installs
 update through [Updating the plugin](#updating-the-plugin) — a re-downloaded binary is
-ignored there. For a manual install:
+ignored there.
 
-1. Close all Claude Code sessions (the binary is locked while running)
-2. Re-download the binary:
-
-```powershell
-iwr "https://github.com/dimitar-grigorov/mcp-file-tools/releases/latest/download/mcp-file-tools_windows_amd64.exe" `
-    -OutFile "$env:LOCALAPPDATA\Programs\mcp-file-tools\mcp-file-tools.exe"
-```
+A manual install updates by re-running the download command from
+[Manual install](#manual-install-other-mcp-clients-or-access-outside-your-workspace) over
+the existing binary. Close all Claude Code sessions first: the binary is locked while
+running. The registration does not need repeating.
 
 To disable update checks, set the environment variable `MCP_NO_UPDATE_CHECK=1`.
 
@@ -293,9 +289,10 @@ Once installed, just ask Claude:
 - "Show all supported encodings"
 - "Read MainForm.dfm using CP1251 encoding"
 
-**Security:** The server only accesses directories you explicitly allow:
-- **Automatic:** Claude Desktop/Code provide workspace directories automatically
-- **Manual:** Specify directories in config `args: ["/path/to/project"]`
+**Security:** the server reaches only the directories you allowed — automatically from the
+workspace Claude Desktop/Code sends over the roots protocol, or explicitly from
+`args: ["/path/to/project"]`. Paths are resolved before the check, so a symlink or Windows
+junction pointing outside is rejected rather than followed.
 
 ## Configuration
 
@@ -307,64 +304,29 @@ The server can be configured via environment variables:
 | `MCP_DEFAULT_LINE_ENDINGS` | Line endings for `write_file` on **new** files (`crlf`/`lf`). Existing files keep their own style regardless. | unset (write unchanged) |
 | `MCP_MEMORY_THRESHOLD` | Memory threshold in bytes. Files smaller are loaded into memory for faster I/O; larger files use streaming. Also affects encoding detection mode. | `67108864` (64MB) |
 
-To override, set environment variables in your config (Claude Desktop example):
-```json
-{
-  "mcpServers": {
-    "file-tools": {
-      "command": "C:\\Users\\YOUR_NAME\\AppData\\Local\\Programs\\mcp-file-tools\\mcp-file-tools.exe",
-      "args": ["D:\\Projects"],
-      "env": {
-        "MCP_DEFAULT_ENCODING": "utf-8"
-      }
-    }
-  }
-}
-```
-
-### Legacy teams (pre-2.0.0 behaviour)
-
-Before 2.0.0 new files defaulted to `cp1251`. Existing files are unaffected by the
-change — their encoding is detected and preserved — so this only matters if your team
-**creates** new non-UTF-8 files (e.g. new Delphi units with Cyrillic literals). To keep
-the old behaviour everywhere, set it once per machine:
+Set them with an `env` block alongside `command` and `args` in any of the configs above:
 
 ```json
 "env": { "MCP_DEFAULT_ENCODING": "cp1251" }
 ```
 
-Per-project instead of per-machine: commit an `.mcp.json` with that `env` block to the
-legacy repo, so anyone working in it gets the right default without local setup.
+### Legacy teams (pre-2.0.0 behaviour)
 
-## Use Cases
+`MCP_DEFAULT_ENCODING` only affects files the server **creates** — a new Delphi unit with
+Cyrillic literals, say. Existing files keep their own detected encoding either way, so
+most teams never need it.
 
-### Legacy Codebases
-
-Many legacy projects use non-UTF-8 encodings that AI assistants can't handle natively:
-
-- **Delphi/Pascal** (Windows-1251): Source files with Cyrillic UI text
-- **Visual Basic 6** (Windows-1252): Forms and config files with Western European characters
-- **Legacy PHP/HTML** (CP1251, ISO-8859-1): Web apps with localized content
-- **Old config files** (Various): INI, properties, registry files with legacy encodings
-
-**How it works:**
-```
-User: Read config.ini and change the title to "Настройки"
-Assistant: [read_text_file with cp1251] → [modify UTF-8] → [write_file with cp1251]
-```
-
-The original encoding is preserved - files remain compatible with legacy tools.
+Commit the `env` block above in the legacy repo's `.mcp.json` rather than setting it per
+machine, and everyone working in that repo gets the right default with no local setup.
 
 ## Development
 
 **Prerequisites:** Go 1.26+
 
 ```bash
-# Run tests
-go test ./...
-
-# Build
-go build -o mcp-file-tools ./cmd/mcp-file-tools
+make test    # go test -race ./...
+make lint    # go vet, go fmt, staticcheck (same pinned version as CI)
+make build
 ```
 
 `test_server.go` is an end-to-end smoke test over every tool, run by CI on each push:
@@ -390,13 +352,12 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | go run ./cmd
 ## Contributing
 
 **If it fits the scope and works, it gets merged.** Don't ask first — just send the PR.
+No CLA, no style review; `make test` and `make lint` passing is enough, and tests are
+welcome but never required. Scope, what gets pushed back on, and the exact commands are in
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
-- No CLA, no style review. `make test` and `make lint` passing is enough; tests are welcome, never required.
-- One-line fixes and half-finished features behind a flag are both fine.
-- Pushed back on (with a comment, not a close): out of scope, or breaking tool contracts other people's agents rely on.
-- Don't want to write the fix? [Open an issue](https://github.com/dimitar-grigorov/mcp-file-tools/issues) with the file, its encoding, and what the tool did.
-
-Details in [CONTRIBUTING.md](CONTRIBUTING.md).
+Don't want to write the fix? [Open an issue](https://github.com/dimitar-grigorov/mcp-file-tools/issues)
+with the file, its encoding, and what the tool did.
 
 ## Forking
 
@@ -413,11 +374,11 @@ Forking is fine. That's what GPL-3.0 is for. Taking the project over is not.
 > only a binary is a **license violation**, and §8 ends your rights the moment you do it.
 
 **It will be enforced,** in this order: a request to comply, then a DMCA takedown plus
-delisting from whichever registry or marketplace carries it, then legal action as the
-copyright holder. Complying costs one license file, one notice, one source link, so none
-of this needs to happen. Unsure whether what you ship complies?
-[Ask in an issue](https://github.com/dimitar-grigorov/mcp-file-tools/issues), that's a
-normal question and a cheaper one.
+delisting from whichever registry or marketplace carries it, then legal action. Complying
+costs one license file, one notice and one source link, so none of this needs to happen.
+Unsure whether what you ship complies?
+[Ask in an issue](https://github.com/dimitar-grigorov/mcp-file-tools/issues) — cheaper than
+finding out later.
 
 **The rest is asked, not enforced:**
 

@@ -61,23 +61,22 @@ func determineStyle(crlfCount, lfCount int) string {
 	}
 }
 
-// ConvertLineEndings converts text to the specified line ending style.
+// ConvertLineEndings rewrites text to targetStyle. Anything other than "crlf"
+// is treated as LF, and mixed input comes out uniform either way.
 func ConvertLineEndings(text string, targetStyle string) string {
 	hasCRLF := strings.Contains(text, "\r\n")
 
 	if targetStyle == LineEndingCRLF {
 		if !hasCRLF {
-			// Only LF present, single pass: LF -> CRLF
 			return strings.ReplaceAll(text, "\n", "\r\n")
 		}
-		// Has CRLF (might be mixed), normalize then convert
+		// Collapse first, so already-CRLF lines do not become CRCRLF.
 		normalized := strings.ReplaceAll(text, "\r\n", "\n")
 		return strings.ReplaceAll(normalized, "\n", "\r\n")
 	}
 
-	// Target is LF (or other non-CRLF style)
 	if !hasCRLF {
-		return text // Already no CRLF
+		return text
 	}
 	return strings.ReplaceAll(text, "\r\n", "\n")
 }
@@ -106,7 +105,6 @@ func (h *Handler) HandleDetectLineEndings(ctx context.Context, req *mcp.CallTool
 		src = transform.NewReader(f, encResult.encoder.NewDecoder())
 	}
 
-	// Track each line's ending type
 	type lineEnding struct {
 		lineNum int
 		isCRLF  bool
@@ -137,7 +135,6 @@ func (h *Handler) HandleDetectLineEndings(ctx context.Context, req *mcp.CallTool
 		prevWasCR = (b == '\r')
 	}
 
-	// Count totals
 	crlfCount := 0
 	lfCount := 0
 	for _, le := range lineEndings {
@@ -148,12 +145,10 @@ func (h *Handler) HandleDetectLineEndings(ctx context.Context, req *mcp.CallTool
 		}
 	}
 
-	// Determine style and find inconsistent lines
 	style := determineStyle(crlfCount, lfCount)
 	var inconsistentLines []int
 
 	if style == LineEndingMixed {
-		// Dominant is the one with more occurrences
 		dominantIsCRLF := crlfCount >= lfCount
 		for _, le := range lineEndings {
 			if le.isCRLF != dominantIsCRLF {
@@ -169,7 +164,7 @@ func (h *Handler) HandleDetectLineEndings(ctx context.Context, req *mcp.CallTool
 		totalLines++ // last line has no terminator
 	}
 
-	// Ensure we don't return nil slice (return empty array for JSON)
+	// Marshal as [] rather than null.
 	if inconsistentLines == nil {
 		inconsistentLines = []int{}
 	}
