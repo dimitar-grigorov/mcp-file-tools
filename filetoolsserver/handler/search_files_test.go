@@ -111,6 +111,51 @@ func TestHandleSearchFiles_NoMatches(t *testing.T) {
 	}
 }
 
+func TestMatchGlobPattern(t *testing.T) {
+	tests := []struct {
+		path, pattern string
+		want          bool
+	}{
+		{"src/a/test/b/x.go", "src/**/test/**/*.go", true},
+		{"src/a/x.go", "src/**/test/**/*.go", false},
+		{"a/b/x.go", "**/*.go", true},
+		{"x.go", "**/*.go", true},
+		{"a/b/c.pas", "*.pas", true},
+		{"a/b/c.pas", "*.dfm", false},
+		{"dir/sub/f.txt", "dir/**", true},
+		{"dir", "dir/**", true},
+		{"other/f.txt", "dir/**", false},
+		{"dir/a/b/f.txt", "dir/**/f.txt", true},
+		{"dir/f.txt", "dir/**/f.txt", true},
+		{"src/x.go", "src/*.go", true},
+		{"src/sub/x.go", "src/*.go", false},
+	}
+	for _, tt := range tests {
+		if got := matchGlobPattern(tt.path, tt.pattern); got != tt.want {
+			t.Errorf("matchGlobPattern(%q, %q) = %v, want %v", tt.path, tt.pattern, got, tt.want)
+		}
+	}
+}
+
+func TestHandleSearchFiles_MultipleDoubleStars(t *testing.T) {
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+
+	deep := filepath.Join(tempDir, "src", "a", "test", "b")
+	os.MkdirAll(deep, 0755)
+	os.WriteFile(filepath.Join(deep, "x.go"), []byte("t"), 0644)
+	os.WriteFile(filepath.Join(tempDir, "src", "y.go"), []byte("t"), 0644)
+
+	input := SearchFilesInput{Path: tempDir, Pattern: "src/**/test/**/*.go"}
+	_, output, err := h.HandleSearchFiles(context.Background(), nil, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(output.Files) != 1 {
+		t.Errorf("expected 1 file, got %d: %v", len(output.Files), output.Files)
+	}
+}
+
 func TestHandleSearchFiles_ValidationErrors(t *testing.T) {
 	tempDir := t.TempDir()
 	h := NewHandler([]string{tempDir})

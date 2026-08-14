@@ -102,8 +102,8 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "search_files",
-		Description: "Recursively search for files matching a glob pattern (*.ext or **/*.ext). Returns full paths. Skips .gitignore'd files (respectGitignore=false to include). Parameters: path (required), pattern (required), excludePatterns, maxResults (default 10000), sortBy, reverse. " +
-			"sortBy: \"name\" (default, lexical), \"mtime\" (newest first) or \"size\" (largest first); reverse flips the order. With mtime or size the whole tree is ranked before the cap, so a truncated result really is the newest/largest maxResults files. " +
+		Description: "Recursively search for files matching a glob pattern (*.ext at any depth, **/*.ext, several ** allowed). Returns full paths. Skips .gitignore'd files (respectGitignore=false to include). Parameters: path (required), pattern (required), excludePatterns, maxResults (default 10000), sortBy, reverse. " +
+			"sortBy: \"name\" (default, lexical), \"mtime\" (newest first) or \"size\" (largest first); reverse flips the order. Unlike the built-in Glob there is no mtime default — pass sortBy \"mtime\" for newest first. With mtime or size the whole tree is ranked before the cap, so a truncated result really is the newest/largest maxResults files. " +
 			`Example: {"path": "D:\\proj", "pattern": "**/*.pas", "sortBy": "mtime"}`,
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "Search Files",

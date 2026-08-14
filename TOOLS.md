@@ -375,7 +375,7 @@ Recursively search for files and directories matching a glob pattern.
 
 **Parameters:**
 - `path` (required): Root directory to search from
-- `pattern` (required): Glob pattern (`*.txt` for current dir, `**/*.txt` for recursive)
+- `pattern` (required): Glob pattern. `*.txt` matches at any depth; `**` spans directories and may appear several times (`src/**/test/**/*.go`)
 - `excludePatterns` (optional): Array of patterns to exclude
 - `maxResults` (optional): Maximum number of results to return (default: 10000)
 - `sortBy` (optional): `name` (default), `mtime` or `size` — see [Ordering](#ordering)

@@ -134,65 +134,41 @@ func searchFiles(ctx context.Context, rootPath string, sOpts searchOptions) ([]s
 }
 
 // matchGlobPattern matches a slash-separated path against a glob pattern.
-// A pattern without a separator also matches on the basename alone, so "*.pas"
-// finds files at any depth.
+// "**" spans any number of segments. A pattern without a separator matches
+// on the basename alone, so "*.pas" finds files at any depth.
 func matchGlobPattern(path, pattern string) bool {
-	pattern = filepath.ToSlash(pattern)
-
-	if strings.Contains(pattern, "**") {
-		return matchDoubleStarPattern(path, pattern)
-	}
-
-	if matched, err := filepath.Match(pattern, path); err == nil && matched {
-		return true
-	}
-
-	if !strings.Contains(pattern, "/") {
+	pattern = strings.TrimSuffix(filepath.ToSlash(pattern), "/")
+	if !strings.Contains(pattern, "/") && !strings.Contains(pattern, "**") {
 		matched, err := filepath.Match(pattern, filepath.Base(path))
 		return err == nil && matched
 	}
-
-	return false
+	return matchSegments(strings.Split(path, "/"), strings.Split(pattern, "/"))
 }
 
-// matchDoubleStarPattern handles a single "**" wildcard, which crosses directories.
-// Two or more are not supported and match nothing.
-func matchDoubleStarPattern(path, pattern string) bool {
-	parts := strings.Split(pattern, "**")
-	if len(parts) != 2 {
-		return false
-	}
-	prefix := strings.TrimSuffix(parts[0], "/")
-	suffix := strings.TrimPrefix(parts[1], "/")
-
-	switch {
-	case prefix == "": // "**" alone, or "**/*.ext"
-		return suffix == "" || matchSuffix(path, suffix)
-	case suffix == "": // "dir/**"
-		return path == prefix || strings.HasPrefix(path, prefix+"/")
-	case strings.HasPrefix(path, prefix+"/"): // "dir/**/file.ext"
-		return matchSuffix(strings.TrimPrefix(path, prefix+"/"), suffix)
-	}
-	return false
-}
-
-// matchSuffix matches suffixPattern against the whole path, the basename, or any
-// trailing run of path segments.
-func matchSuffix(path, suffixPattern string) bool {
-	if matched, err := filepath.Match(suffixPattern, path); err == nil && matched {
-		return true
-	}
-	if matched, err := filepath.Match(suffixPattern, filepath.Base(path)); err == nil && matched {
-		return true
-	}
-
-	parts := strings.Split(path, "/")
-	for i := range parts {
-		if matched, err := filepath.Match(suffixPattern, strings.Join(parts[i:], "/")); err == nil && matched {
-			return true
+// matchSegments matches path segments against pattern segments; "**" spans
+// any number of them, including none.
+func matchSegments(path, pat []string) bool {
+	for len(pat) > 0 {
+		if pat[0] == "**" {
+			if len(pat) == 1 {
+				return true
+			}
+			for i := 0; i <= len(path); i++ {
+				if matchSegments(path[i:], pat[1:]) {
+					return true
+				}
+			}
+			return false
 		}
+		if len(path) == 0 {
+			return false
+		}
+		if matched, err := filepath.Match(pat[0], path[0]); err != nil || !matched {
+			return false
+		}
+		path, pat = path[1:], pat[1:]
 	}
-	return false
+	return len(path) == 0
 }
 
 func containsGlobChars(pattern string) bool {

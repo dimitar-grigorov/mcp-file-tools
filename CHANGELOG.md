@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`search_files` patterns with several `**` silently matched nothing** (e.g.
+  `src/**/test/**/*.go`). The matcher is now segment-based and `**` may appear
+  any number of times.
 - **`write_file` and `edit_file` stripped the CRLFs from UTF-16 files.** Both read
   line endings off raw bytes, where the `00` between CR and LF hides every CRLF, so
   "preserve" rewrote the file as LF. Detection now runs on decoded text, as
