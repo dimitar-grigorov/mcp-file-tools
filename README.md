@@ -57,7 +57,10 @@ Claude: [read_text_file → cp1251 detected] → [edits UTF-8] → [write_file �
 Plus three [prompts](TOOLS.md#prompts) — `audit_encodings`, `fix_mojibake`,
 `migrate_to_utf8` — surfaced by clients as user commands.
 
-See [TOOLS.md](TOOLS.md) for detailed parameters and examples.
+See [TOOLS.md](TOOLS.md) for detailed parameters and examples. Calls shaped like
+Claude Code's built-in Read/Write/Edit/Grep are accepted too — the
+[alias layer](TOOLS.md#built-in-name-aliases) translates them where the semantics
+match exactly, so a model's habits don't fail the call.
 
 **Out of scope:** binary/media reading (`read_media_file`). This is a *text*
 tool; agents read images with their built-in tools.
