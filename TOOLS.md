@@ -162,14 +162,14 @@ Make replacements or apply a unified diff to one text file. Returns a unified di
 
 **Parameters:**
 - `path` (required): Path to the file to edit
-- `edits`: Array of edit operations with `oldText`, `newText`, and optional `similarity` (0.0-1.0)
+- `edits`: Array of edit operations with `oldText`, `newText`, and optional `similarity` (0.0-1.0) and `replaceAll`
 - `patch`: Unified diff string with `---`, `+++`, and `@@` hunks
 - `dryRun` (optional): If true, returns diff without writing changes (default: false)
 - `encoding` (optional): File encoding (auto-detected if not specified)
 - `forceWritable` (optional): If true, clears read-only flag before editing (default: false — fails on read-only files)
 
 **Features:**
-- Exact text matching (first occurrence)
+- Exact text matching, then whitespace-flexible; `oldText` must identify **one** place
 - Whitespace-flexible matching (ignores per-line leading *and* trailing whitespace; interior spacing must still match)
 - Optional fuzzy matching. The score is `1 - line edit distance / longer block length`, after trimming each line. Candidates more than `oldText`'s line count away are rejected.
 - Patch hunks use the same exact then whitespace-flexible matching. Multi-file patches are rejected.
@@ -178,7 +178,29 @@ Make replacements or apply a unified diff to one text file. Returns a unified di
 - Atomic write (temp file + rename)
 - Fails on read-only files by default (set `forceWritable: true` only when user explicitly requests it)
 
-Edits apply in order, and each one replaces only the **first** match remaining at that point.
+#### Several matches
+
+`oldText` must pick out **one** place. If it matches more than one, the edit fails,
+names the line numbers, and changes nothing:
+
+```
+oldText matches more than one place: 2 places (lines 3, 8). NOTHING was changed.
+  Caption := 'Настройки';
+
+Add surrounding lines to oldText so it picks out one of them, or set replaceAll: true on this edit to change all 2
+```
+
+Two ways forward, and they mean different things:
+
+- **Add context** to `oldText` — surrounding lines until it identifies the one you meant.
+- **`replaceAll: true`** on that edit — changes every match. The response then carries
+  `replacements: N`, and the diff text says how many places changed so the agent can
+  tell you.
+
+Editing the first match silently was the old behaviour; it picked the wrong copy as
+often as the right one, and `edit_file` tells the agent not to re-read and check.
+
+Edits apply in order, each against the content left by the previous one.
 Pass exactly one of `edits` or `patch`. A diff returned by `edit_file` can be passed back as `patch` against the original file.
 If an exact edit fails, prefer copying the hint into `oldText`. Use `similarity` only to tolerate whitespace or comment drift, ideally with `dryRun: true`; it is not for different code. Below threshold, the error includes the best score.
 

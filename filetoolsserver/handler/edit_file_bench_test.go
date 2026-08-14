@@ -51,6 +51,6 @@ func BenchmarkApplyEdits_NoMatch(b *testing.B) {
 	content := syntheticSource(2000)
 	edits := []EditOperation{{OldText: "procedure NotPresent;", NewText: "x"}}
 	for b.Loop() {
-		_, _ = applyEdits(content, edits)
+		_, _, _ = applyEdits(content, edits)
 	}
 }

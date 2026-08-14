@@ -50,4 +50,7 @@ var (
 
 	// ErrOldTextEmpty is returned when an edit operation has an empty old_text field.
 	ErrOldTextEmpty = errkind.New(errkind.InvalidInput, "edit old_text cannot be empty")
+
+	// ErrEditAmbiguous is returned when oldText matches more than once and replaceAll is unset.
+	ErrEditAmbiguous = errkind.New(errkind.InvalidInput, "oldText matches more than one place")
 )

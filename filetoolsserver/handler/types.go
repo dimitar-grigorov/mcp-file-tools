@@ -135,6 +135,7 @@ type EditOperation struct {
 	OldText    string   `json:"oldText"`
 	NewText    string   `json:"newText"`
 	Similarity *float64 `json:"similarity,omitempty"`
+	ReplaceAll bool     `json:"replaceAll,omitempty"` // required when oldText matches more than once
 }
 
 // EditFileInput applies text replacements with whitespace-flexible matching.
@@ -151,6 +152,7 @@ type EditFileInput struct {
 type EditFileOutput struct {
 	Diff            string `json:"diff"`
 	ReadOnlyCleared bool   `json:"readOnlyCleared,omitempty"` // true if read-only flag was cleared
+	Replacements    int    `json:"replacements,omitempty"`    // set when replaceAll changed more than one place
 }
 
 type ReadMultipleFilesInput struct {

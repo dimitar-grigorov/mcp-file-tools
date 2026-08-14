@@ -419,7 +419,7 @@ func TestApplyEdits_NoMatchHint(t *testing.T) {
 	content := "func main() {\n\tfmt.Println(\"hi\")\n}\n"
 
 	// oldText whose first line is wrong but the rest matches, so a partial block exists.
-	_, err := applyEdits(content, []EditOperation{{
+	_, _, err := applyEdits(content, []EditOperation{{
 		OldText: "func run() {\n\tfmt.Println(\"hi\")",
 		NewText: "x",
 	}})
@@ -437,7 +437,7 @@ func TestApplyEdits_NoMatchHint(t *testing.T) {
 }
 
 func TestApplyEdits_NoMatchNoHintWhenNothingMatches(t *testing.T) {
-	_, err := applyEdits("a\nb\nc\n", []EditOperation{{OldText: "totally\ndifferent", NewText: "x"}})
+	_, _, err := applyEdits("a\nb\nc\n", []EditOperation{{OldText: "totally\ndifferent", NewText: "x"}})
 	if err == nil {
 		t.Fatal("expected an error for non-matching edit")
 	}
@@ -448,7 +448,7 @@ func TestApplyEdits_NoMatchNoHintWhenNothingMatches(t *testing.T) {
 
 func TestApplyEdits_FuzzyMatch(t *testing.T) {
 	threshold := 0.66
-	got, err := applyEdits("func f() {\n\t// current comment\n\treturn 1\n}\n", []EditOperation{{
+	got, _, err := applyEdits("func f() {\n\t// current comment\n\treturn 1\n}\n", []EditOperation{{
 		OldText: "func f() {\n\t// old comment\n\treturn 1", NewText: "func f() {\n\treturn 2", Similarity: &threshold,
 	}})
 	if err != nil {
@@ -461,7 +461,7 @@ func TestApplyEdits_FuzzyMatch(t *testing.T) {
 
 func TestApplyEdits_FuzzyMissReportsScore(t *testing.T) {
 	threshold := 0.8
-	_, err := applyEdits("a\nb\nx\nd\n", []EditOperation{{
+	_, _, err := applyEdits("a\nb\nx\nd\n", []EditOperation{{
 		OldText: "a\nb\nc\nd", NewText: "changed", Similarity: &threshold,
 	}})
 	if err == nil || !strings.Contains(err.Error(), "Best candidate scored 0.75, threshold 0.8") {
@@ -471,7 +471,7 @@ func TestApplyEdits_FuzzyMissReportsScore(t *testing.T) {
 
 func TestApplyEdits_FuzzyThresholdBoundary(t *testing.T) {
 	threshold := 0.75
-	got, err := applyEdits("a\nb\nx\nd\n", []EditOperation{{
+	got, _, err := applyEdits("a\nb\nx\nd\n", []EditOperation{{
 		OldText: "a\nb\nc\nd", NewText: "changed", Similarity: &threshold,
 	}})
 	if err != nil || !strings.HasPrefix(got, "changed") {
@@ -482,7 +482,7 @@ func TestApplyEdits_FuzzyThresholdBoundary(t *testing.T) {
 func TestApplyEdits_FuzzyDoesNotSpanExtraLines(t *testing.T) {
 	threshold := 0.8
 	content := "func wanted() {\n\ta\n\tb\n\tc\n}\n\nfunc other() {\n\ta\n\textra\n\tb\n\tc\n}\n"
-	got, err := applyEdits(content, []EditOperation{{
+	got, _, err := applyEdits(content, []EditOperation{{
 		OldText: "func other() {\n\ta\n\tb\n\tc", NewText: "wrong", Similarity: &threshold,
 	}})
 	if err != nil {

@@ -25,6 +25,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`edit_file` no longer edits the first of several identical matches.** An `oldText`
+  matching more than one place now fails with their line numbers and changes nothing;
+  add context to pick one, or pass the new `replaceAll: true` to change them all. The
+  response then reports `replacements`. Picking one silently hit the wrong copy as often
+  as the right one, and the tool tells the agent not to re-read and verify.
 - One `Decode` behind every tool that reads encoded bytes.
 
 ## [3.4.1] - 2026-08-14

@@ -76,10 +76,11 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 
 	content = ConvertLineEndings(content, LineEndingLF)
 	var modifiedContent string
+	var replacements int
 	if input.Patch != "" {
 		modifiedContent, err = applyPatch(content, input.Patch)
 	} else {
-		modifiedContent, err = applyEdits(content, input.Edits)
+		modifiedContent, replacements, err = applyEdits(content, input.Edits)
 	}
 	if err != nil {
 		return errorResult(err.Error()), EditFileOutput{}, nil
@@ -97,11 +98,17 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 	}
 
 	text := diff
+	if replacements > 1 {
+		text += fmt.Sprintf("\nreplaceAll changed %d places — tell the user how many.", replacements)
+	}
 	if readOnlyCleared {
 		text += "\nRead-only flag was cleared."
 	}
 
 	output := EditFileOutput{Diff: diff, ReadOnlyCleared: readOnlyCleared}
+	if replacements > 1 {
+		output.Replacements = replacements
+	}
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{&mcp.TextContent{Text: text}},
 	}, output, nil
@@ -127,7 +134,7 @@ func applyPatch(content, patch string) (string, error) {
 		if len(hunk.oldLines) == 0 {
 			modified, err = insertPatchLines(modified, newText, hunk.oldStart+lineOffset)
 		} else {
-			modified, err = applyEdits(modified, []EditOperation{{OldText: oldText, NewText: newText}})
+			modified, _, err = applyEdits(modified, []EditOperation{{OldText: oldText, NewText: newText}})
 		}
 		if err != nil {
 			return "", fmt.Errorf("patch hunk %d failed: %w", i+1, err)
@@ -258,47 +265,103 @@ func insertPatchLines(content, newText string, line int) (string, error) {
 	return strings.Join(result, "\n"), nil
 }
 
-// applyEdits applies edits sequentially, trying exact then whitespace-flexible match.
-// On failure it returns ErrEditNoMatch with a hint pointing at the closest match.
-func applyEdits(content string, edits []EditOperation) (string, error) {
+// applyEdits applies edits in order and returns how many places changed. Several
+// matches need replaceAll, since picking one silently edits the wrong copy half the time.
+func applyEdits(content string, edits []EditOperation) (string, int, error) {
 	modifiedContent := content
+	replacements := 0
 
 	for _, edit := range edits {
 		if edit.OldText == "" {
-			return "", ErrOldTextEmpty
+			return "", 0, ErrOldTextEmpty
 		}
 		if edit.Similarity != nil && (*edit.Similarity < 0 || *edit.Similarity > 1) {
-			return "", fmt.Errorf("similarity must be between 0.0 and 1.0")
+			return "", 0, fmt.Errorf("similarity must be between 0.0 and 1.0")
 		}
 
 		normalizedOld := ConvertLineEndings(edit.OldText, LineEndingLF)
 		normalizedNew := ConvertLineEndings(edit.NewText, LineEndingLF)
 
 		// Try exact match first
-		if strings.Contains(modifiedContent, normalizedOld) {
-			modifiedContent = strings.Replace(modifiedContent, normalizedOld, normalizedNew, 1)
+		if lines := exactMatchLines(modifiedContent, normalizedOld); len(lines) > 0 {
+			if len(lines) > 1 && !edit.ReplaceAll {
+				return "", 0, ambiguousError(edit.OldText, lines)
+			}
+			modifiedContent = strings.ReplaceAll(modifiedContent, normalizedOld, normalizedNew)
+			replacements += len(lines)
 			continue
 		}
 
 		// Try whitespace-flexible line matching
-		matched, result := tryFlexibleMatch(modifiedContent, normalizedOld, normalizedNew)
-		if matched {
-			modifiedContent = result
+		if starts := flexibleMatchStarts(modifiedContent, normalizedOld); len(starts) > 0 {
+			if len(starts) > 1 && !edit.ReplaceAll {
+				return "", 0, ambiguousError(edit.OldText, offsetLines(starts))
+			}
+			oldLineCount := len(strings.Split(normalizedOld, "\n"))
+			// Last to first: replacing later blocks leaves earlier indexes valid.
+			for i := len(starts) - 1; i >= 0; i-- {
+				modifiedContent = replaceLineBlock(modifiedContent, normalizedOld, normalizedNew, starts[i], oldLineCount)
+			}
+			replacements += len(starts)
 			continue
 		}
+
 		if edit.Similarity != nil {
 			candidate := closestCandidate(modifiedContent, normalizedOld)
 			if candidate.start >= 0 && candidate.score >= *edit.Similarity {
 				modifiedContent = replaceLineBlock(modifiedContent, normalizedOld, normalizedNew, candidate.start, candidate.lines)
+				replacements++
 				continue
 			}
-			return "", noMatchError(modifiedContent, normalizedOld, edit.OldText, edit.Similarity)
+			return "", 0, noMatchError(modifiedContent, normalizedOld, edit.OldText, edit.Similarity)
 		}
 
-		return "", noMatchError(modifiedContent, normalizedOld, edit.OldText, nil)
+		return "", 0, noMatchError(modifiedContent, normalizedOld, edit.OldText, nil)
 	}
 
-	return modifiedContent, nil
+	return modifiedContent, replacements, nil
+}
+
+// exactMatchLines returns the 1-based line of every non-overlapping exact match.
+func exactMatchLines(content, needle string) []int {
+	var lines []int
+	for offset := 0; ; {
+		i := strings.Index(content[offset:], needle)
+		if i < 0 {
+			return lines
+		}
+		at := offset + i
+		lines = append(lines, strings.Count(content[:at], "\n")+1)
+		offset = at + len(needle)
+	}
+}
+
+// offsetLines turns 0-based line indexes into 1-based line numbers.
+func offsetLines(starts []int) []int {
+	lines := make([]int, len(starts))
+	for i, s := range starts {
+		lines[i] = s + 1
+	}
+	return lines
+}
+
+// ambiguousError names where oldText matched. Instruction-phrased, like the other hints.
+func ambiguousError(rawOld string, lines []int) error {
+	shown := lines
+	if len(shown) > 10 {
+		shown = shown[:10]
+	}
+	parts := make([]string, len(shown))
+	for i, l := range shown {
+		parts[i] = strconv.Itoa(l)
+	}
+	where := strings.Join(parts, ", ")
+	if len(shown) < len(lines) {
+		where += ", …"
+	}
+	return fmt.Errorf("%w: %d places (lines %s). NOTHING was changed.\n%s\n\n"+
+		"Add surrounding lines to oldText so it picks out one of them, or set replaceAll: true on this edit to change all %d",
+		ErrEditAmbiguous, len(lines), where, rawOld, len(lines))
 }
 
 // noMatchError wraps ErrEditNoMatch, appending the closest matching block if found.
@@ -492,32 +555,30 @@ func replaceLineBlock(content, oldText, newText string, start, oldLineCount int)
 	return strings.Join(result, "\n")
 }
 
-// tryFlexibleMatch matches oldText ignoring whitespace differences, preserving file indentation.
-func tryFlexibleMatch(content, oldText, newText string) (bool, string) {
+// flexibleMatchStarts returns each non-overlapping block matching oldText, ignoring per-line whitespace.
+func flexibleMatchStarts(content, oldText string) []int {
 	oldLines := strings.Split(oldText, "\n")
 	contentLines := strings.Split(content, "\n")
 
 	if len(contentLines) < len(oldLines) {
-		return false, ""
+		return nil
 	}
 
+	var starts []int
 	for i := 0; i <= len(contentLines)-len(oldLines); i++ {
-		potentialMatch := contentLines[i : i+len(oldLines)]
-
 		isMatch := true
 		for j, oldLine := range oldLines {
-			if strings.TrimSpace(oldLine) != strings.TrimSpace(potentialMatch[j]) {
+			if strings.TrimSpace(oldLine) != strings.TrimSpace(contentLines[i+j]) {
 				isMatch = false
 				break
 			}
 		}
-
 		if isMatch {
-			return true, replaceLineBlock(content, oldText, newText, i, len(oldLines))
+			starts = append(starts, i)
+			i += len(oldLines) - 1 // non-overlapping
 		}
 	}
-
-	return false, ""
+	return starts
 }
 
 // adjustRelativeIndent applies baseIndent plus the indentation delta between old and new lines.
