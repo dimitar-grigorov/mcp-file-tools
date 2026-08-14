@@ -57,12 +57,6 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 		return errorResult(fmt.Sprintf("failed to read file: %v", err)), EditFileOutput{}, nil
 	}
 
-	// TODO: Use DetectLineEndingsFromFile for streaming when file > MemoryThreshold
-	lineEndings := DetectLineEndings(data)
-	if lineEndings.Style == LineEndingMixed {
-		slog.Warn("file has mixed line endings", "path", input.Path, "crlf", lineEndings.CRLFCount, "lf", lineEndings.LFCount)
-	}
-
 	encodingName, err := h.resolveEncodingFromData(input.Encoding, data, input.Path)
 	if err != nil {
 		return errorResult(err.Error()), EditFileOutput{}, nil
@@ -73,6 +67,12 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 		return errorResult(fmt.Sprintf("failed to decode file with %s: %v", encodingName, err)), EditFileOutput{}, nil
 	}
 	slog.Debug("edit_file: decoded content", "path", input.Path, "encoding", encodingName, "originalSize", len(data), "decodedSize", len(content))
+
+	// Detect on decoded text: UTF-16 has a 00 between CR and LF.
+	lineEndings := DetectLineEndings([]byte(content))
+	if lineEndings.Style == LineEndingMixed {
+		slog.Warn("file has mixed line endings", "path", input.Path, "crlf", lineEndings.CRLFCount, "lf", lineEndings.LFCount)
+	}
 
 	content = ConvertLineEndings(content, LineEndingLF)
 	var modifiedContent string

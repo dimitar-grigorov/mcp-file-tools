@@ -22,9 +22,7 @@ type UnsupportedRune struct {
 	Column int    `json:"column"`
 }
 
-// UnsupportedError names the characters a target encoding cannot represent.
-// x/text reports only "rune not supported by encoding", which leaves a caller
-// nothing to act on; this says which characters and where they are.
+// UnsupportedError says which characters charset cannot represent, and where.
 type UnsupportedError struct {
 	Charset string
 	Runes   []UnsupportedRune // capped at maxReportedRunes
@@ -73,9 +71,7 @@ func Decode(data []byte, charset string) (string, error) {
 	return string(decoded), nil
 }
 
-// Encode converts UTF-8 content to charset. When the encoding cannot represent
-// a character, the error is an *UnsupportedError naming the offending
-// characters and their positions.
+// Encode converts UTF-8 content to charset; the error is an *UnsupportedError.
 func Encode(content string, enc encoding.Encoding, charset string) ([]byte, error) {
 	out, err := enc.NewEncoder().Bytes([]byte(content))
 	if err == nil {
@@ -87,9 +83,8 @@ func Encode(content string, enc encoding.Encoding, charset string) ([]byte, erro
 	return nil, err
 }
 
-// FindUnsupported reports the characters charset cannot represent, or nil if it
-// covers all of content. Only worth calling once an encode has already failed:
-// it tests one rune at a time.
+// FindUnsupported reports what charset cannot represent, nil if it covers content.
+// Tests one rune at a time, so call it only after an encode has failed.
 func FindUnsupported(content string, enc encoding.Encoding, charset string) *UnsupportedError {
 	encoder := enc.NewEncoder()
 	res := &UnsupportedError{Charset: charset}

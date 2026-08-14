@@ -47,7 +47,7 @@ func (h *Handler) HandleWriteFile(ctx context.Context, req *mcp.CallToolRequest,
 
 	// Match the file's line endings; agents rewriting a CRLF file usually emit LF.
 	eolNormalized := ""
-	if eolStyle := resolveLineEndingStyle(eolPolicy, v.Path, h.config.DefaultLineEndings); eolStyle != "" {
+	if eolStyle := resolveLineEndingStyle(eolPolicy, v.Path, h.config.DefaultLineEndings, encodingName); eolStyle != "" {
 		if converted := ConvertLineEndings(content, eolStyle); converted != content {
 			content = converted
 			eolNormalized = eolStyle

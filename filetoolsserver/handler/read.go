@@ -46,6 +46,8 @@ func (h *Handler) HandleReadTextFile(ctx context.Context, req *mcp.CallToolReque
 	}
 
 	totalLines := countLines(content)
+	// Off the decoded text, before paging slices it: UTF-16 has a 00 between CR and LF.
+	lineEndings := DetectLineEndings([]byte(content))
 
 	var startLine, endLine int
 	if input.Offset != nil || input.Limit != nil {
@@ -88,10 +90,10 @@ func (h *Handler) HandleReadTextFile(ctx context.Context, req *mcp.CallToolReque
 		output.EncodingConfidence = encResult.encodingConfidence
 	}
 	var hints []string
-	if le := DetectLineEndings(data); le.Style == LineEndingMixed {
+	if lineEndings.Style == LineEndingMixed {
 		hints = append(hints, fmt.Sprintf(
 			`This file has MIXED line endings (%d CRLF, %d LF) — tell the user, and use manage_line_endings action="convert" to normalise it.`,
-			le.CRLFCount, le.LFCount))
+			lineEndings.CRLFCount, lineEndings.LFCount))
 	}
 	if hint := h.plainUTF8HintFor(v.Path, encResult.name, existingBOM(v.Path).HasBOM); hint != "" {
 		hints = append(hints, hint)
