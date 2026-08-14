@@ -43,8 +43,7 @@ func main() {
 		return
 	}
 
-	// Remaining args are the allowed directories; none is valid — a client may
-	// still supply them over the roots protocol.
+	// Args are the allowed dirs; none is valid, roots may still supply them.
 	var normalized []string
 	var err error
 	if allowedDirs := os.Args[1:]; len(allowedDirs) > 0 {
@@ -56,8 +55,7 @@ func main() {
 		slog.Debug("normalized allowed directories", "dirs", normalized)
 	}
 
-	// nil logger disables logging middleware (recovery stays on); nil config loads
-	// MCP_DEFAULT_ENCODING/MCP_MEMORY_THRESHOLD from the environment.
+	// nil logger drops logging middleware, recovery stays; nil config reads env.
 	server := filetoolsserver.NewServer(normalized, nil, nil)
 
 	ctx := context.Background()
