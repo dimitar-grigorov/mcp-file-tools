@@ -316,6 +316,7 @@ type GrepOutput struct {
 	FilesMatched  int             `json:"filesMatched"`
 	Truncated     bool            `json:"truncated,omitempty"`
 	NextOffset    int             `json:"nextOffset,omitempty"` // pass as offset to page on
+	Hint          string          `json:"hint,omitempty"`
 }
 
 type DetectLineEndingsInput struct {

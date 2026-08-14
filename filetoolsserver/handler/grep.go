@@ -90,11 +90,12 @@ func (h *Handler) HandleGrep(ctx context.Context, req *mcp.CallToolRequest, inpu
 	if offset < 0 {
 		offset = 0
 	}
+	searchEncoding, encodingHint := resolveGrepEncoding(input.Encoding)
 	opts := grepOptions{
 		re:          re,
 		mode:        mode,
 		matchesOnly: input.MatchesOnly,
-		encoding:    input.Encoding,
+		encoding:    searchEncoding,
 		fallback:    h.fallbackEncoding(),
 		maxFileSize: h.config.MemoryThreshold,
 	}
@@ -109,14 +110,26 @@ func (h *Handler) HandleGrep(ctx context.Context, req *mcp.CallToolRequest, inpu
 	}
 	files := h.collectFiles(ctx, input.Paths, includes, excludes, gitignoreDefault(input.RespectGitignore))
 	if len(files) == 0 {
-		return &mcp.CallToolResult{}, GrepOutput{Matches: []GrepMatch{}, FilesSearched: 0}, nil
+		return &mcp.CallToolResult{}, GrepOutput{Matches: []GrepMatch{}, FilesSearched: 0, Hint: encodingHint}, nil
 	}
 	output := h.searchFiles(ctx, files, opts, maxMatches, offset)
-	output.FilesSearched = len(files)
+	output.Hint = encodingHint
 	if output.Truncated {
 		output.NextOffset = offset + maxMatches
 	}
 	return &mcp.CallToolResult{}, output, nil
+}
+
+// resolveGrepEncoding checks the requested encoding. An unknown name falls back to
+// per-file detection rather than failing the search, and says so.
+func resolveGrepEncoding(requested string) (string, string) {
+	if _, ok := encoding.Canonical(requested); ok || requested == "" {
+		return requested, ""
+	}
+	// Phrased as an instruction because models relay instructions and ignore trivia.
+	return "", fmt.Sprintf(
+		"Encoding %q is not supported, so each file's encoding was auto-detected instead — tell the user. "+
+			"Call list_encodings for the supported names.", requested)
 }
 
 // compilePattern compiles the regex pattern with optional case sensitivity.
@@ -213,7 +226,7 @@ func (h *Handler) searchFiles(ctx context.Context, files []string, opts grepOpti
 		return true
 	}
 
-	workpool.RunOrdered(ctx, files, workpool.Options{},
+	stats := workpool.RunOrdered(ctx, files, workpool.Options{},
 		func(ctx context.Context, _ int, path string) fileHits {
 			if ctx.Err() != nil {
 				return fileHits{}
@@ -240,6 +253,9 @@ func (h *Handler) searchFiles(ctx context.Context, files []string, opts grepOpti
 			}
 			return true
 		})
+
+	// Only the committed files were accounted for; a full page stops the rest.
+	out.FilesSearched = stats.Committed
 
 	// totalMatches is what the page holds: lines, or paths, or the summed counts.
 	out.TotalMatches = taken
