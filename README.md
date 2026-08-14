@@ -13,7 +13,7 @@ file's bytes rather than its extension, hands the model UTF-8, and writes back i
 original encoding — BOM and CRLF/LF intact, still byte-compatible with whatever legacy
 tool owns the file.
 
-- **24 encodings, read and write** — Cyrillic (CP1251, KOI8-R/U, CP866), Windows-125x, ISO-8859-x, UTF-16 LE/BE, GBK/GB18030 ([full list](#supported-encodings))
+- **25 encodings, read and write** — Cyrillic (CP1251, KOI8-R/U, CP866), Windows-125x, ISO-8859-x, UTF-16 LE/BE, GBK/GB18030 ([full list](#supported-encodings))
 - **Encoding-aware across the whole tool set** — not just read and write: `edit_file`, `grep_text_files` and `search_files` decode the same way
 - **Detection you can inspect** — `detect_encoding` reports the charset, a confidence score and any BOM, so garbled text becomes diagnosable instead of mysterious
 - **BOM and line endings are first-class** — add or strip a BOM, convert CRLF↔LF, and do it correctly on UTF-16, where a naive byte-level rewrite corrupts the file
@@ -57,13 +57,13 @@ tool; agents read images with their built-in tools.
 
 ### Supported encodings
 
-24 encodings, each usable for both reading and writing. Any of them can be named
+25 encodings, each usable for both reading and writing. Any of them can be named
 explicitly via the `encoding` parameter, or left to auto-detection.
 
 | Script / region | Encodings |
 |---|---|
 | Unicode | UTF-8, UTF-16 LE, UTF-16 BE |
-| Cyrillic | Windows-1251, KOI8-R, KOI8-U, CP866, ISO-8859-5 |
+| Cyrillic | Windows-1251, KOI8-R, KOI8-U, CP866, ISO-8859-5, MacCyrillic |
 | Western European | Windows-1252, ISO-8859-1, ISO-8859-15 |
 | Central European | Windows-1250, ISO-8859-2 |
 | Greek | Windows-1253, ISO-8859-7 |

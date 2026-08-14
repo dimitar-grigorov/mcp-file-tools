@@ -178,6 +178,7 @@ type FileReadResult struct {
 	ErrorCode          string `json:"errorCode,omitempty"` // Machine-readable error code
 	DetectedEncoding   string `json:"detectedEncoding,omitempty"`
 	EncodingConfidence int    `json:"encodingConfidence,omitempty"`
+	Hint               string `json:"hint,omitempty"`
 }
 
 type ReadMultipleFilesOutput struct {

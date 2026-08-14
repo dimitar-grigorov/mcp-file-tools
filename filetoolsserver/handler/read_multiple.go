@@ -94,6 +94,7 @@ func (h *Handler) readSingleFile(path, requestedEncoding string) FileReadResult 
 	if encResult.autoDetected {
 		result.DetectedEncoding = encResult.detectedEncoding
 		result.EncodingConfidence = encResult.encodingConfidence
+		result.Hint = encResult.fallbackHint
 	}
 
 	return result

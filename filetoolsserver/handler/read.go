@@ -23,6 +23,7 @@ type encodingResult struct {
 	detectedEncoding   string
 	encodingConfidence int
 	autoDetected       bool
+	fallbackHint       string // set when a detected encoding was discarded
 }
 
 func (h *Handler) HandleReadTextFile(ctx context.Context, req *mcp.CallToolRequest, input ReadTextFileInput) (*mcp.CallToolResult, ReadTextFileOutput, error) {
@@ -108,6 +109,9 @@ func (h *Handler) HandleReadTextFile(ctx context.Context, req *mcp.CallToolReque
 	}
 	if hint := h.plainUTF8HintFor(v.Path, encResult.name, existingBOM(v.Path).HasBOM); hint != "" {
 		hints = append(hints, hint)
+	}
+	if encResult.fallbackHint != "" {
+		hints = append(hints, encResult.fallbackHint)
 	}
 	output.Hint = strings.Join(hints, " ")
 
@@ -233,9 +237,14 @@ func (h *Handler) resolveEncoding(inputEncoding string, filePath string) (encodi
 	enc, ok := encoding.Get(result.name)
 	if !ok {
 		// Unsupported detected encoding, fall back to UTF-8
+		slog.Warn("detected encoding not supported, reading as utf-8", "path", filePath, "detected", detection.Charset, "confidence", detection.Confidence)
 		result.encoder = nil
 		result.name = "utf-8"
 		result.detectedEncoding = result.detectedEncoding + " (unsupported, using utf-8)"
+		// Phrased as an instruction because models relay instructions and ignore trivia.
+		result.fallbackHint = fmt.Sprintf(
+			"Detected encoding %s is not supported; the file was read as raw utf-8, so non-ASCII text is likely garbled — tell the user.",
+			detection.Charset)
 	} else {
 		result.encoder = enc
 	}

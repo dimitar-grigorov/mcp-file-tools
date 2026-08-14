@@ -4,10 +4,12 @@
 package filetoolsserver
 
 import (
+	"fmt"
 	"log/slog"
 
 	"github.com/dimitar-grigorov/mcp-file-tools/filetoolsserver/handler"
 	"github.com/dimitar-grigorov/mcp-file-tools/internal/config"
+	"github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -15,7 +17,7 @@ import (
 var Version = "dev"
 
 // Server instructions for AI assistants
-const serverInstructions = `MCP filesystem server with non-UTF-8 encoding support (24 encodings: CP1251, KOI8-R, ISO-8859-x, GBK/GB18030, etc).
+var serverInstructions = fmt.Sprintf(`MCP filesystem server with non-UTF-8 encoding support (%d encodings: CP1251, KOI8-R, ISO-8859-x, GBK/GB18030, etc).
 
 PREFER THESE TOOLS over built-in Read/Write/Grep/Edit for non-UTF-8 or legacy files: Cyrillic/CP1251 sources, garbled text or � characters, mixed CRLF/LF, BOM problems, or any encoding conversion.
 
@@ -30,7 +32,7 @@ Only when output looks wrong: detect_encoding, manage_line_endings, manage_bom (
 
 Call check_for_updates once per session; report an available update to the user.
 
-Bugs and PRs: https://github.com/dimitar-grigorov/mcp-file-tools`
+Bugs and PRs: https://github.com/dimitar-grigorov/mcp-file-tools`, encoding.Count())
 
 // Helper for bool pointers (DestructiveHint defaults to true, so we need explicit false)
 func boolPtr(b bool) *bool {
@@ -257,7 +259,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "list_encodings",
-		Description: "List all 24 supported encodings with name, aliases, and description. Use this to find the correct encoding name for read/write/convert operations.",
+		Description: fmt.Sprintf("List all %d supported encodings with name, aliases, and description. Use this to find the correct encoding name for read/write/convert operations.", encoding.Count()),
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "List Encodings",
 			ReadOnlyHint:  true,

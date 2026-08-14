@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"golang.org/x/text/encoding/charmap"
 )
 
 // isASCIICompatible checks if charset is UTF-8 compatible (utf-8 or ascii)
@@ -419,6 +421,49 @@ func gbkEncode(t *testing.T, s string) []byte {
 		t.Fatalf("encoding to GBK failed: %v", err)
 	}
 	return out
+}
+
+// --- MacCyrillic vs Windows-1251 disambiguation ---
+
+// charmapEncode encodes a UTF-8 string with cm for test fixtures.
+func charmapEncode(t *testing.T, cm *charmap.Charmap, s string) []byte {
+	t.Helper()
+	out, err := cm.NewEncoder().Bytes([]byte(s))
+	if err != nil {
+		t.Fatalf("encoding failed: %v", err)
+	}
+	return out
+}
+
+// Bulgarian text with capitals and я — chardet's raw guess for it is MacCyrillic.
+const cyrillicFixture = "Защо се взема цялото декларирано тегло на пратката, а не поне калкулационното разделено на броя пакети?"
+
+func TestDetect_CP1251PreferredOverMacCyrillic(t *testing.T) {
+	data := charmapEncode(t, charmap.Windows1251, cyrillicFixture)
+	result := Detect(data)
+	if result.Charset != "windows-1251" {
+		t.Errorf("Charset = %q, want windows-1251", result.Charset)
+	}
+}
+
+func TestDetect_GenuineMacCyrillicKept(t *testing.T) {
+	data := charmapEncode(t, charmap.MacintoshCyrillic, cyrillicFixture)
+	result := Detect(data)
+	canonical, ok := Canonical(result.Charset)
+	if !ok || canonical != "x-mac-cyrillic" {
+		t.Errorf("Charset = %q (canonical %q), want maccyrillic", result.Charset, canonical)
+	}
+}
+
+func TestCyrillicLetters(t *testing.T) {
+	cp := charmapEncode(t, charmap.Windows1251, cyrillicFixture)
+	if s1251, sMac := cyrillicLetters(cp, charmap.Windows1251), cyrillicLetters(cp, charmap.MacintoshCyrillic); s1251 <= sMac {
+		t.Errorf("cp1251 text: cp1251 score %d should beat mac score %d", s1251, sMac)
+	}
+	mac := charmapEncode(t, charmap.MacintoshCyrillic, cyrillicFixture)
+	if s1251, sMac := cyrillicLetters(mac, charmap.Windows1251), cyrillicLetters(mac, charmap.MacintoshCyrillic); sMac <= s1251 {
+		t.Errorf("mac text: mac score %d should beat cp1251 score %d", sMac, s1251)
+	}
 }
 
 func TestDetect_GBKChinese(t *testing.T) {

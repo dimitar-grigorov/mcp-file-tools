@@ -40,8 +40,7 @@ type DetectionResult struct {
 	HasBOM     bool
 }
 
-// DetectBOM checks for Unicode BOMs and returns a result if found.
-// Order matters: UTF-32 BOMs must be checked before UTF-16 since they share prefixes.
+// DetectBOM checks for Unicode BOMs; UTF-32 goes before UTF-16 (shared prefixes).
 func DetectBOM(data []byte) (DetectionResult, bool) {
 	if len(data) >= 4 {
 		if data[0] == 0x00 && data[1] == 0x00 && data[2] == 0xFE && data[3] == 0xFF {
@@ -93,8 +92,7 @@ func BOMSize(charset string) int {
 
 // --- Primary API (file-based, streaming) ---
 
-// DetectFromFile detects encoding from a file path using streaming I/O.
-// Modes: "sample" (~384KB max), "chunked" (streams entire file), "full" (loads entire file).
+// DetectFromFile detects encoding via streaming I/O; modes: sample (~384KB), chunked, full.
 func DetectFromFile(path string, mode string) (DetectionResult, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -125,9 +123,7 @@ func Detect(data []byte) DetectionResult {
 	return detectLegacy(data)
 }
 
-// mayContainUTF16 cheaply rules out clean UTF-8/ASCII before the structural pass.
-// A NUL or invalid UTF-8 is the obvious signal; sub-0x80 UTF-16 (Cyrillic 0x04xx,
-// Greek 0x03xx…) is valid-UTF-8 control soup, so a high C0-control fraction counts too.
+// mayContainUTF16 cheaply rules out clean UTF-8/ASCII; sub-0x80 UTF-16 shows up as C0-control soup.
 func mayContainUTF16(data []byte) bool {
 	if len(data) < 4 {
 		return false
@@ -170,11 +166,14 @@ func detectLegacy(data []byte) DetectionResult {
 		if looksLikeGBK(data) {
 			return DetectionResult{Charset: "gbk", Confidence: min(confidence, gbkConfidenceCap)}
 		}
+	case "maccyrillic", "x-mac-cyrillic":
+		// chardet confuses MacCyrillic with Windows-1251; keep whichever decodes better.
+		if cyrillicLetters(data, charmap.Windows1251) >= cyrillicLetters(data, charmap.MacintoshCyrillic) {
+			return DetectionResult{Charset: "windows-1251", Confidence: confidence}
+		}
 	}
 
-	// chardet guesses a single-byte charset for short or emoji-heavy UTF-8, which
-	// would decode valid UTF-8 into mojibake. Legacy text is virtually never valid
-	// UTF-8, so a well-formed multi-byte sequence outweighs the guess.
+	// Valid multi-byte UTF-8 outweighs a single-byte guess: legacy text is virtually never valid UTF-8.
 	if isSingleByteCharset(charset) && hasMultiByteUTF8(data) {
 		return DetectionResult{Charset: "utf-8", Confidence: max(confidence, utf8FallbackConfidence)}
 	}
@@ -192,8 +191,7 @@ func isSingleByteCharset(name string) bool {
 	return isCharmap
 }
 
-// hasMultiByteUTF8 reports whether data is valid UTF-8 and holds at least one
-// multi-byte sequence. Pure ASCII returns false: every candidate agrees on it.
+// hasMultiByteUTF8 reports valid UTF-8 with at least one multi-byte sequence; pure ASCII is false.
 func hasMultiByteUTF8(data []byte) bool {
 	if !utf8.Valid(data) {
 		return false
@@ -206,8 +204,21 @@ func hasMultiByteUTF8(data []byte) bool {
 	return false
 }
 
-// looksLikeGBK reports whether data holds enough valid GBK two-byte sequences,
-// biased toward the common-hanzi lead range (0xB0–0xD7), to trust it over Latin.
+// cyrillicLetters counts high bytes that decode to modern Cyrillic letters under cm.
+func cyrillicLetters(data []byte, cm *charmap.Charmap) int {
+	n := 0
+	for _, b := range data {
+		if b < 0x80 {
+			continue
+		}
+		if r := cm.DecodeByte(b); (r >= 'А' && r <= 'я') || r == 'Ё' || r == 'ё' {
+			n++
+		}
+	}
+	return n
+}
+
+// looksLikeGBK reports enough valid GBK pairs, biased toward common hanzi, to trust it over Latin.
 func looksLikeGBK(data []byte) bool {
 	const minSequences = 5
 	const minCommonRatio = 0.2
@@ -230,8 +241,7 @@ func looksLikeGBK(data []byte) bool {
 	return total >= minSequences && float64(common)/float64(total) > minCommonRatio
 }
 
-// DetectSample detects encoding by sampling beginning, middle, and end of data.
-// Returns the result and whether it should be trusted.
+// DetectSample samples beginning, middle, and end; returns the result and whether to trust it.
 // TODO: Make private or remove when grep.go and convert_encoding.go use streaming I/O.
 func DetectSample(data []byte) (DetectionResult, bool) {
 	size := len(data)

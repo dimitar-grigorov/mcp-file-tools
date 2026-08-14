@@ -29,6 +29,8 @@ func TestGet(t *testing.T) {
 		{"gb-2312", true, false},
 		{"cp936", true, false},
 		{"gb18030", true, false},
+		{"x-mac-cyrillic", true, false},
+		{"maccyrillic", true, false},
 		{"invalid", false, false},
 	}
 
@@ -83,6 +85,7 @@ func TestCanonical(t *testing.T) {
 		{"utf-16LE", "utf-16-le", true},
 		{"utf16be", "utf-16-be", true},
 		{"cp1251", "windows-1251", true},
+		{"maccyrillic", "x-mac-cyrillic", true},
 		{"ascii", "utf-8", true},
 		{"invalid", "", false},
 	}
@@ -113,8 +116,8 @@ func TestListEncodings(t *testing.T) {
 		}
 	}
 
-	// Verify we have the expected number of encodings (24)
-	if len(items) != 24 {
-		t.Errorf("ListEncodings() returned %d items, want 24", len(items))
+	// Verify we have the expected number of encodings (25)
+	if len(items) != 25 {
+		t.Errorf("ListEncodings() returned %d items, want 25", len(items))
 	}
 }

@@ -4,7 +4,7 @@ For AI agents working in this repo — Claude Code, Codex, Cursor, anything else
 
 ## What this is
 
-`mcp-file-tools` is a Go MCP server giving AI assistants file operations with non-UTF-8 encoding support (24 encodings, BOM, line endings). Upstream: <https://github.com/dimitar-grigorov/mcp-file-tools> — GPL-3.0, © 2026 Dimitar Grigorov.
+`mcp-file-tools` is a Go MCP server giving AI assistants file operations with non-UTF-8 encoding support (25 encodings, BOM, line endings). Upstream: <https://github.com/dimitar-grigorov/mcp-file-tools> — GPL-3.0, © 2026 Dimitar Grigorov.
 
 ## Layout
 

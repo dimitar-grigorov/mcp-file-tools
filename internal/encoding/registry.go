@@ -26,11 +26,12 @@ var encodings = map[string]EncodingInfo{
 	"utf-16-be": {unicode.UTF16(unicode.BigEndian, unicode.IgnoreBOM), "UTF-16 BE", []string{"utf16be", "utf-16be"}, "Unicode UTF-16 Big Endian"},
 
 	// Cyrillic
-	"windows-1251": {charmap.Windows1251, "Windows-1251", []string{"cp1251"}, "Windows Cyrillic"},
-	"koi8-r":       {charmap.KOI8R, "KOI8-R", []string{"koi8r"}, "Russian Cyrillic (Unix/Linux)"},
-	"koi8-u":       {charmap.KOI8U, "KOI8-U", []string{"koi8u"}, "Ukrainian Cyrillic (Unix/Linux)"},
-	"ibm866":       {charmap.CodePage866, "CP866", []string{"cp866", "dos-866"}, "DOS Cyrillic"},
-	"iso-8859-5":   {charmap.ISO8859_5, "ISO-8859-5", []string{"iso88595", "cyrillic"}, "ISO Cyrillic"},
+	"windows-1251":   {charmap.Windows1251, "Windows-1251", []string{"cp1251"}, "Windows Cyrillic"},
+	"koi8-r":         {charmap.KOI8R, "KOI8-R", []string{"koi8r"}, "Russian Cyrillic (Unix/Linux)"},
+	"koi8-u":         {charmap.KOI8U, "KOI8-U", []string{"koi8u"}, "Ukrainian Cyrillic (Unix/Linux)"},
+	"ibm866":         {charmap.CodePage866, "CP866", []string{"cp866", "dos-866"}, "DOS Cyrillic"},
+	"iso-8859-5":     {charmap.ISO8859_5, "ISO-8859-5", []string{"iso88595", "cyrillic"}, "ISO Cyrillic"},
+	"x-mac-cyrillic": {charmap.MacintoshCyrillic, "MacCyrillic", []string{"maccyrillic", "mac-cyrillic"}, "Macintosh Cyrillic"},
 
 	// Western European
 	"windows-1252": {charmap.Windows1252, "Windows-1252", []string{"cp1252"}, "Windows Western European"},
@@ -79,6 +80,11 @@ func init() {
 			canonicalNames[alias] = canonical
 		}
 	}
+}
+
+// Count returns the number of supported encodings.
+func Count() int {
+	return len(encodings)
 }
 
 // Canonical resolves a name or alias to the canonical encoding name.
