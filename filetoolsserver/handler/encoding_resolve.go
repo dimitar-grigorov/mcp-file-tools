@@ -167,14 +167,5 @@ func (r *encodingResult) setFallback(name, note string) {
 
 // decodeContent decodes file data to UTF-8 using the resolved encoding.
 func decodeContent(data []byte, encResult encodingResult) (string, error) {
-	if encoding.IsUTF8(encResult.name) {
-		return string(data), nil
-	}
-
-	decoder := encResult.encoder.NewDecoder()
-	utf8Content, err := decoder.Bytes(data)
-	if err != nil {
-		return "", err
-	}
-	return string(utf8Content), nil
+	return encoding.Decode(data, encResult.name)
 }

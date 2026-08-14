@@ -167,17 +167,10 @@ func (h *Handler) convertOne(path string, input ConvertEncodingInput, policy bom
 		}
 	}
 
-	var utf8Content string
-	if encoding.IsUTF8(sourceEncodingName) {
-		utf8Content = string(payload)
-	} else {
-		sourceEnc, _ := encoding.Get(sourceEncodingName)
-		decoded, err := sourceEnc.NewDecoder().Bytes(payload)
-		if err != nil {
-			res.Error = fmt.Sprintf("failed to decode from %s: %v", sourceEncodingName, err)
-			return res
-		}
-		utf8Content = string(decoded)
+	utf8Content, err := encoding.Decode(payload, sourceEncodingName)
+	if err != nil {
+		res.Error = fmt.Sprintf("failed to decode from %s: %v", sourceEncodingName, err)
+		return res
 	}
 
 	var targetData []byte

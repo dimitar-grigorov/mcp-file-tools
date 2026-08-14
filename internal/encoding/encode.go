@@ -57,6 +57,22 @@ func (e *UnsupportedError) Error() string {
 	return b.String()
 }
 
+// Decode converts data in charset to UTF-8. A BOM decodes as content; strip it first.
+func Decode(data []byte, charset string) (string, error) {
+	if IsUTF8(charset) {
+		return string(data), nil
+	}
+	enc, ok := Get(charset)
+	if !ok {
+		return "", fmt.Errorf("unsupported encoding: %s", charset)
+	}
+	decoded, err := enc.NewDecoder().Bytes(data)
+	if err != nil {
+		return "", err
+	}
+	return string(decoded), nil
+}
+
 // Encode converts UTF-8 content to charset. When the encoding cannot represent
 // a character, the error is an *UnsupportedError naming the offending
 // characters and their positions.

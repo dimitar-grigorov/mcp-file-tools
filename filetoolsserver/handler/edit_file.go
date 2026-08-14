@@ -68,19 +68,11 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 		return errorResult(err.Error()), EditFileOutput{}, nil
 	}
 
-	var content string
-	if encoding.IsUTF8(encodingName) {
-		content = string(data)
-	} else {
-		enc, _ := encoding.Get(encodingName) // Already validated by resolveEncodingFromData
-		decoder := enc.NewDecoder()
-		decoded, err := decoder.Bytes(data)
-		if err != nil {
-			return errorResult(fmt.Sprintf("failed to decode file with %s: %v", encodingName, err)), EditFileOutput{}, nil
-		}
-		content = string(decoded)
-		slog.Debug("edit_file: decoded content", "path", input.Path, "encoding", encodingName, "originalSize", len(data), "decodedSize", len(decoded))
+	content, err := encoding.Decode(data, encodingName) // name already validated above
+	if err != nil {
+		return errorResult(fmt.Sprintf("failed to decode file with %s: %v", encodingName, err)), EditFileOutput{}, nil
 	}
+	slog.Debug("edit_file: decoded content", "path", input.Path, "encoding", encodingName, "originalSize", len(data), "decodedSize", len(content))
 
 	content = ConvertLineEndings(content, LineEndingLF)
 	var modifiedContent string

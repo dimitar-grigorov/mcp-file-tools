@@ -385,13 +385,8 @@ func decodeFileContent(data []byte, forcedEncoding, fallback string) (string, st
 
 // decodeWithFallback decodes as name, retrying once as fallback if that fails.
 func decodeWithFallback(data []byte, name, fallback string) (string, string) {
-	if encoding.IsUTF8(name) {
-		return trimBOM(string(data)), name
-	}
-	if enc, ok := encoding.Get(name); ok {
-		if decoded, err := enc.NewDecoder().Bytes(data); err == nil {
-			return trimBOM(string(decoded)), name
-		}
+	if decoded, err := encoding.Decode(data, name); err == nil {
+		return trimBOM(decoded), name
 	}
 	if name == fallback || encoding.IsUTF8(fallback) {
 		return trimBOM(string(data)), fallback
