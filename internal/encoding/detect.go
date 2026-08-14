@@ -249,8 +249,8 @@ func looksLikeGBK(data []byte) bool {
 	return total >= minSequences && float64(common)/float64(total) > minCommonRatio
 }
 
-// DetectSample samples beginning, middle, and end; returns the result and whether to trust it.
-// TODO: Make private or remove when grep.go and convert_encoding.go use streaming I/O.
+// DetectSample samples beginning, middle and end; reports whether to trust it.
+// TODO: make private once grep and convert_encoding stream instead of buffering.
 func DetectSample(data []byte) (DetectionResult, bool) {
 	size := len(data)
 

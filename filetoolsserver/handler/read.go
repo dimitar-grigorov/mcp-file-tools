@@ -131,8 +131,8 @@ func lineStarts(content string) []int {
 	return starts
 }
 
-// addLineNumbers prefixes each line with "N<tab>", numbering from start so a
-// paged read shows absolute file line numbers. A trailing newline gets no number.
+// addLineNumbers prefixes "N<tab>", numbering from start so paged reads show
+// absolute line numbers. A trailing newline gets none.
 func addLineNumbers(content string, start int) string {
 	if content == "" {
 		return content

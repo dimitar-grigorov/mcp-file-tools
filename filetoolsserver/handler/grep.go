@@ -192,8 +192,8 @@ func shouldIncludeFile(path string, includes, excludes []string) bool {
 	return false
 }
 
-// searchFiles searches all files with bounded concurrency, committing results in file
-// order so the truncated set is the same on every run, and stopping once the page is full.
+// searchFiles runs bounded-concurrent, committing in file order so a truncated
+// result is the same on every run.
 func (h *Handler) searchFiles(ctx context.Context, files []string, opts grepOptions, maxMatches, offset int) GrepOutput {
 	out := GrepOutput{Matches: []GrepMatch{}}
 	skip, taken := offset, 0
@@ -252,8 +252,7 @@ func (h *Handler) searchFiles(ctx context.Context, files []string, opts grepOpti
 	return out
 }
 
-// searchSingleFile searches one file. Outside content mode it only counts, so
-// nothing is built to be thrown away.
+// searchSingleFile only counts outside content mode, building nothing to discard.
 func searchSingleFile(path string, opts grepOptions) fileHits {
 	if info, err := os.Stat(path); err == nil && info.Size() > opts.maxFileSize {
 		slog.Warn("loading large file into memory", "path", path, "size", info.Size(), "threshold", opts.maxFileSize)
@@ -313,8 +312,7 @@ func searchSingleFile(path string, opts grepOptions) fileHits {
 	return hits
 }
 
-// findLineMatches returns every occurrence when matchesOnly extracts substrings,
-// otherwise just the first — one match per line.
+// findLineMatches returns every occurrence for matchesOnly, else the first only.
 func findLineMatches(opts grepOptions, line string) [][]int {
 	if opts.matchesOnly && opts.mode == outputModeContent {
 		return opts.re.FindAllStringIndex(line, -1)
