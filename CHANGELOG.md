@@ -6,6 +6,21 @@ versions see the [GitHub releases](https://github.com/dimitar-grigorov/mcp-file-
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.1] - 2026-08-14
+
+### Fixed
+
+- **`edit_file` could stall for minutes on a failed edit** — finding the closest
+  match was cubic in `oldText`. A 50-line block against a 2,000-line file: 5.6s
+  → 4ms.
+- **`read_text_file` and `grep_text_files` ignored `MCP_DEFAULT_ENCODING`** on an
+  inconclusive detection; writes and edits already honoured it. No change on the
+  default `utf-8`.
+- **`convert_encoding` converted on a detection it did not trust**, and a bad
+  guess is unrecoverable — the result detects as valid UTF-8. It now stops and
+  names the guess. **Behaviour change:** confirm with `from`, or pass the new
+  `allowLowConfidence`.
+
 ## [3.4.0] - 2026-08-14
 
 ### Added
