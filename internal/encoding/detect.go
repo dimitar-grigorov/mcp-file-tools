@@ -441,10 +441,11 @@ func detectChunkedFromReader(r io.ReaderAt, size int64) (DetectionResult, error)
 		encodingConfidenceSum[r.encoding] += r.confidence * r.weight
 	}
 
+	// Name breaks a tie: ranging a map alone would pick a different one per run.
 	var bestEncoding string
 	var bestWeight int
 	for enc, weight := range encodingWeights {
-		if weight > bestWeight {
+		if weight > bestWeight || (weight == bestWeight && enc < bestEncoding) {
 			bestWeight = weight
 			bestEncoding = enc
 		}
