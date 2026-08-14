@@ -4,7 +4,7 @@ go 1.26.5
 
 require (
 	github.com/modelcontextprotocol/go-sdk v1.7.0
-	golang.org/x/text v0.40.0
+	golang.org/x/text v0.41.0
 )
 
 require (
