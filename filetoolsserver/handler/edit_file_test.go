@@ -415,30 +415,6 @@ func TestEditFile_InconclusiveDetection_UsesConfiguredDefault(t *testing.T) {
 	}
 }
 
-func TestLongestMatchingBlock(t *testing.T) {
-	content := "alpha\nbeta\ngamma\ndelta"
-
-	tests := []struct {
-		name      string
-		oldText   string
-		wantLine  int
-		wantCount int
-	}{
-		{"middle block", "beta\ngamma", 1, 2},
-		{"whitespace-insensitive", "  beta  \n\tgamma", 1, 2},
-		{"single line", "delta", 3, 1},
-		{"no match", "zzz\nyyy", -1, 0},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			line, count := longestMatchingBlock(content, tt.oldText)
-			if line != tt.wantLine || count != tt.wantCount {
-				t.Errorf("longestMatchingBlock = (%d, %d), want (%d, %d)", line, count, tt.wantLine, tt.wantCount)
-			}
-		})
-	}
-}
-
 func TestApplyEdits_NoMatchHint(t *testing.T) {
 	content := "func main() {\n\tfmt.Println(\"hi\")\n}\n"
 

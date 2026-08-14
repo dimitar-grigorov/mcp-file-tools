@@ -407,28 +407,6 @@ func replaceLineBlock(content, oldText, newText string, start, oldLineCount int)
 	return strings.Join(result, "\n")
 }
 
-// longestMatchingBlock returns the start line and length of the longest run of
-// consecutive lines (ignoring whitespace) shared by content and oldText, or (-1, 0).
-func longestMatchingBlock(content, oldText string) (startLine, length int) {
-	contentLines := strings.Split(content, "\n")
-	oldLines := strings.Split(oldText, "\n")
-
-	startLine, length = -1, 0
-	for i := range contentLines {
-		for j := range oldLines {
-			n := 0
-			for i+n < len(contentLines) && j+n < len(oldLines) &&
-				strings.TrimSpace(contentLines[i+n]) == strings.TrimSpace(oldLines[j+n]) {
-				n++
-			}
-			if n > length {
-				startLine, length = i, n
-			}
-		}
-	}
-	return startLine, length
-}
-
 // tryFlexibleMatch matches oldText ignoring whitespace differences, preserving file indentation.
 func tryFlexibleMatch(content, oldText, newText string) (bool, string) {
 	oldLines := strings.Split(oldText, "\n")

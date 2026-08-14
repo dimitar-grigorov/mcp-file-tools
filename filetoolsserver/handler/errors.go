@@ -16,9 +16,6 @@ var (
 	// ErrPatternRequired is returned when a required pattern parameter is empty.
 	ErrPatternRequired = errkind.New(errkind.InvalidInput, "pattern is required and must be a non-empty string")
 
-	// ErrEditsRequired is returned when the edits array is missing or empty.
-	ErrEditsRequired = errkind.New(errkind.InvalidInput, "edits array is required and must not be empty")
-
 	// ErrPathMustBeDirectory is returned when a directory is expected but a file was provided.
 	ErrPathMustBeDirectory = errkind.New(errkind.InvalidPath, "path must be a directory")
 )

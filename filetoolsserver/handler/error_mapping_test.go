@@ -66,7 +66,6 @@ func TestSecuritySentinelsKeepMessagesAndMatching(t *testing.T) {
 		{security.ErrNotDirectory, "path is not a directory"},
 		{ErrPathRequired, "path is required and must be a non-empty string"},
 		{ErrPatternRequired, "pattern is required and must be a non-empty string"},
-		{ErrEditsRequired, "edits array is required and must not be empty"},
 		{ErrPathMustBeDirectory, "path must be a directory"},
 		{ErrEncodingUnsupported, "unsupported encoding"},
 		{ErrEditNoMatch, "could not find exact match for edit"},
