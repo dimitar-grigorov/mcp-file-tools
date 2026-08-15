@@ -15,6 +15,12 @@ fills in the real values in CI. That's what stopped the committed copy drifting 
 plugin.json. `scripts/verify-release-version.js` rejects a tag that disagrees with
 plugin.json/marketplace.json before anything is built.
 
+A **major** bump also moves the module path (`/v4` → `/v5`), or the proxy ignores every
+new tag and `go install @latest` keeps serving the last version that matched.
+`go run github.com/icholy/gomajor@latest path -next` rewrites go.mod and every import;
+the `-X` ldflag in `.goreleaser.yml` and the `go install` lines in `README.md` and
+`plugin/README.md` need doing by hand.
+
 "Auto-registered" only means the registry entry updates on release — clients still
 install via .mcp.json, the plugin, or a .mcpb bundle.
 
