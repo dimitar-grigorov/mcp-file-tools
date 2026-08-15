@@ -3,6 +3,7 @@
 [![Release](https://img.shields.io/github/v/release/dimitar-grigorov/mcp-file-tools)](https://github.com/dimitar-grigorov/mcp-file-tools/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/dimitar-grigorov/mcp-file-tools/total)](https://github.com/dimitar-grigorov/mcp-file-tools/releases)
 [![Test](https://github.com/dimitar-grigorov/mcp-file-tools/actions/workflows/test.yml/badge.svg)](https://github.com/dimitar-grigorov/mcp-file-tools/actions/workflows/test.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/dimitar-grigorov/mcp-file-tools/badge)](https://scorecard.dev/viewer/?uri=github.com/dimitar-grigorov/mcp-file-tools)
 [![License: GPL-3.0](https://img.shields.io/github/license/dimitar-grigorov/mcp-file-tools)](LICENSE)
 [![MCP Registry](https://img.shields.io/badge/MCP-Registry-blue)](https://registry.modelcontextprotocol.io/?search=mcp-file-tools)
 [![Glama score](https://glama.ai/mcp/servers/dimitar-grigorov/mcp-file-tools/badges/score.svg)](https://glama.ai/mcp/servers/dimitar-grigorov/mcp-file-tools)

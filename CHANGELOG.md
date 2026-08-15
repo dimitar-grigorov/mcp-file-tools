@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Go Report Card badge dropped — the service was sunset 2026-07-01 and its endpoint now
   renders "retired". Downloads and Glama score badges take its place.
+- `scorecard.yml` publishes OpenSSF Scorecard results weekly.
 
 ## [4.2.0] - 2026-08-15
 
