@@ -86,7 +86,6 @@ func (h *Handler) HandleChangeLineEndings(ctx context.Context, req *mcp.CallTool
 	info := DetectLineEndings([]byte(content))
 	originalStyle := info.Style
 
-	// Already in target style — no-op
 	if originalStyle == style || originalStyle == LineEndingNone {
 		return &mcp.CallToolResult{}, ChangeLineEndingsOutput{
 			Message:       fmt.Sprintf("File already uses %s line endings, no changes needed", style),
@@ -96,7 +95,6 @@ func (h *Handler) HandleChangeLineEndings(ctx context.Context, req *mcp.CallTool
 		}, nil
 	}
 
-	// Count lines that will change
 	var linesChanged int
 	if style == LineEndingLF {
 		linesChanged = info.CRLFCount

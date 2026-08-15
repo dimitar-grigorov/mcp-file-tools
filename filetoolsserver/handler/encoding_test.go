@@ -23,17 +23,14 @@ func TestHandleListEncodings(t *testing.T) {
 		t.Errorf("expected success, got error: %v", result.Content)
 	}
 
-	// Check encodings list
 	if len(output.Encodings) == 0 {
 		t.Fatal("expected encodings list, got empty")
 	}
 
-	// Check minimum expected number of encodings (we now support 20)
 	if len(output.Encodings) < 15 {
 		t.Errorf("expected at least 15 encodings, got %d", len(output.Encodings))
 	}
 
-	// Helper to check if encoding exists
 	hasEncoding := func(name string) bool {
 		for _, enc := range output.Encodings {
 			if enc.Name == name {

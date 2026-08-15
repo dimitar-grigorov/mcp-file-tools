@@ -20,7 +20,6 @@ func getFileTimes(stat os.FileInfo) (created, accessed, modified time.Time) {
 		created = time.Unix(0, sys.CreationTime.Nanoseconds())
 		accessed = time.Unix(0, sys.LastAccessTime.Nanoseconds())
 	} else {
-		// Fallback if syscall data is not available
 		created = modified
 		accessed = modified
 	}
