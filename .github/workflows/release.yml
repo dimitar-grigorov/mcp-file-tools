@@ -5,10 +5,9 @@ on:
     tags:
       - 'v*'
 
+# Read by default; the two jobs that need more ask for it themselves.
 permissions:
-  contents: write
-  packages: write
-  id-token: write  # Required for MCP Registry OIDC auth
+  contents: read
 
 jobs:
   test:
@@ -40,6 +39,8 @@ jobs:
   release:
     needs: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # GoReleaser creates the release and uploads its assets
     steps:
       - name: Checkout
         uses: actions/checkout@v7
