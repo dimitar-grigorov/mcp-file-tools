@@ -20,9 +20,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   renders "retired". Downloads and Glama score badges take its place.
 - `scorecard.yml` publishes OpenSSF Scorecard results weekly.
 - `release.yml` defaults to `contents: read`; only the GoReleaser job gets write.
+- Every action is pinned by commit SHA, both Docker images by digest; Dependabot now
+  covers Docker too.
 
 ### Added
 
+- **Releases carry build provenance.** `checksums.txt` is attested and the bundle
+  ships as `mcp-file-tools.intoto.jsonl` — `gh attestation verify` checks it.
 - `SECURITY.md` — private reporting, and what counts as a containment bug.
 - `codeql.yml` scans Go on push, PR and weekly.
 
