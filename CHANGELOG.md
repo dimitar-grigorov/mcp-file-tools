@@ -19,6 +19,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Go Report Card badge dropped — the service was sunset 2026-07-01 and its endpoint now
   renders "retired". Downloads and Glama score badges take its place.
 - `scorecard.yml` publishes OpenSSF Scorecard results weekly.
+- `release.yml` defaults to `contents: read`; only the GoReleaser job gets write.
+
+### Added
+
+- `SECURITY.md` — private reporting, and what counts as a containment bug.
+- `codeql.yml` scans Go on push, PR and weekly.
 
 ## [4.2.0] - 2026-08-15
 
