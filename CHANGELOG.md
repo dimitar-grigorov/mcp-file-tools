@@ -6,6 +6,14 @@ versions see the [GitHub releases](https://github.com/dimitar-grigorov/mcp-file-
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **`go install` silently served v1.8.1, not the current release.** The module path
+  lacked the `/v4` suffix Go requires from v2 on, so the proxy ignored every tag since
+  2.0.0. The module is now `github.com/dimitar-grigorov/mcp-file-tools/v4`.
+
 ## [4.2.0] - 2026-08-15
 
 ### Added

@@ -15,9 +15,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/dimitar-grigorov/mcp-file-tools/filetoolsserver"
-	"github.com/dimitar-grigorov/mcp-file-tools/filetoolsserver/handler"
-	"github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/filetoolsserver"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/filetoolsserver/handler"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/encoding"
 )
 
 var failed = 0

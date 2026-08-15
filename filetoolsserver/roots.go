@@ -12,8 +12,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/dimitar-grigorov/mcp-file-tools/filetoolsserver/handler"
-	"github.com/dimitar-grigorov/mcp-file-tools/internal/security"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/filetoolsserver/handler"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/security"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 

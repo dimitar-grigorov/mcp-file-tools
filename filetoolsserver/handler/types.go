@@ -3,7 +3,7 @@
 
 package handler
 
-import "github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
+import "github.com/dimitar-grigorov/mcp-file-tools/v4/internal/encoding"
 
 // ReadTextFileInput for reading files with encoding support; Offset/Limit are 1-indexed line numbers for a partial read.
 type ReadTextFileInput struct {

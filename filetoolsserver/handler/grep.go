@@ -15,9 +15,9 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
-	"github.com/dimitar-grigorov/mcp-file-tools/internal/filesystem"
-	"github.com/dimitar-grigorov/mcp-file-tools/internal/workpool"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/encoding"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/filesystem"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/workpool"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 

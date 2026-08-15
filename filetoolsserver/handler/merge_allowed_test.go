@@ -6,7 +6,7 @@ package handler
 import (
 	"testing"
 
-	"github.com/dimitar-grigorov/mcp-file-tools/internal/security"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/security"
 )
 
 // normDir normalizes a directory the way the roots handler does before merging.

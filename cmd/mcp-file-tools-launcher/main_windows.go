@@ -10,7 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	installmode "github.com/dimitar-grigorov/mcp-file-tools/internal/install"
+	installmode "github.com/dimitar-grigorov/mcp-file-tools/v4/internal/install"
 )
 
 const (

@@ -10,7 +10,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/dimitar-grigorov/mcp-file-tools/internal/security"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/security"
 )
 
 func TestGitignoreMatching(t *testing.T) {

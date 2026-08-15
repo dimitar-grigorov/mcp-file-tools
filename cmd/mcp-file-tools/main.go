@@ -14,8 +14,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/dimitar-grigorov/mcp-file-tools/filetoolsserver"
-	"github.com/dimitar-grigorov/mcp-file-tools/internal/security"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/filetoolsserver"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/security"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 

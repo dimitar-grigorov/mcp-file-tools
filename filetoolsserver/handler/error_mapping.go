@@ -6,7 +6,7 @@ package handler
 import (
 	"fmt"
 
-	"github.com/dimitar-grigorov/mcp-file-tools/internal/errkind"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/errkind"
 )
 
 // mapOperationError turns an error into a per-file message and code.

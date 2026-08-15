@@ -12,7 +12,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/dimitar-grigorov/mcp-file-tools/internal/filesystem"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/filesystem"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 

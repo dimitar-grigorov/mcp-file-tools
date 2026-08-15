@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/dimitar-grigorov/mcp-file-tools/internal/config"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/config"
 )
 
 func TestNewHandler(t *testing.T) {

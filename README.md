@@ -165,7 +165,7 @@ claude mcp add --scope user file-tools -- ~/.local/bin/mcp-file-tools ~/Projects
 
 ```bash
 # Requires Go 1.26+
-go install github.com/dimitar-grigorov/mcp-file-tools/cmd/mcp-file-tools@latest
+go install github.com/dimitar-grigorov/mcp-file-tools/v4/cmd/mcp-file-tools@latest
 # Linux / macOS
 claude mcp add --scope user file-tools -- $(go env GOPATH)/bin/mcp-file-tools ~/Projects
 ```

@@ -9,7 +9,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/encoding"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/pmezard/go-difflib/difflib"
 )

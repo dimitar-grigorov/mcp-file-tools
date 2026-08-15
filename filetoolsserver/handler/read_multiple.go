@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/dimitar-grigorov/mcp-file-tools/internal/workpool"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/workpool"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 

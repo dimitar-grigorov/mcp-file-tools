@@ -13,7 +13,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/dimitar-grigorov/mcp-file-tools/internal/security"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/security"
 )
 
 func TestWalk_LexicalOrderAndMetadata(t *testing.T) {

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/encoding"
 )
 
 func TestHandleConvertEncoding_UTF8ToCP1251(t *testing.T) {

@@ -3,7 +3,7 @@
 
 package security
 
-import "github.com/dimitar-grigorov/mcp-file-tools/internal/errkind"
+import "github.com/dimitar-grigorov/mcp-file-tools/v4/internal/errkind"
 
 // Sentinel errors for path validation and security operations.
 // Match with errors.Is(); the attached Kind is what callers classify on.

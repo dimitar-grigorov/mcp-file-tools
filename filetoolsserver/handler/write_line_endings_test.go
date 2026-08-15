@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/dimitar-grigorov/mcp-file-tools/internal/config"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/config"
 )
 
 func writeAndRead(t *testing.T, existing string, in WriteFileInput, cfg *config.Config) string {

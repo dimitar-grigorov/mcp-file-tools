@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/dimitar-grigorov/mcp-file-tools/filetoolsserver/handler"
-	"github.com/dimitar-grigorov/mcp-file-tools/internal/config"
-	"github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/filetoolsserver/handler"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/config"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/encoding"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/encoding"
 )
 
 func TestHandleTree_BasicOutput(t *testing.T) {

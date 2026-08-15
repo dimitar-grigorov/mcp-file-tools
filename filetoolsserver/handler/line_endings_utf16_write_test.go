@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/encoding"
 )
 
 // writeUTF16 writes text as UTF-16 with a BOM.

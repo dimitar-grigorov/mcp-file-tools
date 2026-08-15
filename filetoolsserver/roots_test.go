@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/dimitar-grigorov/mcp-file-tools/filetoolsserver/handler"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/filetoolsserver/handler"
 )
 
 func TestUpdateAllowedDirectoriesFromRoots_ValidRoots(t *testing.T) {

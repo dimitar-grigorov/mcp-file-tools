@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dimitar-grigorov/mcp-file-tools/internal/install"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/install"
 )
 
 func TestIsNewerVersion(t *testing.T) {

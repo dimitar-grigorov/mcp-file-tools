@@ -9,8 +9,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/dimitar-grigorov/mcp-file-tools/internal/config"
-	"github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/config"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/encoding"
 	textEncoding "golang.org/x/text/encoding"
 )
 

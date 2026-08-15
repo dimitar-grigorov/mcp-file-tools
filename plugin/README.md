@@ -42,7 +42,7 @@ with no runtime dependencies — see below to skip Node entirely.
 ## Alternative without the plugin
 
 Install the binary with `go install
-github.com/dimitar-grigorov/mcp-file-tools/cmd/mcp-file-tools@latest` (or download it
+github.com/dimitar-grigorov/mcp-file-tools/v4/cmd/mcp-file-tools@latest` (or download it
 from Releases), then add to `.mcp.json`:
 
 ```json

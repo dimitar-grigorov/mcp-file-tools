@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dimitar-grigorov/mcp-file-tools/internal/config"
-	"github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/config"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/encoding"
 )
 
 // sparseCyrillicSource is what defeats detection: a big mostly-ASCII unit.

@@ -3,7 +3,7 @@
 
 package handler
 
-import "github.com/dimitar-grigorov/mcp-file-tools/internal/errkind"
+import "github.com/dimitar-grigorov/mcp-file-tools/v4/internal/errkind"
 
 // Sentinel errors for handler operations.
 // Match with errors.Is(); the attached Kind is what mapOperationError classifies on.

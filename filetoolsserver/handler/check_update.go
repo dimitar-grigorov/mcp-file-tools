@@ -7,8 +7,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/dimitar-grigorov/mcp-file-tools/internal/install"
-	"github.com/dimitar-grigorov/mcp-file-tools/internal/updater"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/install"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/updater"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 

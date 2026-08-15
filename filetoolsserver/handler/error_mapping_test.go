@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dimitar-grigorov/mcp-file-tools/internal/security"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/security"
 )
 
 // Locks in the per-file codes read_multiple reports, so the mapper can't reclassify silently.
