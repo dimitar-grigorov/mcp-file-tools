@@ -1,10 +1,11 @@
 # MCP File Tools
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/dimitar-grigorov/mcp-file-tools)](https://goreportcard.com/report/github.com/dimitar-grigorov/mcp-file-tools)
 [![Release](https://img.shields.io/github/v/release/dimitar-grigorov/mcp-file-tools)](https://github.com/dimitar-grigorov/mcp-file-tools/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/dimitar-grigorov/mcp-file-tools/total)](https://github.com/dimitar-grigorov/mcp-file-tools/releases)
+[![Test](https://github.com/dimitar-grigorov/mcp-file-tools/actions/workflows/test.yml/badge.svg)](https://github.com/dimitar-grigorov/mcp-file-tools/actions/workflows/test.yml)
 [![License: GPL-3.0](https://img.shields.io/github/license/dimitar-grigorov/mcp-file-tools)](LICENSE)
 [![MCP Registry](https://img.shields.io/badge/MCP-Registry-blue)](https://registry.modelcontextprotocol.io/?search=mcp-file-tools)
-[![Test](https://github.com/dimitar-grigorov/mcp-file-tools/actions/workflows/test.yml/badge.svg)](https://github.com/dimitar-grigorov/mcp-file-tools/actions/workflows/test.yml)
+[![Glama score](https://glama.ai/mcp/servers/dimitar-grigorov/mcp-file-tools/badges/score.svg)](https://glama.ai/mcp/servers/dimitar-grigorov/mcp-file-tools)
 
 Claude sees `Настройки` — not `????` or `Íàñòðîéêè`.
 
@@ -130,9 +131,11 @@ claude plugin update mcp-file-tools@mcp-file-tools
 Use the full `plugin@marketplace` id, not the bare name. Or enable auto-update in
 `/plugin` → **Marketplaces**.
 
-### MCP Registry
+### Registries and directories
 
-This server is listed in the [Official MCP Registry](https://registry.modelcontextprotocol.io/?search=mcp-file-tools) for discovery by any MCP client.
+This server is listed in the [Official MCP Registry](https://registry.modelcontextprotocol.io/?search=mcp-file-tools) for discovery by any MCP client, and indexed on
+[Glama](https://glama.ai/mcp/servers/dimitar-grigorov/mcp-file-tools), which scores it A
+for license, quality and maintenance.
 
 ### Manual install (other MCP clients, or access outside your workspace)
 
