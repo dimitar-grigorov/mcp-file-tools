@@ -10,6 +10,16 @@ upgrade instead.
 | 4.x     | yes       |
 | < 4.0   | no        |
 
+## Verifying a release
+
+Every release since 4.3.0 carries build provenance. `checksums.txt` covers all the
+artifacts, so verifying it once covers whatever you downloaded:
+
+```bash
+gh attestation verify checksums.txt --repo dimitar-grigorov/mcp-file-tools
+sha256sum --check --ignore-missing checksums.txt
+```
+
 ## Reporting a vulnerability
 
 Report privately through GitHub's

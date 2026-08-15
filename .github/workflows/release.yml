@@ -5,7 +5,6 @@ on:
     tags:
       - 'v*'
 
-# Read by default; the two jobs that need more ask for it themselves.
 permissions:
   contents: read
 
@@ -17,13 +16,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Verify the release tag matches plugin.json and marketplace.json
         run: node scripts/verify-release-version.js "${{ github.ref_name }}"
 
       - name: Set up Go
-        uses: actions/setup-go@v7
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
 
@@ -40,26 +39,45 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # GoReleaser creates the release and uploads its assets
+      contents: write      # GoReleaser creates the release and uploads its assets
+      id-token: write      # keyless signing of the provenance
+      attestations: write  # record it on the attestations API
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
       - name: Set up Go
-        uses: actions/setup-go@v7
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
 
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v7
+        uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
         with:
           distribution: goreleaser
           version: 'v2.17.0'
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # checksums.txt lists every artifact, so one subject attests them all.
+      - name: Attest the release
+        id: attest
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: dist/checksums.txt
+
+      # Also a release asset, so it verifies offline without the attestations API.
+      - name: Attach the provenance
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          cp "$BUNDLE" mcp-file-tools.intoto.jsonl
+          gh release upload "$TAG" mcp-file-tools.intoto.jsonl --clobber
 
   # Chained call rather than a `release: published` trigger: GoReleaser creates
   # the release with GITHUB_TOKEN, whose events never trigger other workflows.
