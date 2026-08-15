@@ -59,8 +59,7 @@ type utf16Evidence struct {
 	roundTrip       bool
 }
 
-// utf16Analyzer consumes bytes incrementally so a file can be scored across
-// streamed chunks without buffering it whole.
+// utf16Analyzer consumes bytes incrementally, so a file is scored across streamed chunks without buffering it whole.
 type utf16Analyzer struct {
 	spec     utf16Spec
 	evidence utf16Evidence
@@ -187,8 +186,7 @@ func analyzeUTF16(data []byte, spec utf16Spec) utf16Evidence {
 	return analyzer.Finish()
 }
 
-// analyzeUTF16Samples scores discontiguous samples, trimming each so partial
-// units and split surrogate pairs at sample edges do not skew the evidence.
+// analyzeUTF16Samples trims each sample so partial units and split surrogates at its edges do not skew the evidence.
 func analyzeUTF16Samples(samples []byteSample, totalSize int64, spec utf16Spec) utf16Evidence {
 	combined := utf16Evidence{charset: spec.charset, structuralValid: true, roundTrip: true}
 	for _, sample := range samples {
@@ -269,18 +267,9 @@ func (e utf16Evidence) score() int {
 		return 0
 	}
 	quality := e.goodRuneCount * 50 / e.runeCount
-	pageBonus := int(maxFloat64(0, e.pageDominance()) * 30)
-	if pageBonus > 30 {
-		pageBonus = 30
-	}
-	lengthBonus := e.runeCount / 8
-	if lengthBonus > 10 {
-		lengthBonus = 10
-	}
-	surrogateBonus := e.surrogatePairs
-	if surrogateBonus > 3 {
-		surrogateBonus = 3
-	}
+	pageBonus := min(int(max(0, e.pageDominance())*30), 30)
+	lengthBonus := min(e.runeCount/8, 10)
+	surrogateBonus := min(e.surrogatePairs, 3)
 	return 20 + quality + pageBonus + lengthBonus + surrogateBonus
 }
 
@@ -296,10 +285,8 @@ func detectUTF16Samples(samples []byteSample, totalSize int64) (DetectionResult,
 	return decideUTF16(le, be)
 }
 
-// decideUTF16 picks an endianness only when one reading is eligible, scores high
-// enough, and (when both are) clearly beats the other. On a raw zero-column
-// signal without a clean decode it returns handled with an empty result, so the
-// caller reports "undetected" rather than letting chardet mislabel the bytes.
+// decideUTF16 picks an endianness only when one reading is eligible, scores high enough and, when both are, clearly beats the other.
+// A raw zero-column signal with no clean decode returns handled but empty, so the caller says "undetected" instead of letting chardet mislabel it.
 func decideUTF16(le, be utf16Evidence) (DetectionResult, bool) {
 	leEligible := le.eligible()
 	beEligible := be.eligible()
@@ -330,23 +317,15 @@ func decideUTF16(le, be utf16Evidence) (DetectionResult, bool) {
 	return DetectionResult{}, rawSignal
 }
 
-// hasUTF16RawSignal reports whether one byte column is so dominated by zeros that
-// the bytes can only be UTF-16, even when they do not decode to clean text.
+// hasUTF16RawSignal reports whether one byte column is so zero-dominated the bytes can only be UTF-16, even without a clean decode.
 func hasUTF16RawSignal(le, be utf16Evidence) bool {
-	units := le.unitCount
-	if be.unitCount > units {
-		units = be.unitCount
-	}
+	units := max(le.unitCount, be.unitCount)
 	if units == 0 {
 		return false
 	}
 
-	evenZeros := be.expectedZeros
-	oddZeros := le.expectedZeros
-	maxZeros, minZeros := evenZeros, oddZeros
-	if oddZeros > evenZeros {
-		maxZeros, minZeros = oddZeros, evenZeros
-	}
+	maxZeros := max(be.expectedZeros, le.expectedZeros)
+	minZeros := min(be.expectedZeros, le.expectedZeros)
 	maxRatio := float64(maxZeros) / float64(units)
 	dominance := float64(maxZeros-minZeros) / float64(units)
 
@@ -357,19 +336,6 @@ func hasUTF16RawSignal(le, be utf16Evidence) bool {
 }
 
 func utf16Result(evidence utf16Evidence) DetectionResult {
-	confidence := evidence.score()
-	if confidence < HighConfidenceThreshold {
-		confidence = HighConfidenceThreshold
-	}
-	if confidence > 95 {
-		confidence = 95
-	}
+	confidence := min(max(evidence.score(), HighConfidenceThreshold), 95)
 	return DetectionResult{Charset: evidence.charset, Confidence: confidence}
-}
-
-func maxFloat64(first, second float64) float64 {
-	if first > second {
-		return first
-	}
-	return second
 }
