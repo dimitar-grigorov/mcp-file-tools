@@ -13,14 +13,8 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// validBOMEncodings lists encodings that have a defined BOM.
-var validBOMEncodings = map[string]bool{
-	"utf-8":     true,
-	"utf-16-le": true,
-	"utf-16-be": true,
-	"utf-32-le": true,
-	"utf-32-be": true,
-}
+// The encodings encoding.BOMBytesFor knows, named for the error messages.
+const bomEncodingNames = "utf-8, utf-16-le, utf-16-be, utf-32-le, utf-32-be"
 
 // HandleManageBom detects, strips, or adds a Unicode BOM (Byte Order Mark).
 func (h *Handler) HandleManageBom(ctx context.Context, req *mcp.CallToolRequest, input ManageBomInput) (*mcp.CallToolResult, ManageBomOutput, error) {
@@ -37,12 +31,14 @@ func (h *Handler) HandleManageBom(ctx context.Context, req *mcp.CallToolRequest,
 	case "add":
 		enc := strings.ToLower(input.Encoding)
 		if enc == "" {
-			return errorResult(`encoding is required for "add" action (utf-8, utf-16-le, utf-16-be, utf-32-le, utf-32-be)`), ManageBomOutput{}, nil
+			return errorResult(`encoding is required for "add" action (` + bomEncodingNames + `)`), ManageBomOutput{}, nil
 		}
-		if !validBOMEncodings[enc] {
-			return errorResult(fmt.Sprintf("unsupported BOM encoding %q — valid: utf-8, utf-16-le, utf-16-be, utf-32-le, utf-32-be", enc)), ManageBomOutput{}, nil
+		// An encoding has a BOM exactly when BOMBytesFor knows one for it.
+		bom := encoding.BOMBytesFor(enc)
+		if len(bom) == 0 {
+			return errorResult(fmt.Sprintf("unsupported BOM encoding %q — valid: %s", enc, bomEncodingNames)), ManageBomOutput{}, nil
 		}
-		return h.bomAdd(ctx, v.Path, enc)
+		return h.bomAdd(ctx, v.Path, enc, bom)
 	}
 	return errorResult(`action must be "detect", "strip", or "add"`), ManageBomOutput{}, nil
 }
@@ -95,8 +91,7 @@ func (h *Handler) bomStrip(ctx context.Context, path string) (*mcp.CallToolResul
 		return r, ManageBomOutput{}, nil
 	}
 
-	mode := getFileMode(path)
-	if err := atomicWriteFile(path, stripped, mode); err != nil {
+	if err := rewriteFile(path, stripped); err != nil {
 		return errorResult(fmt.Sprintf("failed to write file: %v", err)), ManageBomOutput{}, nil
 	}
 
@@ -110,7 +105,7 @@ func (h *Handler) bomStrip(ctx context.Context, path string) (*mcp.CallToolResul
 }
 
 // bomAdd prepends a BOM for the given encoding. Fails if a BOM already exists.
-func (h *Handler) bomAdd(ctx context.Context, path string, enc string) (*mcp.CallToolResult, ManageBomOutput, error) {
+func (h *Handler) bomAdd(ctx context.Context, path string, enc string, bomBytes []byte) (*mcp.CallToolResult, ManageBomOutput, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return errorResult(fmt.Sprintf("failed to read file: %v", err)), ManageBomOutput{}, nil
@@ -120,17 +115,11 @@ func (h *Handler) bomAdd(ctx context.Context, path string, enc string) (*mcp.Cal
 		return errorResult(fmt.Sprintf("file already has a %s BOM — strip it first if you want to change it", existingResult.Charset)), ManageBomOutput{}, nil
 	}
 
-	bomBytes := encoding.BOMBytesFor(enc)
-	withBOM := make([]byte, len(bomBytes)+len(data))
-	copy(withBOM, bomBytes)
-	copy(withBOM[len(bomBytes):], data)
-
 	if r := cancelled(ctx); r != nil {
 		return r, ManageBomOutput{}, nil
 	}
 
-	mode := getFileMode(path)
-	if err := atomicWriteFile(path, withBOM, mode); err != nil {
+	if err := rewriteFile(path, prependBOM(bomBytes, data)); err != nil {
 		return errorResult(fmt.Sprintf("failed to write file: %v", err)), ManageBomOutput{}, nil
 	}
 
