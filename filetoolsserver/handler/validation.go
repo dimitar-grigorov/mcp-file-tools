@@ -63,8 +63,7 @@ func (h *Handler) ValidatePath(path string) PathValidationResult {
 	return PathValidationResult{Path: validatedPath}
 }
 
-// ValidateSourceDest validates both paths of a two-path operation. The
-// destination is left zero when the source already failed.
+// ValidateSourceDest leaves destination zero when source already failed.
 func (h *Handler) ValidateSourceDest(source, destination string) (PathValidationResult, PathValidationResult) {
 	srcResult := h.validateNamedPath(source, "source")
 	if !srcResult.Ok() {

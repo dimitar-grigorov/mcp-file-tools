@@ -25,9 +25,7 @@ type CheckUpdateOutput struct {
 	InstallMethod  string `json:"installMethod"`
 }
 
-// NewCheckUpdateHandler returns a handler that checks for newer versions.
-// Uses cached result by default (max 1 GitHub API call per 30 min).
-// Set force=true to bypass cache.
+// NewCheckUpdateHandler: cached result by default (max 1 GitHub API call per 30 min); force=true bypasses it.
 func (h *Handler) NewCheckUpdateHandler(version string) mcp.ToolHandlerFor[CheckUpdateInput, CheckUpdateOutput] {
 	return func(ctx context.Context, req *mcp.CallToolRequest, input CheckUpdateInput) (*mcp.CallToolResult, CheckUpdateOutput, error) {
 		env := h.installEnv(req.Session)
@@ -60,8 +58,7 @@ func (h *Handler) installEnv(session *mcp.ServerSession) install.Env {
 	return env
 }
 
-// CheckForUpdatesAsync checks for updates in the background and notifies via MCP logging.
-// Called once on server initialization, before any tool calls.
+// CheckForUpdatesAsync notifies via MCP logging. Call once on server initialization, before any tool calls.
 func (h *Handler) CheckForUpdatesAsync(session *mcp.ServerSession, version string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

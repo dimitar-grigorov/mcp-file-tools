@@ -133,10 +133,8 @@ func searchFiles(ctx context.Context, rootPath string, sOpts searchOptions) ([]s
 	return results, truncated, nil
 }
 
-// matchGlobPattern matches a slash-separated path against a glob pattern.
-// "**" spans any number of segments; "{a,b}" tries each alternative. A pattern
-// without a separator matches on the basename alone, so "*.pas" finds files
-// at any depth.
+// "**" spans any number of segments and "{a,b}" tries each alternative; a pattern
+// without a separator matches on the basename alone, so "*.pas" finds files at any depth.
 func matchGlobPattern(path, pattern string) bool {
 	pattern = strings.TrimSuffix(filepath.ToSlash(pattern), "/")
 	if !strings.Contains(pattern, "{") {
@@ -180,8 +178,7 @@ func expandBraces(pattern string) []string {
 	return out
 }
 
-// matchSegments matches path segments against pattern segments; "**" spans
-// any number of them, including none.
+// matchSegments: "**" spans any number of path segments, including none.
 func matchSegments(path, pat []string) bool {
 	for len(pat) > 0 {
 		if pat[0] == "**" {
@@ -210,9 +207,8 @@ func containsGlobChars(pattern string) bool {
 	return strings.ContainsAny(pattern, "*?[")
 }
 
-// shouldExcludePath reports whether path matches any exclude pattern. A literal
-// pattern also excludes anything under a directory of that name, so "vendor"
-// drops the whole subtree rather than just a file called "vendor".
+// A literal exclude pattern also excludes anything under a directory of that name,
+// so "vendor" drops the whole subtree rather than just a file called "vendor".
 func shouldExcludePath(path string, patterns []string) bool {
 	for _, pattern := range patterns {
 		pattern = filepath.ToSlash(pattern)
