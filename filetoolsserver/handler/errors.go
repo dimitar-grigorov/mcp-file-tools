@@ -20,8 +20,11 @@ var (
 	// Wrap to include the encoding name: fmt.Errorf("%w: %s", ErrEncodingUnsupported, name)
 	ErrEncodingUnsupported = errkind.New(errkind.Encoding, "unsupported encoding")
 
-	ErrBOMEncodingConflict     = errkind.New(errkind.Encoding, "BOM conflicts with requested encoding")
-	ErrBOMPolicyInvalid        = errkind.New(errkind.InvalidInput, "invalid bom policy")
+	ErrBOMEncodingConflict = errkind.New(errkind.Encoding, "BOM conflicts with requested encoding")
+
+	// ErrBOMPolicyInvalid is also returned for a policy the encoding cannot satisfy.
+	ErrBOMPolicyInvalid = errkind.New(errkind.InvalidInput, "invalid bom policy")
+
 	ErrLineEndingPolicyInvalid = errkind.New(errkind.InvalidInput, "invalid lineEndings policy")
 	ErrLineEndingActionInvalid = errkind.New(errkind.InvalidInput, `invalid action — valid: "detect", "convert"`)
 	ErrLineEndingStyleRequired = errkind.New(errkind.InvalidInput, `style is required for action="convert" — "lf" or "crlf"`)
@@ -32,6 +35,8 @@ var (
 	// Wrap to include context: fmt.Errorf("%w:\n%s", ErrEditNoMatch, oldText)
 	ErrEditNoMatch = errkind.New(errkind.InvalidInput, "could not find exact match for edit")
 
-	ErrOldTextEmpty  = errkind.New(errkind.InvalidInput, "edit old_text cannot be empty")
+	ErrOldTextEmpty = errkind.New(errkind.InvalidInput, "edit old_text cannot be empty")
+
+	// ErrEditAmbiguous is returned when oldText matches more than once and replaceAll is unset.
 	ErrEditAmbiguous = errkind.New(errkind.InvalidInput, "oldText matches more than one place")
 )

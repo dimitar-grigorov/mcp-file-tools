@@ -92,7 +92,7 @@ func BOMBytesFor(charset string) []byte {
 	}
 }
 
-// BOMSize returns 0 if charset has no BOM.
+// BOMSize returns the byte length of a BOM for the given charset, or 0 if unknown.
 func BOMSize(charset string) int {
 	b := BOMBytesFor(charset)
 	return len(b)
