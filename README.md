@@ -411,7 +411,8 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | go run ./cmd
 - Pushed back on (with a comment, not a close): out of scope, or breaking tool contracts other people's agents rely on.
 - Don't want to write the fix? [Open an issue](https://github.com/dimitar-grigorov/mcp-file-tools/issues) with the file, its encoding, and what the tool did.
 
-Details in [CONTRIBUTING.md](CONTRIBUTING.md).
+Details in [CONTRIBUTING.md](CONTRIBUTING.md). Found a way out of an allowed
+directory? That one goes to [SECURITY.md](SECURITY.md), privately, not to an issue.
 
 ## Forking
 
