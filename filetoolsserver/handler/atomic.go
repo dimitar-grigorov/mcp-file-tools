@@ -14,6 +14,11 @@ import (
 
 const tempFileSuffixBytes = 16
 
+// rewriteFile replaces a file's contents, keeping its permissions (DefaultFileMode if absent).
+func rewriteFile(path string, data []byte) error {
+	return atomicWriteFile(path, data, getFileMode(path))
+}
+
 // atomicWriteFile writes data atomically using temp file + rename.
 func atomicWriteFile(path string, data []byte, mode os.FileMode) (err error) {
 	tempPath, err := generateTempPath(path)
@@ -100,16 +105,14 @@ func writeTempFile(path string, data []byte, mode os.FileMode) error {
 	return nil
 }
 
-// syncParentDir persists the directory entry a rename just created. Best effort:
-// the rename already succeeded, so a sync failure must not fail the operation.
+// syncParentDir persists the entry a rename just created. Best effort: the rename already succeeded.
 func syncParentDir(path string) {
 	if err := syncDir(filepath.Dir(path)); err != nil {
 		slog.Debug("failed to sync directory after rename", "path", path, "error", err)
 	}
 }
 
-// generateTempPath returns a random sibling of target, so the later rename stays
-// on the same filesystem and is therefore atomic.
+// generateTempPath returns a random sibling of target, so the rename stays on one filesystem and is atomic.
 func generateTempPath(target string) (string, error) {
 	randBytes := make([]byte, tempFileSuffixBytes)
 	if _, err := rand.Read(randBytes); err != nil {

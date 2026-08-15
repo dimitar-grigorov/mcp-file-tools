@@ -37,8 +37,7 @@ func (h *Handler) HandleWriteFile(ctx context.Context, req *mcp.CallToolRequest,
 
 	enc, _ := encoding.Get(encodingName) // Already validated by resolveWriteEncoding
 
-	// A BOM in the content is transport (read_text_file returns it as text), not text
-	// to encode — and asking for it back is what the policy decides below.
+	// A BOM in content is transport (read_text_file hands it back as text), not text to encode.
 	content, contentHadBOM := trimContentBOM(input.Content)
 	existing := existingBOM(v.Path)
 	if contentHadBOM {
@@ -75,8 +74,7 @@ func (h *Handler) HandleWriteFile(ctx context.Context, req *mcp.CallToolRequest,
 		return r, WriteFileOutput{}, nil
 	}
 
-	mode := getFileMode(v.Path)
-	if err := atomicWriteFile(v.Path, contentToWrite, mode); err != nil {
+	if err := rewriteFile(v.Path, contentToWrite); err != nil {
 		return errorResult(fmt.Sprintf("failed to write file: %v", err)), WriteFileOutput{}, nil
 	}
 
