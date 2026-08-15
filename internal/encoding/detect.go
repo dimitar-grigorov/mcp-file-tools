@@ -33,7 +33,6 @@ const (
 	gbkConfidenceCap = 85 // cap when GBK is recovered from a Latin guess
 )
 
-// DetectionResult holds encoding detection result.
 type DetectionResult struct {
 	Charset    string
 	Confidence int
@@ -75,7 +74,7 @@ func DetectBOM(data []byte) (DetectionResult, bool) {
 	return DetectionResult{}, false
 }
 
-// BOMBytesFor returns the BOM byte sequence for a given encoding name, or nil if unsupported.
+// BOMBytesFor returns the BOM bytes for charset, or nil if unsupported.
 func BOMBytesFor(charset string) []byte {
 	switch strings.ToLower(charset) {
 	case "utf-8":
@@ -115,7 +114,6 @@ func DetectFromFile(path string, mode string) (DetectionResult, error) {
 	return detectFromReader(file, stat.Size(), mode)
 }
 
-// Detect detects encoding from a byte slice.
 func Detect(data []byte) DetectionResult {
 	if result, ok := DetectBOM(data); ok {
 		return result

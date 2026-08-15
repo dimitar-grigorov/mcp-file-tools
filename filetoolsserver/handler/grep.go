@@ -141,7 +141,6 @@ func resolveGrepEncoding(requested string) (string, string) {
 			"Call list_encodings for the supported names.", requested)
 }
 
-// compilePattern compiles the regex pattern with optional case sensitivity.
 func compilePattern(pattern string, caseSensitive *bool) (*regexp.Regexp, error) {
 	if caseSensitive != nil && !*caseSensitive {
 		pattern = "(?i)" + pattern
@@ -167,7 +166,6 @@ func namePatternError(patterns []string, caseSensitive *bool, err error) string 
 	return fmt.Sprintf("invalid regex pattern: %v", err)
 }
 
-// collectFiles gathers all files to search from the given paths.
 func (h *Handler) collectFiles(ctx context.Context, paths, includes, excludes []string, gitignore bool) []string {
 	var files []string
 	seen := make(map[string]bool)
@@ -445,7 +443,6 @@ func decodeWithFallback(data []byte, name, fallback string) (string, string) {
 	return decodeWithFallback(data, fallback, fallback)
 }
 
-// getContextBefore returns N lines before the given line index.
 func getContextBefore(lines []string, lineIdx, count int) []string {
 	start := max(lineIdx-count, 0)
 	if start >= lineIdx {
@@ -454,7 +451,6 @@ func getContextBefore(lines []string, lineIdx, count int) []string {
 	return lines[start:lineIdx]
 }
 
-// getContextAfter returns N lines after the given line index.
 func getContextAfter(lines []string, lineIdx, count int) []string {
 	end := min(lineIdx+count+1, len(lines))
 	if lineIdx+1 >= end {

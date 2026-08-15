@@ -19,16 +19,12 @@ import (
 )
 
 const (
-	// UpdateCheckURL is the GitHub API endpoint for latest release
 	UpdateCheckURL = "https://api.github.com/repos/dimitar-grigorov/mcp-file-tools/releases/latest"
+	RepoURL        = "https://github.com/dimitar-grigorov/mcp-file-tools"
 
-	// RepoURL is the GitHub repository URL
-	RepoURL = "https://github.com/dimitar-grigorov/mcp-file-tools"
-
-	// CheckInterval is the minimum time between API calls (respects GitHub rate limits)
+	// CheckInterval respects GitHub's rate limits.
 	CheckInterval = 30 * time.Minute
 
-	// httpTimeout is the timeout for HTTP requests to GitHub API
 	httpTimeout = 10 * time.Second
 )
 
@@ -105,7 +101,6 @@ func updateSteps(env install.Env) string {
 	return steps
 }
 
-// fetchLatestVersion queries the GitHub API for the latest release tag.
 func fetchLatestVersion(ctx context.Context) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, UpdateCheckURL, nil)
 	if err != nil {
