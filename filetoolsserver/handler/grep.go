@@ -88,10 +88,7 @@ func (h *Handler) HandleGrep(ctx context.Context, req *mcp.CallToolRequest, inpu
 	if maxMatches <= 0 {
 		maxMatches = defaultMaxMatches
 	}
-	offset := input.Offset
-	if offset < 0 {
-		offset = 0
-	}
+	offset := max(input.Offset, 0)
 	searchEncoding, encodingHint := resolveGrepEncoding(input.Encoding)
 	opts := grepOptions{
 		re:          re,
@@ -122,8 +119,7 @@ func (h *Handler) HandleGrep(ctx context.Context, req *mcp.CallToolRequest, inpu
 	return &mcp.CallToolResult{}, output, nil
 }
 
-// resolveGrepEncoding checks the requested encoding. An unknown name falls back to
-// per-file detection rather than failing the search, and says so.
+// resolveGrepEncoding falls back to per-file detection on an unknown name, rather than failing the search, and says so.
 func resolveGrepEncoding(requested string) (string, string) {
 	if _, ok := encoding.Canonical(requested); ok || requested == "" {
 		return requested, ""
@@ -188,8 +184,7 @@ func (h *Handler) collectFiles(ctx context.Context, paths, includes, excludes []
 	return files
 }
 
-// expandBasenameGlobs expands {a,b} alternatives and drops a leading "**/",
-// which models used to path globs send out of habit.
+// expandBasenameGlobs expands {a,b} alternatives and drops a leading "**/", which models send out of habit.
 func expandBasenameGlobs(patterns []string) []string {
 	if len(patterns) == 0 {
 		return patterns
@@ -222,8 +217,7 @@ func shouldIncludeFile(path string, includes, excludes []string) bool {
 	return false
 }
 
-// searchFiles runs bounded-concurrent, committing in file order so a truncated
-// result is the same on every run.
+// searchFiles runs bounded-concurrent, committing in file order so a truncated result is the same on every run.
 func (h *Handler) searchFiles(ctx context.Context, files []string, opts grepOptions, maxMatches, offset int) GrepOutput {
 	out := GrepOutput{Matches: []GrepMatch{}}
 	skip, taken := offset, 0
@@ -403,17 +397,10 @@ func decodeFileContent(data []byte, forcedEncoding, fallback string) (string, st
 	if fallback == "" {
 		fallback = "utf-8"
 	}
-	encodingName := fallback
-	if forcedEncoding != "" {
-		if canonical, ok := encoding.Canonical(forcedEncoding); ok {
-			encodingName = canonical
-		} else {
-			encodingName = strings.ToLower(forcedEncoding)
-		}
-	} else {
-		encodingName = detectGrepEncoding(data, fallback)
+	if forcedEncoding == "" {
+		return decodeWithFallback(data, detectGrepEncoding(data, fallback), fallback)
 	}
-	return decodeWithFallback(data, encodingName, fallback)
+	return decodeWithFallback(data, canonicalCharset(forcedEncoding), fallback)
 }
 
 // decodeWithFallback decodes as name, retrying once as fallback if that fails.
@@ -432,10 +419,7 @@ func decodeWithFallback(data []byte, name, fallback string) (string, string) {
 
 // getContextBefore returns N lines before the given line index.
 func getContextBefore(lines []string, lineIdx, count int) []string {
-	start := lineIdx - count
-	if start < 0 {
-		start = 0
-	}
+	start := max(lineIdx-count, 0)
 	if start >= lineIdx {
 		return nil
 	}
@@ -444,10 +428,7 @@ func getContextBefore(lines []string, lineIdx, count int) []string {
 
 // getContextAfter returns N lines after the given line index.
 func getContextAfter(lines []string, lineIdx, count int) []string {
-	end := lineIdx + count + 1
-	if end > len(lines) {
-		end = len(lines)
-	}
+	end := min(lineIdx+count+1, len(lines))
 	if lineIdx+1 >= end {
 		return nil
 	}
