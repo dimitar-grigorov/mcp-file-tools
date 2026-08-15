@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -50,7 +51,10 @@ type fileHits struct {
 
 // HandleGrep searches for a pattern in files with encoding support.
 func (h *Handler) HandleGrep(ctx context.Context, req *mcp.CallToolRequest, input GrepInput) (*mcp.CallToolResult, GrepOutput, error) {
-	if input.Pattern == "" {
+	if input.Pattern != "" && len(input.Patterns) > 0 {
+		return errorResult("pattern and patterns cannot be used together"), GrepOutput{}, nil
+	}
+	if input.Pattern == "" && len(input.Patterns) == 0 {
 		return errorResult("pattern is required"), GrepOutput{}, nil
 	}
 	if len(input.Paths) == 0 {
@@ -80,9 +84,16 @@ func (h *Handler) HandleGrep(ctx context.Context, req *mcp.CallToolRequest, inpu
 		return errorResult(fmt.Sprintf("invalid outputMode %q: use %q, %q or %q",
 			input.OutputMode, outputModeContent, outputModeFiles, outputModeCount)), GrepOutput{}, nil
 	}
-	re, err := compilePattern(input.Pattern, input.CaseSensitive)
+	patterns := input.Patterns
+	if input.Pattern != "" {
+		patterns = []string{input.Pattern}
+	}
+	if slices.Contains(patterns, "") {
+		return errorResult("patterns contains an empty pattern, which matches every line"), GrepOutput{}, nil
+	}
+	re, err := compilePattern(anyOf(patterns), input.CaseSensitive)
 	if err != nil {
-		return errorResult(fmt.Sprintf("invalid regex pattern: %v", err)), GrepOutput{}, nil
+		return errorResult(namePatternError(patterns, input.CaseSensitive, err)), GrepOutput{}, nil
 	}
 	maxMatches := input.MaxMatches
 	if maxMatches <= 0 {
@@ -136,6 +147,24 @@ func compilePattern(pattern string, caseSensitive *bool) (*regexp.Regexp, error)
 		pattern = "(?i)" + pattern
 	}
 	return regexp.Compile(pattern)
+}
+
+// anyOf folds patterns into one alternation — the search stays single-pattern code, RE2 walks each line once, and grouping stops a pattern's own "a|b" swallowing the next.
+func anyOf(patterns []string) string {
+	if len(patterns) == 1 {
+		return patterns[0]
+	}
+	return "(?:" + strings.Join(patterns, ")|(?:") + ")"
+}
+
+// namePatternError says which pattern is bad; the alternation's own error points into a string the caller never wrote.
+func namePatternError(patterns []string, caseSensitive *bool, err error) string {
+	for _, p := range patterns {
+		if _, e := compilePattern(p, caseSensitive); e != nil {
+			return fmt.Sprintf("invalid regex pattern %q: %v", p, e)
+		}
+	}
+	return fmt.Sprintf("invalid regex pattern: %v", err)
 }
 
 // collectFiles gathers all files to search from the given paths.
@@ -403,8 +432,7 @@ func decodeFileContent(data []byte, forcedEncoding, fallback string) (string, st
 	return decodeWithFallback(data, canonicalCharset(forcedEncoding), fallback)
 }
 
-// decodeWithFallback decodes as name, retrying once as fallback if that fails.
-// The BOM is dropped so it doesn't shift line 1 columns or break ^ anchors.
+// decodeWithFallback decodes as name, retrying once as fallback; the BOM is dropped so it can't shift line 1 columns or break ^ anchors.
 func decodeWithFallback(data []byte, name, fallback string) (string, string) {
 	if decoded, err := encoding.Decode(data, name); err == nil {
 		content, _ := trimContentBOM(decoded)

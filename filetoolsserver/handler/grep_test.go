@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/dimitar-grigorov/mcp-file-tools/internal/config"
@@ -533,5 +534,89 @@ func TestHandleGrep_IncludeBracesAndDoubleStarPrefix(t *testing.T) {
 	}
 	if output.FilesMatched != 2 {
 		t.Errorf("filesMatched = %d, want 2: %+v", output.FilesMatched, output)
+	}
+}
+
+// patternsFixture writes one file whose lines each match a different pattern.
+func patternsFixture(t *testing.T) (string, string) {
+	t.Helper()
+	tempDir := t.TempDir()
+	path := filepath.Join(tempDir, "test.txt")
+	if err := os.WriteFile(path, []byte("alpha here\nnothing\nbravo here\ncharlie here\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	return tempDir, path
+}
+
+func TestHandleGrep_Patterns(t *testing.T) {
+	tempDir, path := patternsFixture(t)
+	h := NewHandler([]string{tempDir})
+	caseInsensitive := false
+
+	tests := []struct {
+		name     string
+		input    GrepInput
+		want     int
+		wantText []string
+	}{
+		{"any of", GrepInput{Patterns: []string{"alpha", "charlie"}}, 2, []string{"alpha", "charlie"}},
+		// Without the grouping, "alpha|bravo" + "charlie" would parse as "alpha|bravocharlie".
+		{"alternation inside a pattern", GrepInput{Patterns: []string{"alpha|bravo", "charlie"}}, 3, nil},
+		{"case insensitive", GrepInput{Patterns: []string{"ALPHA", "CHARLIE"}, CaseSensitive: &caseInsensitive}, 2, nil},
+		{"one entry behaves like pattern", GrepInput{Patterns: []string{"bravo"}}, 1, nil},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.input.Paths = []string{path}
+			tc.input.MatchesOnly = tc.wantText != nil
+			result, output, err := h.HandleGrep(context.Background(), nil, tc.input)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if result.IsError {
+				t.Fatalf("unexpected error: %s", result.Content[0].(*mcp.TextContent).Text)
+			}
+			if output.TotalMatches != tc.want {
+				t.Fatalf("totalMatches = %d, want %d: %+v", output.TotalMatches, tc.want, output.Matches)
+			}
+			// matchesOnly tells which pattern hit.
+			for i, want := range tc.wantText {
+				if output.Matches[i].Text != want {
+					t.Errorf("match %d text = %q, want %q", i, output.Matches[i].Text, want)
+				}
+			}
+		})
+	}
+}
+
+func TestHandleGrep_PatternsRejected(t *testing.T) {
+	tempDir, path := patternsFixture(t)
+	h := NewHandler([]string{tempDir})
+
+	tests := []struct {
+		name  string
+		input GrepInput
+		want  string
+	}{
+		{"both", GrepInput{Pattern: "alpha", Patterns: []string{"bravo"}}, "pattern and patterns cannot be used together"},
+		{"neither", GrepInput{}, "pattern is required"},
+		{"empty entry", GrepInput{Patterns: []string{"alpha", ""}}, "patterns contains an empty pattern, which matches every line"},
+		{"invalid is named", GrepInput{Patterns: []string{"alpha", "charlie("}}, `invalid regex pattern "charlie("`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.input.Paths = []string{path}
+			result, _, err := h.HandleGrep(context.Background(), nil, tc.input)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !result.IsError {
+				t.Fatal("expected tool error")
+			}
+			got := result.Content[0].(*mcp.TextContent).Text
+			if !strings.HasPrefix(got, tc.want) {
+				t.Fatalf("error = %q, want prefix %q", got, tc.want)
+			}
+		})
 	}
 }

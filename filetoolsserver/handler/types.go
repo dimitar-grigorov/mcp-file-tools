@@ -5,8 +5,7 @@ package handler
 
 import "github.com/dimitar-grigorov/mcp-file-tools/internal/encoding"
 
-// ReadTextFileInput for reading files with encoding support.
-// Offset/Limit are 1-indexed line numbers for partial reads.
+// ReadTextFileInput for reading files with encoding support; Offset/Limit are 1-indexed line numbers for a partial read.
 type ReadTextFileInput struct {
 	Path          string `json:"path"`
 	Encoding      string `json:"encoding,omitempty"`
@@ -29,8 +28,7 @@ type ReadTextFileOutput struct {
 }
 
 // WriteFileInput - encoding defaults to the existing file's encoding, else utf-8.
-// BOM: "auto" (default), "always", "never", "preserve".
-// LineEndings: "preserve" (default), "crlf", "lf", "asis".
+// BOM: "auto" (default), "always", "never", "preserve"; LineEndings: "preserve" (default), "crlf", "lf", "asis".
 type WriteFileInput struct {
 	Path        string `json:"path"`
 	Content     string `json:"content"`
@@ -122,8 +120,7 @@ type MoveFileOutput struct {
 	Message string `json:"message"`
 }
 
-// SearchFilesInput - pattern supports *.ext and **/*.ext syntax.
-// SortBy is "name" (default), "mtime" or "size".
+// SearchFilesInput - pattern supports *.ext and **/*.ext syntax; SortBy is "name" (default), "mtime" or "size".
 type SearchFilesInput struct {
 	Path             string   `json:"path"`
 	Pattern          string   `json:"pattern"`
@@ -146,8 +143,7 @@ type EditOperation struct {
 	ReplaceAll bool     `json:"replaceAll,omitempty"` // required when oldText matches more than once
 }
 
-// EditFileInput applies text replacements with whitespace-flexible matching.
-// Set DryRun to preview changes without writing.
+// EditFileInput applies text replacements with whitespace-flexible matching; DryRun previews without writing.
 type EditFileInput struct {
 	Path          string          `json:"path"`
 	Edits         []EditOperation `json:"edits,omitempty"`
@@ -233,8 +229,7 @@ type CopyFileOutput struct {
 	Message string `json:"message"`
 }
 
-// ConvertEncodingInput converts between encodings. From is auto-detected if empty.
-// BOM: "auto" (default), "always", "never", "preserve".
+// ConvertEncodingInput converts between encodings; From is auto-detected if empty, BOM is "auto" (default), "always", "never" or "preserve".
 // Pass either Path (one file) or Paths (a batch), never both.
 type ConvertEncodingInput struct {
 	Path   string   `json:"path,omitempty"`
@@ -262,8 +257,7 @@ type ConvertFileResult struct {
 	UnsupportedCount int                        `json:"unsupportedCount,omitempty"`
 }
 
-// ConvertEncodingOutput keeps the flat fields for a single Path; Results and the
-// counts are populated only for a Paths batch.
+// ConvertEncodingOutput keeps the flat fields for a single Path; Results and the counts are filled only for a Paths batch.
 type ConvertEncodingOutput struct {
 	Message        string `json:"message"`
 	SourceEncoding string `json:"sourceEncoding,omitempty"`
@@ -280,10 +274,10 @@ type ConvertEncodingOutput struct {
 	Errors       []string            `json:"errors,omitempty"`
 }
 
-// GrepInput for searching file contents with regex.
-// OutputMode: "content" (default), "files_with_matches", "count".
+// GrepInput for searching file contents with regex; OutputMode is "content" (default), "files_with_matches" or "count".
 type GrepInput struct {
 	Pattern          string   `json:"pattern"`
+	Patterns         []string `json:"patterns,omitempty"` // match any of these, in one pass
 	Paths            []string `json:"paths"`
 	CaseSensitive    *bool    `json:"caseSensitive,omitempty"` // defaults to true
 	ContextBefore    int      `json:"contextBefore,omitempty"`
@@ -334,8 +328,7 @@ type DetectLineEndingsInput struct {
 	Encoding string `json:"encoding,omitempty"`
 }
 
-// ChangeLineEndingsInput converts line endings in a file.
-// Style must be "lf" or "crlf".
+// ChangeLineEndingsInput converts line endings in a file; Style must be "lf" or "crlf".
 type ChangeLineEndingsInput struct {
 	Path     string `json:"path"`
 	Style    string `json:"style"`
@@ -349,9 +342,8 @@ type ChangeLineEndingsOutput struct {
 	LinesChanged  int    `json:"linesChanged"`
 }
 
-// ManageBomInput manages Unicode BOM (Byte Order Mark) in files.
-// Action: "detect" (check for BOM), "strip" (remove BOM), "add" (prepend BOM).
-// Encoding is required for "add" action: utf-8, utf-16-le, utf-16-be, utf-32-le, utf-32-be.
+// ManageBomInput manages a Unicode BOM; Action is "detect", "strip" or "add".
+// Encoding is required for "add": utf-8, utf-16-le, utf-16-be, utf-32-le, utf-32-be.
 type ManageBomInput struct {
 	Path     string `json:"path"`
 	Action   string `json:"action"`
@@ -366,9 +358,7 @@ type ManageBomOutput struct {
 	Changed  bool   `json:"changed"`
 }
 
-// ManageLineEndingsInput manages line endings in files.
-// Action: "detect" (report style), "convert" (rewrite to Style).
-// Style is required for "convert": "lf" or "crlf".
+// ManageLineEndingsInput manages line endings; Action is "detect" (report style) or "convert" (rewrite to Style, "lf" or "crlf").
 type ManageLineEndingsInput struct {
 	Path     string `json:"path"`
 	Action   string `json:"action"`
