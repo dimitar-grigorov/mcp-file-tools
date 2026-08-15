@@ -80,7 +80,6 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 	// Guided workflows, surfaced by clients as user commands.
 	registerPrompts(server)
 
-	// Register all tools using the new AddTool API with annotations
 	// All handlers are wrapped with recovery middleware (and logging if logger is provided)
 
 	// Orient: find files and directories

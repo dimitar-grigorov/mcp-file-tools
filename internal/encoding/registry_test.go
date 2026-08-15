@@ -116,7 +116,6 @@ func TestListEncodings(t *testing.T) {
 		}
 	}
 
-	// Verify we have the expected number of encodings (25)
 	if len(items) != 25 {
 		t.Errorf("ListEncodings() returned %d items, want 25", len(items))
 	}

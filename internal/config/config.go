@@ -50,7 +50,6 @@ func Load() *Config {
 		MemoryThreshold: DefaultMaxSize,
 	}
 
-	// Load default encoding from environment
 	if enc := os.Getenv(EnvDefaultEncoding); enc != "" {
 		if _, ok := encoding.Get(enc); ok {
 			cfg.DefaultEncoding = enc
@@ -60,7 +59,6 @@ func Load() *Config {
 		}
 	}
 
-	// Load default line endings from environment
 	switch strings.ToLower(strings.TrimSpace(os.Getenv(EnvDefaultLineEnding))) {
 	case "crlf":
 		cfg.DefaultLineEndings = "crlf"
@@ -71,10 +69,8 @@ func Load() *Config {
 		slog.Warn("invalid MCP_DEFAULT_LINE_ENDINGS, ignoring", "value", os.Getenv(EnvDefaultLineEnding))
 	}
 
-	// Load detection candidates from environment
 	cfg.DetectionCandidates = parseDetectionCandidates(os.Getenv(EnvDetectionCandidates))
 
-	// Load memory threshold from environment
 	if sizeStr := os.Getenv(EnvMemoryThreshold); sizeStr != "" {
 		if size, err := strconv.ParseInt(sizeStr, 10, 64); err == nil && size > 0 {
 			cfg.MemoryThreshold = size
