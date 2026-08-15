@@ -4,6 +4,7 @@
 package handler
 
 import (
+	"log/slog"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -53,8 +54,7 @@ func (h *Handler) plainUTF8HintFor(path, encodingName string, hasBOM bool) strin
 	return plainUTF8Hint
 }
 
-// TODO(2027-01): drop the transition notice — it runs to the end of 2026.
-// Phrased as an instruction because models relay instructions and ignore trivia.
+// TODO(2027-01): drop the transition notice — it runs to the end of 2026. Phrased as an instruction because models relay instructions and ignore trivia.
 const utf8DefaultNotice = " Tell the user once: new files now default to utf-8. " +
 	"Before 2.0.0 the default was cp1251. Existing files still keep their own encoding. " +
 	"To restore the old behaviour, set MCP_DEFAULT_ENCODING=cp1251."
@@ -95,6 +95,11 @@ func NewHandler(allowedDirs []string, opts ...Option) *Handler {
 		opt(h)
 	}
 
+	// Detection is package state in encoding, far below any handler; applied here so both config.Load and WithConfig reach it.
+	if err := encoding.SetDetectionCandidates(h.config.DetectionCandidates); err != nil {
+		slog.Warn("invalid "+config.EnvDetectionCandidates+", detection stays unrestricted", "error", err)
+	}
+
 	return h
 }
 
@@ -124,8 +129,7 @@ func (h *Handler) UpdateAllowedDirectories(newDirs []string) {
 	h.allowedDirs = normalizeAllowedDirs(newDirs)
 }
 
-// normalizeAllowedDirs canonicalizes every dir so validations compare like with like — a Windows 8.3
-// root would never match a long request path. Per dir, so one unusable path doesn't discard the rest.
+// normalizeAllowedDirs canonicalizes each dir so validations compare like with like (a Windows 8.3 root never matches a long path); per dir, so one bad path doesn't discard the rest.
 func normalizeAllowedDirs(dirs []string) []string {
 	normalized := make([]string, 0, len(dirs))
 	for _, dir := range dirs {

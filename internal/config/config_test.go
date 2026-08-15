@@ -5,6 +5,7 @@ package config
 
 import (
 	"os"
+	"slices"
 	"testing"
 )
 
@@ -93,5 +94,23 @@ func TestLoad_NegativeMemoryThreshold(t *testing.T) {
 	// Should fall back to default when negative
 	if cfg.MemoryThreshold != DefaultMaxSize {
 		t.Errorf("expected fallback to %d for negative threshold, got %d", DefaultMaxSize, cfg.MemoryThreshold)
+	}
+}
+
+func TestLoad_DetectionCandidates(t *testing.T) {
+	t.Setenv(EnvDetectionCandidates, " utf8 , windows-1252 ,, klingon-1 ")
+
+	got := Load().DetectionCandidates
+	want := []string{"utf-8", "windows-1252"}
+	if !slices.Equal(got, want) {
+		t.Fatalf("candidates = %v, want %v (canonicalized, blanks and unknowns dropped)", got, want)
+	}
+}
+
+func TestLoad_DetectionCandidatesUnset(t *testing.T) {
+	t.Setenv(EnvDetectionCandidates, "")
+
+	if got := Load().DetectionCandidates; got != nil {
+		t.Fatalf("candidates = %v, want nil (unrestricted)", got)
 	}
 }

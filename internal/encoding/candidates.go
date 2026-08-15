@@ -22,8 +22,7 @@ type Candidate struct {
 	Supported  bool // in the registry, so usable as an encoding parameter
 }
 
-// candidates ranks what the bytes could be, best first. Nil once a BOM or the
-// UTF-16 classifier decided: nothing to choose between.
+// candidates ranks what the bytes could be, best first; nil once a BOM or the UTF-16 classifier decided, as there is nothing to choose between.
 func candidates(data []byte) []Candidate {
 	if _, ok := DetectBOM(data); ok {
 		return nil
@@ -38,7 +37,8 @@ func candidates(data []byte) []Candidate {
 	seen := make(map[string]bool)
 	for _, result := range chardet.DetectAll(data) {
 		charset, confidence := correctCharset(strings.ToLower(result.Encoding), int(result.Confidence*100), data)
-		if charset == "" {
+		// A pinned set rules out alternatives too: offering one would contradict the verdict.
+		if charset == "" || !charsetAllowed(charset) {
 			continue
 		}
 		// The registry's own name, so the agent can pass it straight back.

@@ -15,9 +15,10 @@ import (
 
 const (
 	// Environment variable names
-	EnvDefaultEncoding   = "MCP_DEFAULT_ENCODING"
-	EnvMemoryThreshold   = "MCP_MEMORY_THRESHOLD"
-	EnvDefaultLineEnding = "MCP_DEFAULT_LINE_ENDINGS"
+	EnvDefaultEncoding     = "MCP_DEFAULT_ENCODING"
+	EnvMemoryThreshold     = "MCP_MEMORY_THRESHOLD"
+	EnvDefaultLineEnding   = "MCP_DEFAULT_LINE_ENDINGS"
+	EnvDetectionCandidates = "MCP_DETECTION_CANDIDATES"
 
 	// Default values
 	DefaultEncoding = "utf-8"
@@ -26,23 +27,20 @@ const (
 
 // Config holds server configuration loaded from environment variables.
 type Config struct {
-	// DefaultEncoding is the fallback for write_file/edit_file: new files, and
-	// existing files with inconclusive detection (e.g. pure ASCII).
-	// Set via MCP_DEFAULT_ENCODING. Default: "utf-8" ("cp1251" for legacy codebases).
+	// DefaultEncoding is the write fallback for new files and inconclusive detection.
 	DefaultEncoding string
 
 	// DefaultEncodingFromEnv reports whether MCP_DEFAULT_ENCODING set DefaultEncoding.
 	DefaultEncodingFromEnv bool
 
-	// MemoryThreshold: files smaller load fully into memory, larger stream.
-	// Also gates encoding detection mode (full vs sample).
-	// Set via MCP_MEMORY_THRESHOLD. Default: 67108864 (64MB)
+	// MemoryThreshold: files below load fully, above stream; also picks full vs sample detection.
 	MemoryThreshold int64
 
-	// DefaultLineEndings is the fallback for write_file on a new file, or one with
-	// no line endings yet. Set via MCP_DEFAULT_LINE_ENDINGS ("crlf"/"lf").
-	// Empty means write the content unchanged.
+	// DefaultLineEndings ("crlf"/"lf") is the write fallback; empty writes content unchanged.
 	DefaultLineEndings string
+
+	// DetectionCandidates pins what detection may answer, in priority order; empty is unrestricted.
+	DetectionCandidates []string
 }
 
 // Load reads configuration from environment variables with sensible defaults.
@@ -73,6 +71,9 @@ func Load() *Config {
 		slog.Warn("invalid MCP_DEFAULT_LINE_ENDINGS, ignoring", "value", os.Getenv(EnvDefaultLineEnding))
 	}
 
+	// Load detection candidates from environment
+	cfg.DetectionCandidates = parseDetectionCandidates(os.Getenv(EnvDetectionCandidates))
+
 	// Load memory threshold from environment
 	if sizeStr := os.Getenv(EnvMemoryThreshold); sizeStr != "" {
 		if size, err := strconv.ParseInt(sizeStr, 10, 64); err == nil && size > 0 {
@@ -81,4 +82,21 @@ func Load() *Config {
 	}
 
 	return cfg
+}
+
+// parseDetectionCandidates canonicalizes a comma-separated list, skipping names the registry does not know.
+func parseDetectionCandidates(raw string) []string {
+	var candidates []string
+	for name := range strings.SplitSeq(raw, ",") {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			continue
+		}
+		if canonical, ok := encoding.Canonical(name); ok {
+			candidates = append(candidates, canonical)
+		} else {
+			slog.Warn("unknown encoding in "+EnvDetectionCandidates+", skipping", "value", name)
+		}
+	}
+	return candidates
 }

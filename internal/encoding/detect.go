@@ -123,7 +123,7 @@ func Detect(data []byte) DetectionResult {
 
 	// BOM-less UTF-16 is classified structurally; chardet never sees clean UTF-16.
 	if mayContainUTF16(data) {
-		if result, handled := detectUTF16(data); handled {
+		if result, handled := detectUTF16(data); handled && charsetAllowed(result.Charset) {
 			return result
 		}
 	}
@@ -147,8 +147,18 @@ func mayContainUTF16(data []byte) bool {
 	return controls*100 >= len(data)*20
 }
 
-// detectLegacy is the chardet-based path for single-byte and other legacy codecs.
+// detectLegacy is the chardet path for single-byte and other legacy codecs, and the one funnel every statistical verdict takes — so a pin is enforced here.
 func detectLegacy(data []byte) DetectionResult {
+	guess := guessLegacy(data)
+	if charsetAllowed(guess.Charset) {
+		return guess
+	}
+	// The guess fell outside the pin: exactly the statistical accident it exists to override.
+	return pinnedVerdict(data)
+}
+
+// guessLegacy is the unrestricted chardet verdict.
+func guessLegacy(data []byte) DetectionResult {
 	detected := chardet.Detect(data)
 	if detected.Encoding == "" {
 		if utf8.Valid(data) {
@@ -196,12 +206,17 @@ func correctCharset(charset string, confidence int, data []byte) (string, int) {
 
 // isSingleByteCharset reports whether name is a registered single-byte codec.
 func isSingleByteCharset(name string) bool {
+	return charmapFor(name) != nil
+}
+
+// charmapFor returns the byte table behind name, nil for multi-byte codecs and unknown names.
+func charmapFor(name string) *charmap.Charmap {
 	canonical, ok := Canonical(name)
 	if !ok {
-		return false
+		return nil
 	}
-	_, isCharmap := encodings[canonical].Encoding.(*charmap.Charmap)
-	return isCharmap
+	cm, _ := encodings[canonical].Encoding.(*charmap.Charmap)
+	return cm
 }
 
 // hasMultiByteUTF8 reports valid UTF-8 with at least one multi-byte sequence; pure ASCII is false.
@@ -273,7 +288,7 @@ func detectSampleFromData(data []byte) DetectionResult {
 
 // decideFromSamples is the shared verdict over samples: UTF-16 structurally, else chardet on the head then on all of them.
 func decideFromSamples(samples []byteSample, size int64) DetectionResult {
-	if result, handled := detectUTF16Samples(samples, size); handled {
+	if result, handled := detectUTF16Samples(samples, size); handled && charsetAllowed(result.Charset) {
 		return result
 	}
 	if result := detectLegacy(samples[0].data); result.Confidence >= HighConfidenceThreshold {
@@ -424,7 +439,7 @@ func detectChunkedFromReader(r io.ReaderAt, size int64) (DetectionResult, error)
 		offset += int64(n)
 	}
 
-	if result, handled := decideUTF16(leAnalyzer.Finish(), beAnalyzer.Finish()); handled {
+	if result, handled := decideUTF16(leAnalyzer.Finish(), beAnalyzer.Finish()); handled && charsetAllowed(result.Charset) {
 		return result, nil
 	}
 	if len(results) == 0 {
