@@ -40,8 +40,7 @@ type DetectionResult struct {
 	HasBOM     bool
 }
 
-// Conclusive reports whether the result settles which encoding to use. "ascii"
-// never does: it fits every encoding here, so it is no evidence, not a match.
+// Conclusive reports whether the result settles which encoding to use. "ascii" never does: it fits every encoding here.
 func (d DetectionResult) Conclusive() bool {
 	if d.Charset == "" || d.Charset == "ascii" || d.Confidence < MinConfidenceThreshold {
 		return false
@@ -165,8 +164,7 @@ func detectLegacy(data []byte) DetectionResult {
 	return DetectionResult{Charset: charset, Confidence: confidence}
 }
 
-// correctCharset fixes up one chardet verdict, shared by the single-verdict path
-// and the ranked candidate list. An empty name means the verdict is unusable.
+// correctCharset fixes up one chardet verdict for both the single-verdict and ranked paths; an empty name means unusable.
 func correctCharset(charset string, confidence int, data []byte) (string, int) {
 	// BOM-less UTF-16 is accepted only by the structural classifier.
 	if charset == "utf-16-le" || charset == "utf-16-be" || charset == "utf-16le" || charset == "utf-16be" {
@@ -259,43 +257,56 @@ func looksLikeGBK(data []byte) bool {
 // DetectSample samples beginning, middle and end; reports whether to trust it.
 // TODO: make private once grep and convert_encoding stream instead of buffering.
 func DetectSample(data []byte) (DetectionResult, bool) {
-	size := len(data)
-
-	if size <= SmallFileThreshold {
-		result := Detect(data)
-		return result, result.Confidence >= MinConfidenceThreshold
-	}
-	if result, ok := DetectBOM(data); ok {
-		return result, true
-	}
-
-	samples := detectionSamplesFromData(data)
-	if result, handled := detectUTF16Samples(samples, int64(size)); handled {
-		return result, result.Confidence >= MinConfidenceThreshold
-	}
-
-	result := detectLegacy(samples[0].data)
-	if result.Confidence >= HighConfidenceThreshold {
-		return result, true
-	}
-	result = detectLegacy(joinDetectionSamples(samples))
+	result := detectSampleFromData(data)
 	return result, result.Confidence >= MinConfidenceThreshold
 }
 
-// detectionSamplesFromData slices even-aligned beginning, middle, and end chunks.
-func detectionSamplesFromData(data []byte) []byteSample {
-	size := len(data)
-	samples := []byteSample{{data: data[:min(ChunkSize, size)], offset: 0}}
+func detectSampleFromData(data []byte) DetectionResult {
+	if len(data) <= SmallFileThreshold {
+		return Detect(data)
+	}
+	if result, ok := DetectBOM(data); ok {
+		return result
+	}
+	return decideFromSamples(detectionSamplesFromData(data), int64(len(data)))
+}
 
+// decideFromSamples is the shared verdict over samples: UTF-16 structurally, else chardet on the head then on all of them.
+func decideFromSamples(samples []byteSample, size int64) DetectionResult {
+	if result, handled := detectUTF16Samples(samples, size); handled {
+		return result
+	}
+	if result := detectLegacy(samples[0].data); result.Confidence >= HighConfidenceThreshold {
+		return result
+	}
+	return detectLegacy(joinDetectionSamples(samples))
+}
+
+// detectionOffsets returns even-aligned begin/middle/end starts, shared so both paths sample the same bytes.
+func detectionOffsets(size int64) []int64 {
+	offsets := []int64{0}
 	if size > ChunkSize*2 {
 		middle := (size - ChunkSize) / 2
-		middle -= middle % 2
-		samples = append(samples, byteSample{data: data[middle : middle+ChunkSize], offset: int64(middle)})
+		offsets = append(offsets, middle-middle%2)
 	}
 	if size > ChunkSize {
 		end := size - ChunkSize
-		end -= end % 2
-		samples = append(samples, byteSample{data: data[end:], offset: int64(end)})
+		offsets = append(offsets, end-end%2)
+	}
+	return offsets
+}
+
+// detectionSamplesFromData slices the sample chunks out of an in-memory buffer.
+func detectionSamplesFromData(data []byte) []byteSample {
+	size := int64(len(data))
+	offsets := detectionOffsets(size)
+	samples := make([]byteSample, 0, len(offsets))
+	for i, offset := range offsets {
+		end := min(offset+ChunkSize, size)
+		if i == len(offsets)-1 {
+			end = size // final sample runs to EOF
+		}
+		samples = append(samples, byteSample{data: data[offset:end], offset: offset})
 	}
 	return samples
 }
@@ -341,31 +352,12 @@ func detectSampleFromReader(r io.ReaderAt, size int64) (DetectionResult, error) 
 	if result, ok := DetectBOM(samples[0].data); ok {
 		return result, nil
 	}
-	if result, handled := detectUTF16Samples(samples, size); handled {
-		return result, nil
-	}
-
-	result := detectLegacy(samples[0].data)
-	if result.Confidence >= HighConfidenceThreshold {
-		return result, nil
-	}
-	return detectLegacy(joinDetectionSamples(samples)), nil
+	return decideFromSamples(samples, size), nil
 }
 
-// readDetectionSamples reads even-aligned beginning, middle, and end samples.
+// readDetectionSamples reads the sample chunks through a ReaderAt.
 func readDetectionSamples(r io.ReaderAt, size int64) ([]byteSample, error) {
-	offsets := []int64{0}
-	if size > int64(ChunkSize*2) {
-		middle := (size - int64(ChunkSize)) / 2
-		middle -= middle % 2
-		offsets = append(offsets, middle)
-	}
-	if size > int64(ChunkSize) {
-		end := size - int64(ChunkSize)
-		end -= end % 2
-		offsets = append(offsets, end)
-	}
-
+	offsets := detectionOffsets(size)
 	samples := make([]byteSample, 0, len(offsets))
 	for i, offset := range offsets {
 		length := min(int64(ChunkSize), size-offset)
