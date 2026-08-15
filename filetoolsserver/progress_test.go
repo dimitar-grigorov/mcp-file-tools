@@ -8,14 +8,20 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// connectWithProgress returns a session whose progress notifications are collected.
-func connectWithProgress(t *testing.T, dir string) (*mcp.ClientSession, func() []*mcp.ProgressNotificationParams) {
+// waitUntil blocks until the notifications satisfy done or within elapses, returning whatever arrived.
+type waitUntil func(within time.Duration, done func([]*mcp.ProgressNotificationParams) bool) []*mcp.ProgressNotificationParams
+
+// connectWithProgress collects a session's progress notifications. Waiting beats reading them straight
+// after a call: the SDK retires a response on the read path but queues notifications for another goroutine.
+func connectWithProgress(t *testing.T, dir string) (*mcp.ClientSession, waitUntil) {
 	t.Helper()
 	ctx := context.Background()
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
@@ -29,11 +35,16 @@ func connectWithProgress(t *testing.T, dir string) (*mcp.ClientSession, func() [
 
 	var mu sync.Mutex
 	var seen []*mcp.ProgressNotificationParams
+	arrived := make(chan struct{}, 1)
 	client := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "0"}, &mcp.ClientOptions{
 		ProgressNotificationHandler: func(_ context.Context, req *mcp.ProgressNotificationClientRequest) {
 			mu.Lock()
-			defer mu.Unlock()
 			seen = append(seen, req.Params)
+			mu.Unlock()
+			select {
+			case arrived <- struct{}{}:
+			default:
+			}
 		},
 	})
 	clientSession, err := client.Connect(ctx, clientTransport, nil)
@@ -42,10 +53,21 @@ func connectWithProgress(t *testing.T, dir string) (*mcp.ClientSession, func() [
 	}
 	t.Cleanup(func() { clientSession.Close() })
 
-	return clientSession, func() []*mcp.ProgressNotificationParams {
-		mu.Lock()
-		defer mu.Unlock()
-		return seen
+	return clientSession, func(within time.Duration, done func([]*mcp.ProgressNotificationParams) bool) []*mcp.ProgressNotificationParams {
+		deadline := time.After(within)
+		for {
+			mu.Lock()
+			got := slices.Clone(seen)
+			mu.Unlock()
+			if done(got) {
+				return got
+			}
+			select {
+			case <-arrived:
+			case <-deadline:
+				return got
+			}
+		}
 	}
 }
 
@@ -89,7 +111,7 @@ func TestBatchConvertReportsProgress(t *testing.T) {
 
 	callConvert(t, session, paths, true)
 
-	seen := notifications()
+	seen := notifications(5*time.Second, func(s []*mcp.ProgressNotificationParams) bool { return len(s) >= len(paths) })
 	if len(seen) != len(paths) {
 		t.Fatalf("got %d notifications, want %d: %+v", len(seen), len(paths), seen)
 	}
@@ -111,7 +133,9 @@ func TestBatchConvertQuietWithoutToken(t *testing.T) {
 
 	callConvert(t, session, paths, false)
 
-	if seen := notifications(); len(seen) != 0 {
+	// Give one a chance to arrive rather than checking before it could have.
+	seen := notifications(200*time.Millisecond, func(s []*mcp.ProgressNotificationParams) bool { return len(s) > 0 })
+	if len(seen) != 0 {
 		t.Errorf("got %d unrequested notifications: %+v", len(seen), seen)
 	}
 }
@@ -124,7 +148,9 @@ func TestBatchConvertThinsLargeBatches(t *testing.T) {
 
 	callConvert(t, session, paths, true)
 
-	seen := notifications()
+	seen := notifications(5*time.Second, func(s []*mcp.ProgressNotificationParams) bool {
+		return len(s) > 0 && s[len(s)-1].Progress == 250
+	})
 	if len(seen) == 0 || len(seen) > 101 {
 		t.Fatalf("got %d notifications for 250 files, want at most 101", len(seen))
 	}
