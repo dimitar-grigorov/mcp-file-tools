@@ -31,7 +31,7 @@ jobs:
       MCP_PUBLISHER_SHA256: 1370446bbe74d562608e8005a6ccce02d146a661fbd78674e11cc70b9618d6cf
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # A manual dispatch can outrun GoReleaser, which uploads the release assets
       # minutes after the tag lands. Wait for them rather than 404 on the race.
