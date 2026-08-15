@@ -83,7 +83,7 @@ func TestIsPathWithinAllowedDirectories_BasicCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := IsPathWithinAllowedDirectories(tt.path, tt.allowedDirs)
+			result := isPathWithinAllowedDirectories(tt.path, tt.allowedDirs)
 			if result != tt.expected {
 				t.Errorf("%s: expected %v, got %v", tt.description, tt.expected, result)
 			}
@@ -138,7 +138,7 @@ func TestIsPathWithinAllowedDirectories_SecurityVulnerabilities(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := IsPathWithinAllowedDirectories(tt.path, tt.allowedDirs)
+			result := isPathWithinAllowedDirectories(tt.path, tt.allowedDirs)
 			if result != tt.expected {
 				t.Errorf("%s: expected %v, got %v", tt.description, tt.expected, result)
 			}
@@ -151,7 +151,7 @@ func TestIsPathWithinAllowedDirectories_RootDirectory(t *testing.T) {
 		t.Skip("Windows roots require a drive letter - see TestIsPathWithinAllowedDirectories_WindowsPaths")
 	}
 
-	if !IsPathWithinAllowedDirectories("/tmp/project/file.txt", []string{"/"}) {
+	if !isPathWithinAllowedDirectories("/tmp/project/file.txt", []string{"/"}) {
 		t.Fatal("the filesystem root should allow an absolute descendant")
 	}
 }
@@ -228,7 +228,7 @@ func TestIsPathWithinAllowedDirectories_WindowsPaths(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := IsPathWithinAllowedDirectories(tt.path, tt.allowedDirs)
+			result := isPathWithinAllowedDirectories(tt.path, tt.allowedDirs)
 			if result != tt.expected {
 				t.Errorf("%s: expected %v, got %v", tt.description, tt.expected, result)
 			}
@@ -531,19 +531,19 @@ func TestExpandHome(t *testing.T) {
 	}
 
 	// Test ~ expands to home
-	if got := ExpandHome("~"); got != home {
-		t.Errorf("ExpandHome(~) = %q, want %q", got, home)
+	if got := expandHome("~"); got != home {
+		t.Errorf("expandHome(~) = %q, want %q", got, home)
 	}
 
 	// Test ~/path expands correctly
 	want := filepath.Join(home, "Documents")
-	if got := ExpandHome("~/Documents"); got != want {
-		t.Errorf("ExpandHome(~/Documents) = %q, want %q", got, want)
+	if got := expandHome("~/Documents"); got != want {
+		t.Errorf("expandHome(~/Documents) = %q, want %q", got, want)
 	}
 
 	// Test non-tilde paths unchanged
-	if got := ExpandHome("/usr/bin"); got != "/usr/bin" {
-		t.Errorf("ExpandHome(/usr/bin) = %q, want /usr/bin", got)
+	if got := expandHome("/usr/bin"); got != "/usr/bin" {
+		t.Errorf("expandHome(/usr/bin) = %q, want /usr/bin", got)
 	}
 }
 
@@ -570,7 +570,7 @@ func FuzzIsPathWithinAllowedDirectories(f *testing.F) {
 	allowedDirWithSep := allowedDir + "/"
 
 	f.Fuzz(func(t *testing.T, path string) {
-		result := IsPathWithinAllowedDirectories(path, []string{allowedDir})
+		result := isPathWithinAllowedDirectories(path, []string{allowedDir})
 
 		if !result {
 			return

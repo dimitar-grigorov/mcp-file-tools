@@ -59,8 +59,7 @@ const utf8DefaultNotice = " Tell the user once: new files now default to utf-8. 
 	"Before 2.0.0 the default was cp1251. Existing files still keep their own encoding. " +
 	"To restore the old behaviour, set MCP_DEFAULT_ENCODING=cp1251."
 
-// utf8TransitionNotice returns the notice the first time a new file takes the
-// built-in default, and "" every time after. Silent if the user set the default.
+// utf8TransitionNotice returns the notice once, on the first new file taking the built-in default. Silent if the user set it.
 func (h *Handler) utf8TransitionNotice() string {
 	if h.config.DefaultEncodingFromEnv {
 		return ""
@@ -82,8 +81,7 @@ func WithConfig(cfg *config.Config) Option {
 	}
 }
 
-// NewHandler creates a Handler for the given allowed directories. Without
-// WithConfig the configuration comes from the environment.
+// NewHandler creates a Handler for allowedDirs; without WithConfig the config comes from the environment.
 func NewHandler(allowedDirs []string, opts ...Option) *Handler {
 	cliDirs := normalizeAllowedDirs(allowedDirs)
 
@@ -126,14 +124,13 @@ func (h *Handler) UpdateAllowedDirectories(newDirs []string) {
 	h.allowedDirs = normalizeAllowedDirs(newDirs)
 }
 
-// normalizeAllowedDirs canonicalizes every dir so later validations compare like
-// with like — a Windows 8.3 root would otherwise never match a long request path.
-// Per dir, so one unusable path doesn't discard the rest.
+// normalizeAllowedDirs canonicalizes every dir so validations compare like with like — a Windows 8.3
+// root would never match a long request path. Per dir, so one unusable path doesn't discard the rest.
 func normalizeAllowedDirs(dirs []string) []string {
 	normalized := make([]string, 0, len(dirs))
 	for _, dir := range dirs {
-		if one, err := security.NormalizeAllowedDirs([]string{dir}); err == nil && len(one) == 1 {
-			normalized = append(normalized, one[0])
+		if one, err := security.NormalizeAllowedDir(dir); err == nil {
+			normalized = append(normalized, one)
 			continue
 		}
 		normalized = append(normalized, dir)
@@ -141,8 +138,7 @@ func normalizeAllowedDirs(dirs []string) []string {
 	return normalized
 }
 
-// MergeAllowedDirectories sets the allowed directories to the deduped union of the
-// CLI baseline and newDirs, so MCP roots augment rather than replace CLI args.
+// MergeAllowedDirectories sets the dirs to the deduped union of CLI baseline and newDirs — roots augment, not replace.
 func (h *Handler) MergeAllowedDirectories(newDirs []string) []string {
 	h.mu.Lock()
 	defer h.mu.Unlock()

@@ -93,19 +93,15 @@ func updateAllowedDirectoriesFromRoots(h *handler.Handler, rootURIs []string) {
 	for _, uri := range rootURIs {
 		rootPath := fileURIToPath(uri)
 
-		normalized, err := security.NormalizeAllowedDirs([]string{rootPath})
+		normalized, err := security.NormalizeAllowedDir(rootPath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to normalize root directory %s: %v\n", rootPath, err)
 			continue
 		}
-
-		if len(normalized) > 0 {
-			validatedDirs = append(validatedDirs, normalized[0])
-		}
+		validatedDirs = append(validatedDirs, normalized)
 	}
 
-	// Merge unconditionally: an empty or fully invalid list must revoke roots the
-	// client granted earlier, leaving only the CLI baseline.
+	// Merge unconditionally: an empty or invalid list must revoke roots granted earlier, leaving the CLI baseline.
 	merged := h.MergeAllowedDirectories(validatedDirs)
 	slog.Debug("merged allowed directories from MCP roots",
 		"roots", validatedDirs, "merged", merged)
