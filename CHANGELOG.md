@@ -6,6 +6,19 @@ versions see the [GitHub releases](https://github.com/dimitar-grigorov/mcp-file-
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`MCP_DETECTION_CANDIDATES` pins what detection may answer**, in priority order. A BOM
+  still wins and a guess inside the list keeps its confidence; one outside it gives way to
+  the first listed encoding that decodes the bytes cleanly, and nothing fitting means no
+  answer rather than a wrong one. Fixes Spanish CP1252 read as GBK. Unset changes nothing.
+- **`grep_text_files` takes `patterns`** — an array searched as one alternation, so a list
+  of names is one call and one pass; `matchesOnly` says which pattern hit.
+
+Both reimplemented from [Mario Rial](https://github.com/seguridadea1)'s fork.
+
 ## [4.1.0] - 2026-08-14
 
 ### Added

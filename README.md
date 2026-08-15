@@ -314,6 +314,7 @@ The server can be configured via environment variables:
 | `MCP_DEFAULT_ENCODING` | Default encoding for `write_file` on **new** files when none specified. Existing files keep their detected encoding. Set to `cp1251` to restore the pre-2.0.0 default. | `utf-8` |
 | `MCP_DEFAULT_LINE_ENDINGS` | Line endings for `write_file` on **new** files (`crlf`/`lf`). Existing files keep their own style regardless. | unset (write unchanged) |
 | `MCP_MEMORY_THRESHOLD` | Memory threshold in bytes. Files smaller are loaded into memory for faster I/O; larger files use streaming. Also affects encoding detection mode. | `67108864` (64MB) |
+| `MCP_DETECTION_CANDIDATES` | Comma-separated list pinning what detection may answer, in priority order — e.g. `utf-8,windows-1252`. See [Pinning the encodings](#pinning-the-encodings). | unset (detection unrestricted) |
 
 Set them with an `env` block in your config (Claude Desktop example):
 
@@ -330,6 +331,23 @@ Set them with an `env` block in your config (Claude Desktop example):
   }
 }
 ```
+
+### Pinning the encodings
+
+Detection is a guess, and guesses have blind spots: Spanish CP1252 like `MÓDULO
+FÍSICAMENTE ÚNICO` is plausible GBK — every uppercase accent before an ASCII letter is a
+valid hanzi pair — so it reads back as Chinese and edits fail with *"gbk cannot represent
+2 characters"*. If you know what the repo contains, say so:
+
+```json
+"env": { "MCP_DETECTION_CANDIDATES": "utf-8,windows-1252" }
+```
+
+A BOM still wins. A guess inside the list keeps its confidence; one outside it is dropped
+and the first listed encoding that decodes the bytes cleanly takes over, so order is your
+priority. Nothing fitting means no answer rather than a wrong one, and unlisted encodings
+stop appearing in `detect_encoding`'s `candidates` too. UTF-16/32 are named only by a BOM
+or the structural classifier, so listing them cannot make them a catch-all.
 
 ### Legacy teams (pre-2.0.0 behaviour)
 
@@ -426,6 +444,7 @@ Ideas that started in someone else's fork and were reimplemented here:
 - [@haobiao](https://github.com/haobiao) - GBK/GB18030, independently
 - [Hugo Rosário](https://github.com/WTC-ZoneSoft) - merging MCP roots with CLI allowed dirs
 - [@zoster81](https://github.com/zoster81) - UTF-16 line endings and grep, path containment fixes, write durability, BOM policy, ordered concurrency
+- [Mario Rial](https://github.com/seguridadea1) - pinning detection to known encodings, multi-pattern grep
 
 A PR gets your name on the commit instead of this list.
 

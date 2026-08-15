@@ -444,6 +444,7 @@ Search file contents using regex patterns with encoding support. Supports contex
 
 **Parameters:**
 - `pattern` (required): Regular expression pattern to search for
+- `patterns` (optional): Array of regexes; a line matching any of them is a hit
 - `paths` (required): Array of file or directory paths to search
 - `outputMode` (optional): `content` (default), `files_with_matches`, or `count`
 - `caseSensitive` (optional): Case-sensitive matching (default: true)
@@ -462,7 +463,12 @@ Directories in `paths` are searched recursively; individual files are searched d
 
 Patterns are matched against the file name only; `{a,b}` alternatives work and a leading
 `**/` is ignored. Built-in Grep's `glob`/`type` are not supported. Do not combine
-`include` with `includes`, or `exclude` with `excludes`.
+`include` with `includes`, `exclude` with `excludes`, or `pattern` with `patterns`.
+
+`patterns` sweeps a list of names in one call. The regexes are folded into one
+alternation, so every other parameter behaves as with a single `pattern` and each line is
+still scanned once; `matchesOnly` then says which pattern hit. An empty entry is rejected
+rather than matching everything, and an invalid regex is reported by name.
 
 **Example:**
 ```json
@@ -614,6 +620,9 @@ other tools cannot accept, so pick the next one:
 
 `read_text_file` puts the same ranking in `hint` when it fell back, `convert_encoding` in
 the error when it refuses an untrusted guess.
+
+Setting `MCP_DETECTION_CANDIDATES` pins the answer to a known list and filters `candidates`
+to it — see [Pinning the encodings](README.md#pinning-the-encodings).
 
 ### convert_encoding
 
