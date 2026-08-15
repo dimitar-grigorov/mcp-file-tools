@@ -13,14 +13,14 @@ import (
 	"golang.org/x/text/encoding/unicode"
 )
 
-type EncodingInfo struct {
+type encodingInfo struct {
 	Encoding    encoding.Encoding // nil = UTF-8 passthrough
 	DisplayName string
 	Aliases     []string
 	Description string
 }
 
-var encodings = map[string]EncodingInfo{
+var encodings = map[string]encodingInfo{
 	"utf-8":     {nil, "UTF-8", []string{"utf8", "ascii"}, "Unicode, no conversion"},
 	"utf-16-le": {unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM), "UTF-16 LE", []string{"utf16le", "utf-16le"}, "Unicode UTF-16 Little Endian"},
 	"utf-16-be": {unicode.UTF16(unicode.BigEndian, unicode.IgnoreBOM), "UTF-16 BE", []string{"utf16be", "utf-16be"}, "Unicode UTF-16 Big Endian"},
@@ -62,14 +62,14 @@ var encodings = map[string]EncodingInfo{
 	"gb18030": {simplifiedchinese.GB18030, "GB18030", []string{"gb-18030"}, "Chinese Simplified (GB18030, full Unicode)"},
 }
 
-// registry maps all names (canonical + aliases) to EncodingInfo for fast lookup.
-var registry map[string]*EncodingInfo
+// registry maps all names (canonical + aliases) to encodingInfo for fast lookup.
+var registry map[string]*encodingInfo
 
 // canonicalNames maps all names (canonical + aliases) to the canonical name.
 var canonicalNames map[string]string
 
 func init() {
-	registry = make(map[string]*EncodingInfo)
+	registry = make(map[string]*encodingInfo)
 	canonicalNames = make(map[string]string)
 	for canonical, info := range encodings {
 		infoCopy := info

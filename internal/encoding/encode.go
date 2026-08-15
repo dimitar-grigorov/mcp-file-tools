@@ -77,15 +77,15 @@ func Encode(content string, enc encoding.Encoding, charset string) ([]byte, erro
 	if err == nil {
 		return out, nil
 	}
-	if bad := FindUnsupported(content, enc, charset); bad != nil {
+	if bad := findUnsupported(content, enc, charset); bad != nil {
 		return nil, bad
 	}
 	return nil, err
 }
 
-// FindUnsupported reports what charset cannot represent, nil if it covers content.
+// findUnsupported reports what charset cannot represent, nil if it covers content.
 // Tests one rune at a time, so call it only after an encode has failed.
-func FindUnsupported(content string, enc encoding.Encoding, charset string) *UnsupportedError {
+func findUnsupported(content string, enc encoding.Encoding, charset string) *UnsupportedError {
 	encoder := enc.NewEncoder()
 	res := &UnsupportedError{Charset: charset}
 

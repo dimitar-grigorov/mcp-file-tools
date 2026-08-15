@@ -94,17 +94,17 @@ func TestEncodeCapsReportedRunes(t *testing.T) {
 
 func TestFindUnsupportedNilWhenCovered(t *testing.T) {
 	enc, _ := Get("cp1251")
-	if got := FindUnsupported("Привет ASCII 123", enc, "cp1251"); got != nil {
-		t.Errorf("FindUnsupported() = %v, want nil", got)
+	if got := findUnsupported("Привет ASCII 123", enc, "cp1251"); got != nil {
+		t.Errorf("findUnsupported() = %v, want nil", got)
 	}
 }
 
 func TestFindUnsupportedTracksColumnsAfterCRLF(t *testing.T) {
 	enc, _ := Get("cp1251")
 	// CRLF must not shift the reported column on the following line.
-	ue := FindUnsupported("a\r\nxä", enc, "cp1251")
+	ue := findUnsupported("a\r\nxä", enc, "cp1251")
 	if ue == nil {
-		t.Fatal("FindUnsupported() = nil, want an offender")
+		t.Fatal("findUnsupported() = nil, want an offender")
 	}
 	if ue.Runes[0].Line != 2 {
 		t.Errorf("line = %d, want 2", ue.Runes[0].Line)
