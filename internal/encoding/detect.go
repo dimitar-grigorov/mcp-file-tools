@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/wlynxg/chardet"
@@ -32,6 +33,28 @@ const (
 	gbkTrailGap      = 0x7F
 	gbkConfidenceCap = 85 // cap when GBK is recovered from a Latin guess
 )
+
+// Cyrillic spells words out of high bytes, in the same range Latin spends on the odd accent — which is why
+// chardet files sparse Cyrillic under a Latin table, and why the bytes can say otherwise.
+const (
+	cyrillicMinRun   = 3   // three letters in a row is a word, not an accent
+	cyrillicMinBytes = 12  // below this there is no text to judge
+	cyrillicMinShare = 0.8 // nearly every high byte belongs to one of those words
+)
+
+// cyrillicCodepages are the tables Cyrillic is written in, cp1251 first so a tie goes to the one the Windows world uses.
+// Only Cyrillic: chardet names Greek, Hebrew and Thai outright, and this test tells tables apart, never alphabets.
+var cyrillicCodepages = []struct {
+	name string
+	cm   *charmap.Charmap
+}{
+	{"windows-1251", charmap.Windows1251},
+	{"koi8-r", charmap.KOI8R},
+	{"koi8-u", charmap.KOI8U},
+	{"ibm866", charmap.CodePage866},
+	{"iso-8859-5", charmap.ISO8859_5},
+	{"x-mac-cyrillic", charmap.MacintoshCyrillic},
+}
 
 type DetectionResult struct {
 	Charset    string
@@ -182,13 +205,16 @@ func correctCharset(charset string, confidence int, data []byte) (string, int) {
 	switch charset {
 	case "gb2312", "hz-gb-2312":
 		charset = "gbk" // GBK is the superset real-world files use
-	case "iso-8859-1", "latin-1", "latin1", "windows-1252", "cp1252":
-		// chardet often mislabels GBK as single-byte Latin; correct it.
+	case "iso-8859-1", "latin-1", "latin1", "windows-1252", "cp1252", "macroman", "x-mac-roman", "macintosh":
+		// A Latin table wins by default on text that is mostly ASCII, so ask the high bytes what script they spell.
+		if cyrillic := cyrillicCodepage(data); cyrillic != "" {
+			return cyrillic, confidence
+		}
 		if looksLikeGBK(data) {
 			return "gbk", min(confidence, gbkConfidenceCap)
 		}
 	case "maccyrillic", "x-mac-cyrillic":
-		// chardet confuses MacCyrillic with Windows-1251; keep whichever decodes better.
+		// Here chardet has the script right and only the table wrong, so counting letters settles it.
 		if cyrillicLetters(data, charmap.Windows1251) >= cyrillicLetters(data, charmap.MacintoshCyrillic) {
 			return "windows-1251", confidence
 		}
@@ -230,6 +256,10 @@ func hasMultiByteUTF8(data []byte) bool {
 	return false
 }
 
+func isCyrillicLetter(r rune) bool {
+	return (r >= 'А' && r <= 'я') || r == 'Ё' || r == 'ё'
+}
+
 // cyrillicLetters counts high bytes that decode to modern Cyrillic letters under cm.
 func cyrillicLetters(data []byte, cm *charmap.Charmap) int {
 	n := 0
@@ -237,11 +267,71 @@ func cyrillicLetters(data []byte, cm *charmap.Charmap) int {
 		if b < 0x80 {
 			continue
 		}
-		if r := cm.DecodeByte(b); (r >= 'А' && r <= 'я') || r == 'Ё' || r == 'ё' {
+		if isCyrillicLetter(cm.DecodeByte(b)) {
 			n++
 		}
 	}
 	return n
+}
+
+// cyrillicCodepage names the table whose reading of the high bytes spells Cyrillic words, empty when none does.
+func cyrillicCodepage(data []byte) string {
+	high := 0
+	for _, b := range data {
+		if b >= 0x80 {
+			high++
+		}
+	}
+
+	name, best := "", 0
+	for _, codepage := range cyrillicCodepages {
+		if n := cyrillicWordBytes(data, codepage.cm); n > best {
+			name, best = codepage.name, n
+		}
+	}
+	if best < cyrillicMinBytes || float64(best) < cyrillicMinShare*float64(high) {
+		return ""
+	}
+	return name
+}
+
+// cyrillicWordBytes counts the high bytes cm reads as Cyrillic words: runs of letters cased the way a word is.
+func cyrillicWordBytes(data []byte, cm *charmap.Charmap) int {
+	total := 0
+	word := make([]rune, 0, 32)
+	endWord := func() {
+		if wordLike(word) {
+			total += len(word)
+		}
+		word = word[:0]
+	}
+	for _, b := range data {
+		if b < 0x80 {
+			endWord()
+			continue
+		}
+		if r := cm.DecodeByte(b); isCyrillicLetter(r) {
+			word = append(word, r)
+			continue
+		}
+		endWord()
+	}
+	endWord()
+
+	return total
+}
+
+// wordLike reports whether the letters are cased as a word is; the wrong table shouts the text back in capitals.
+func wordLike(word []rune) bool {
+	if len(word) < cyrillicMinRun {
+		return false
+	}
+	for _, r := range word[1:] {
+		if unicode.IsUpper(r) {
+			return false
+		}
+	}
+	return true
 }
 
 // looksLikeGBK reports enough valid GBK pairs, biased toward common hanzi, to trust it over Latin.
