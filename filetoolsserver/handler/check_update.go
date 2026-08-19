@@ -50,7 +50,7 @@ func (h *Handler) NewCheckUpdateHandler(version string) mcp.ToolHandlerFor[Check
 func (h *Handler) installEnv(session *mcp.ServerSession) install.Env {
 	env := install.Env{
 		Method:    install.DetectMethod(),
-		RootsOnly: !h.HasCLIDirs(),
+		RootsOnly: !h.HasExplicitDirs(),
 	}
 	if session != nil {
 		if params := session.InitializeParams(); params != nil && params.ClientInfo != nil {

@@ -10,7 +10,7 @@ import "github.com/dimitar-grigorov/mcp-file-tools/v4/internal/errkind"
 
 var (
 	// ErrNoAllowedDirs is returned when no allowed directories are configured.
-	ErrNoAllowedDirs = errkind.New(errkind.AccessDenied, "no allowed directories configured - please provide directories via CLI arguments or MCP roots protocol")
+	ErrNoAllowedDirs = errkind.New(errkind.AccessDenied, "no allowed directories configured - pass them as CLI arguments or set MCP_FILE_TOOLS_ALLOWED_DIRS")
 
 	// ErrPathDenied is returned when a path is outside all allowed directories.
 	ErrPathDenied = errkind.New(errkind.AccessDenied, "access denied - path outside allowed directories")

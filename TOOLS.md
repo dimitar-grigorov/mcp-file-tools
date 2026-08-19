@@ -848,7 +848,8 @@ Returns every [supported encoding](#supported-encodings) with its name, aliases,
 
 ### list_allowed_directories
 
-Returns directories the server is allowed to access. If empty, add paths as args in config.
+Returns directories the server is allowed to access, normally the directory it was started
+in. If empty, add paths as args in config or set `MCP_FILE_TOOLS_ALLOWED_DIRS`.
 
 ### check_for_updates
 

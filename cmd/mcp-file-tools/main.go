@@ -15,7 +15,8 @@ import (
 	"strings"
 
 	"github.com/dimitar-grigorov/mcp-file-tools/v4/filetoolsserver"
-	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/security"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/filetoolsserver/handler"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/config"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -43,24 +44,33 @@ func main() {
 		return
 	}
 
-	// Args are the allowed dirs; none is valid, roots may still supply them.
-	var normalized []string
-	var err error
-	if allowedDirs := os.Args[1:]; len(allowedDirs) > 0 {
-		normalized, err = security.NormalizeAllowedDirs(allowedDirs)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
-		}
-		slog.Debug("normalized allowed directories", "dirs", normalized)
+	// Args are the allowed dirs; without them the baseline comes from env or the working directory.
+	baseline, err := config.ResolveBaseline(os.Args[1:])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
 	}
+	logBaseline(baseline)
 
 	// nil logger drops logging middleware, recovery stays; nil config reads env.
-	server := filetoolsserver.NewServer(normalized, nil, nil)
+	server := filetoolsserver.NewServer(baseline.Dirs, nil, nil, handler.WithExplicitDirs(baseline.Explicit))
 
 	ctx := context.Background()
 	if err := server.Run(ctx, &mcp.StdioTransport{}); err != nil {
 		fmt.Fprintf(os.Stderr, "Server error: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+// logBaseline puts what the server may reach, and why, in the client's log.
+func logBaseline(b config.Baseline) {
+	if len(b.Dirs) > 0 {
+		fmt.Fprintf(os.Stderr, "mcp-file-tools: allowed directories from %s: %s\n",
+			b.Reason, strings.Join(b.Dirs, ", "))
+		slog.Debug("resolved allowed directories", "source", b.Source, "dirs", b.Dirs)
+		return
+	}
+
+	fmt.Fprintf(os.Stderr, "mcp-file-tools: no allowed directories - %s. Pass them as arguments or set %s.\n",
+		b.Reason, config.EnvAllowedDirs)
 }

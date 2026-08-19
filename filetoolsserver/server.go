@@ -28,7 +28,7 @@ Workflow:
 
 Only when output looks wrong: detect_encoding, manage_line_endings, manage_bom (a UTF-8 BOM breaks PHP/shell scripts). convert_encoding rewrites a whole file — pass backup=true.
 
-"no allowed directories configured" — add paths as args in .mcp.json.
+"no allowed directories configured" — add paths as args in .mcp.json, or set MCP_FILE_TOOLS_ALLOWED_DIRS.
 
 Call check_for_updates once per session; report an available update to the user.
 
@@ -40,12 +40,13 @@ func boolPtr(b bool) *bool {
 }
 
 // NewServer registers all file tools. Nil logger keeps recovery but drops
-// logging middleware; nil cfg reads config from the environment.
-func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *mcp.Server {
+// logging middleware; nil cfg reads config from the environment; opts apply last.
+func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, opts ...handler.Option) *mcp.Server {
 	var handlerOpts []handler.Option
 	if cfg != nil {
 		handlerOpts = append(handlerOpts, handler.WithConfig(cfg))
 	}
+	handlerOpts = append(handlerOpts, opts...)
 	h := handler.NewHandler(allowedDirs, handlerOpts...)
 
 	// Title, description and icon are what a client's server list shows.
@@ -144,7 +145,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config) *m
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "list_allowed_directories",
-		Description: "Returns the list of directories this server is allowed to access. Subdirectories are also accessible. If empty, user needs to add directory paths as args in .mcp.json.",
+		Description: "Returns the list of directories this server is allowed to access, normally the directory it was started in. Subdirectories are also accessible. If empty, the user needs to add paths as args in .mcp.json or set MCP_FILE_TOOLS_ALLOWED_DIRS.",
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "List Allowed Directories",
 			ReadOnlyHint:  true,

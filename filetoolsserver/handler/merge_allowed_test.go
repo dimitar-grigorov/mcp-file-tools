@@ -77,3 +77,30 @@ func TestMergeAllowedDirectories_ReturnsDefensiveCopy(t *testing.T) {
 		t.Error("mutating the returned slice affected handler state; expected a defensive copy")
 	}
 }
+
+// A derived baseline must survive revoked roots too, or an empty list leaves no access.
+func TestMergeAllowedDirectories_EmptyRootsKeepDerivedBaseline(t *testing.T) {
+	base := t.TempDir()
+	h := NewHandler([]string{base})
+
+	h.MergeAllowedDirectories([]string{normDir(t, t.TempDir())})
+	merged := h.MergeAllowedDirectories(nil)
+
+	if len(merged) != 1 || merged[0] != normDir(t, base) {
+		t.Errorf("expected only baseline %q, got %v", normDir(t, base), merged)
+	}
+}
+
+func TestHasExplicitDirs(t *testing.T) {
+	base := t.TempDir()
+
+	if h := NewHandler([]string{base}); h.HasExplicitDirs() {
+		t.Error("a baseline without WithExplicitDirs should not count as user-configured")
+	}
+	if h := NewHandler([]string{base}, WithExplicitDirs(true)); !h.HasExplicitDirs() {
+		t.Error("WithExplicitDirs(true) should mark the baseline user-configured")
+	}
+	if h := NewHandler(nil, WithExplicitDirs(true)); h.HasExplicitDirs() {
+		t.Error("an empty baseline is never user-configured")
+	}
+}

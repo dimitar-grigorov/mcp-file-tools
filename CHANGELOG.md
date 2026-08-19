@@ -6,6 +6,36 @@ versions see the [GitHub releases](https://github.com/dimitar-grigorov/mcp-file-
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.3.0] - 2026-08-19
+
+### Fixed
+
+- **Zero-config access was gone on Claude Code 2.1.232 and later.** Those clients speak
+  MCP 2026-07-28, where SEP-2322 forbids server-initiated requests, so `roots/list` — the
+  only channel the plugin had — is refused before it is sent. `list_allowed_directories`
+  came back empty and every file operation failed. The server now derives its baseline
+  from where it was started, so the plugin works again with nothing configured.
+- **The plugin launcher swallowed `args`.** `plugin/bin/run.js` spawned the binary with an
+  empty argument list, so directories set in `.mcp.json` never reached it. It forwards them
+  now.
+
+### Added
+
+- **`MCP_FILE_TOOLS_ALLOWED_DIRS`** — allowed directories as an OS path list (`;` on
+  Windows, `:` elsewhere), for clients where the `env` block is the only one you control.
+- **`MCP_FILE_TOOLS_NO_CWD_FALLBACK`** turns the working-directory fallback off.
+
+### Changed
+
+- Allowed directories now resolve in precedence order: `args`, then
+  `MCP_FILE_TOOLS_ALLOWED_DIRS`, then the working directory. MCP roots still merge on top
+  for clients below 2026-07-28, and revoking them falls back to that baseline rather than
+  to nothing.
+- The fallback refuses a filesystem root, and the home directory or anything above it — too
+  broad to grant without being asked. Name them explicitly if you want them.
+- Startup logs to stderr which directories were granted and why, including why a working
+  directory was refused.
+
 ## [4.2.1] - 2026-08-15
 
 ### Fixed

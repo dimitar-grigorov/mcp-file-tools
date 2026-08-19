@@ -58,7 +58,7 @@ func TestSecuritySentinelsKeepMessagesAndMatching(t *testing.T) {
 		err  error
 		want string
 	}{
-		{security.ErrNoAllowedDirs, "no allowed directories configured - please provide directories via CLI arguments or MCP roots protocol"},
+		{security.ErrNoAllowedDirs, "no allowed directories configured - pass them as CLI arguments or set MCP_FILE_TOOLS_ALLOWED_DIRS"},
 		{security.ErrPathDenied, "access denied - path outside allowed directories"},
 		{security.ErrSymlinkDenied, "access denied - symlink target outside allowed directories"},
 		{security.ErrParentDirDenied, "access denied - parent directory outside allowed directories"},

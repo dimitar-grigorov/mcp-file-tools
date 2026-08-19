@@ -210,3 +210,23 @@ func TestUpdateAllowedDirectoriesFromRoots_DedupsBaseline(t *testing.T) {
 		t.Errorf("expected 1 directory after dedup, got %d: %v", len(updatedDirs), updatedDirs)
 	}
 }
+
+// Roots merge on top of the startup baseline, and revoking them falls back to it.
+func TestUpdateAllowedDirectoriesFromRoots_KeepsBaseline(t *testing.T) {
+	base := t.TempDir()
+	root := t.TempDir()
+
+	h := handler.NewHandler([]string{base})
+	updateAllowedDirectoriesFromRoots(h, []string{"file:///" + filepath.ToSlash(root)})
+
+	if dirs := h.GetAllowedDirectories(); len(dirs) != 2 {
+		t.Fatalf("expected baseline plus root, got %v", dirs)
+	}
+
+	updateAllowedDirectoriesFromRoots(h, nil)
+
+	dirs := h.GetAllowedDirectories()
+	if len(dirs) != 1 {
+		t.Fatalf("expected the baseline to survive empty roots, got %v", dirs)
+	}
+}

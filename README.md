@@ -109,8 +109,7 @@ script. Claude Code ships as a standalone binary and does not bundle Node, so
 
 On first launch the plugin downloads the right binary for your OS, verifies its
 SHA-256, caches it, and keeps it pinned to a known version. The server is
-automatically scoped to the folder you have open (via the MCP roots protocol), so
-there is nothing to configure.
+automatically scoped to the folder you have open, so there is nothing to configure.
 
 The plugin only accesses your current workspace. Without Node, or to grant access to
 directories outside the workspace, use a manual install (below).
@@ -304,10 +303,13 @@ Once installed, just ask Claude:
 - "Show all supported encodings"
 - "Read MainForm.dfm using CP1251 encoding"
 
-**Security:** the server reaches only the directories you allowed — automatically from the
-workspace Claude Desktop/Code sends over the roots protocol, or explicitly from
-`args: ["/path/to/project"]`. Paths are resolved before the check, so a symlink or Windows
-junction pointing outside is rejected rather than followed.
+**Security:** the server reaches only the directories you allowed. It takes them from
+`args: ["/path/to/project"]` first, then `MCP_FILE_TOOLS_ALLOWED_DIRS`, and failing both
+from the directory it was started in — the workspace, when a client launches it there.
+Clients that still speak the MCP roots protocol add their roots on top. A drive root or
+your home directory is never granted by that last fallback; name it explicitly instead.
+Paths are resolved before the check, so a symlink or Windows junction pointing outside is
+rejected rather than followed.
 
 ## Configuration
 
@@ -319,6 +321,8 @@ The server can be configured via environment variables:
 | `MCP_DEFAULT_LINE_ENDINGS` | Line endings for `write_file` on **new** files (`crlf`/`lf`). Existing files keep their own style regardless. | unset (write unchanged) |
 | `MCP_MEMORY_THRESHOLD` | Memory threshold in bytes. Files smaller are loaded into memory for faster I/O; larger files use streaming. Also affects encoding detection mode. | `67108864` (64MB) |
 | `MCP_DETECTION_CANDIDATES` | Comma-separated list pinning what detection may answer, in priority order — e.g. `utf-8,windows-1252`. See [Pinning the encodings](#pinning-the-encodings). | unset (detection unrestricted) |
+| `MCP_FILE_TOOLS_ALLOWED_DIRS` | Allowed directories as an OS path list (`;` on Windows, `:` elsewhere). For clients where `env` is the only block you control, such as the Claude Code plugin. Overridden by `args`. | unset |
+| `MCP_FILE_TOOLS_NO_CWD_FALLBACK` | Set to turn off granting the working directory when neither `args` nor `MCP_FILE_TOOLS_ALLOWED_DIRS` names one. | unset (fallback on) |
 
 Set them with an `env` block in your config (Claude Desktop example):
 

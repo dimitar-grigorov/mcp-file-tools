@@ -23,9 +23,11 @@ const (
 // Handler carries the allowed-directory set and config every tool call resolves against.
 type Handler struct {
 	config      *config.Config
-	cliDirs     []string // immutable baseline from CLI args; always allowed
+	baseDirs    []string // immutable startup baseline; always allowed
 	allowedDirs []string
 	mu          sync.RWMutex
+
+	explicitDirs bool // baseline was user-configured, not derived from the working directory
 
 	utf8NoticeOnce sync.Once // TODO(2027-01): remove with the utf-8 default transition notice
 	plainUTF8Seen  sync.Map  // path -> struct{}, for the built-in-tooling hint
@@ -81,14 +83,21 @@ func WithConfig(cfg *config.Config) Option {
 	}
 }
 
+// WithExplicitDirs marks the baseline as user-configured rather than derived.
+func WithExplicitDirs(explicit bool) Option {
+	return func(h *Handler) {
+		h.explicitDirs = explicit
+	}
+}
+
 // NewHandler creates a Handler for allowedDirs; without WithConfig the config comes from the environment.
 func NewHandler(allowedDirs []string, opts ...Option) *Handler {
-	cliDirs := normalizeAllowedDirs(allowedDirs)
+	baseDirs := normalizeAllowedDirs(allowedDirs)
 
 	h := &Handler{
 		config:      config.Load(),
-		cliDirs:     cliDirs,
-		allowedDirs: append([]string(nil), cliDirs...),
+		baseDirs:    baseDirs,
+		allowedDirs: append([]string(nil), baseDirs...),
 	}
 
 	for _, opt := range opts {
@@ -112,9 +121,9 @@ func (h *Handler) GetAllowedDirectories() []string {
 	return dirs
 }
 
-// HasCLIDirs reports whether any directory came from CLI args rather than roots.
-func (h *Handler) HasCLIDirs() bool {
-	return len(h.cliDirs) > 0
+// HasExplicitDirs reports whether the user configured the baseline, via CLI args or env.
+func (h *Handler) HasExplicitDirs() bool {
+	return h.explicitDirs && len(h.baseDirs) > 0
 }
 
 // ResolvedAllowedDirs returns allowed directories with symlinks resolved.
@@ -142,15 +151,15 @@ func normalizeAllowedDirs(dirs []string) []string {
 	return normalized
 }
 
-// MergeAllowedDirectories sets the dirs to the deduped union of CLI baseline and newDirs — roots augment, not replace.
+// MergeAllowedDirectories sets the dirs to the deduped union of the startup baseline and newDirs — roots augment, not replace.
 func (h *Handler) MergeAllowedDirectories(newDirs []string) []string {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
 	normalizedNew := normalizeAllowedDirs(newDirs)
-	seen := make(map[string]struct{}, len(h.cliDirs)+len(normalizedNew))
-	merged := make([]string, 0, len(h.cliDirs)+len(normalizedNew))
-	for _, dirs := range [][]string{h.cliDirs, normalizedNew} {
+	seen := make(map[string]struct{}, len(h.baseDirs)+len(normalizedNew))
+	merged := make([]string, 0, len(h.baseDirs)+len(normalizedNew))
+	for _, dirs := range [][]string{h.baseDirs, normalizedNew} {
 		for _, dir := range dirs {
 			if _, ok := seen[dir]; ok {
 				continue

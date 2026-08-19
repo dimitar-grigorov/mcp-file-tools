@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/dimitar-grigorov/mcp-file-tools/v4/filetoolsserver/handler"
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/config"
 	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/security"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -37,20 +38,17 @@ func createInitializedHandler(h *handler.Handler) func(context.Context, *mcp.Ini
 		// Async update check — runs regardless of roots support.
 		go h.CheckForUpdatesAsync(req.Session, Version)
 
+		// 2026-07-28 clients cannot be asked at all (SEP-2322), so failure is routine.
 		uris, err := listRootURIs(ctx, req.Session)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to request roots from client: %v\n", err)
-			return
+			slog.Debug("client did not answer roots/list; keeping the startup baseline", "error", err)
+		} else if len(uris) > 0 {
+			updateAllowedDirectoriesFromRoots(h, uris)
 		}
 
-		if len(uris) > 0 {
-			updateAllowedDirectoriesFromRoots(h, uris)
-		} else {
-			currentDirs := h.GetAllowedDirectories()
-			if len(currentDirs) == 0 {
-				fmt.Fprintf(os.Stderr, "Warning: No allowed directories configured. File operations will fail.\n")
-				fmt.Fprintf(os.Stderr, "Provide directories via CLI arguments or ensure MCP client supports roots protocol.\n")
-			}
+		if len(h.GetAllowedDirectories()) == 0 {
+			fmt.Fprintf(os.Stderr, "Warning: no allowed directories - pass them as arguments or set %s.\n",
+				config.EnvAllowedDirs)
 		}
 	}
 }
@@ -101,7 +99,7 @@ func updateAllowedDirectoriesFromRoots(h *handler.Handler, rootURIs []string) {
 		validatedDirs = append(validatedDirs, normalized)
 	}
 
-	// Merge unconditionally: an empty or invalid list must revoke roots granted earlier, leaving the CLI baseline.
+	// Merge unconditionally: an empty or invalid list revokes earlier roots, leaving the baseline.
 	merged := h.MergeAllowedDirectories(validatedDirs)
 	slog.Debug("merged allowed directories from MCP roots",
 		"roots", validatedDirs, "merged", merged)
