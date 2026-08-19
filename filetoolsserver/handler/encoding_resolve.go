@@ -23,6 +23,7 @@ type encodingResult struct {
 	detectedEncoding   string
 	encodingConfidence int
 	autoDetected       bool
+	fromFallback       bool   // detection decided nothing, so name is the configured default
 	fallbackHint       string // set when a detected encoding was discarded
 }
 
@@ -137,7 +138,13 @@ func (h *Handler) resolveEncoding(inputEncoding string, filePath string) (encodi
 			note = detection.Charset + " (low confidence, using " + fallback + ")"
 		}
 		result.setFallback(fallback, note)
-		if alternatives := alternativeEncodings(filePath, detectionMode, fallback); alternatives != "" {
+		if pinned := h.config.DetectionCandidates; len(pinned) > 0 {
+			// Phrased as an instruction because models relay instructions and ignore trivia.
+			result.fallbackHint = fmt.Sprintf(
+				"ODD ENCODING: this file is none of the encodings you configured (%s), so it was read as %s and non-ASCII text may be garbled. "+
+					"Tell the user, naming the file. If it looks wrong, retry read_text_file with an explicit encoding.",
+				strings.Join(pinned, ", "), fallback)
+		} else if alternatives := alternativeEncodings(filePath, detectionMode, fallback); alternatives != "" {
 			result.fallbackHint = fmt.Sprintf(
 				"Encoding detection was inconclusive, so the file was read as %s and non-ASCII text may be garbled — tell the user. "+
 					"If it looks wrong, retry read_text_file with encoding set to one of: %s.",
@@ -186,6 +193,7 @@ func alternativesSuffix(data []byte, exclude string) string {
 // setFallback switches to name and resolves its encoder; note replaces the report.
 func (r *encodingResult) setFallback(name, note string) {
 	r.name = name
+	r.fromFallback = true
 	r.encoder, _ = encoding.Get(name) // nil for utf-8, which decodeContent expects
 	if note != "" {
 		r.detectedEncoding = note

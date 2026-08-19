@@ -205,13 +205,19 @@ func correctCharset(charset string, confidence int, data []byte) (string, int) {
 	switch charset {
 	case "gb2312", "hz-gb-2312":
 		charset = "gbk" // GBK is the superset real-world files use
-	case "iso-8859-1", "latin-1", "latin1", "windows-1252", "cp1252", "macroman", "x-mac-roman", "macintosh":
-		// A Latin table wins by default on text that is mostly ASCII, so ask the high bytes what script they spell.
+	case "iso-8859-1", "latin-1", "latin1", "windows-1252", "cp1252":
+		// A Latin table wins by default on mostly-ASCII text, so ask the high bytes what script they spell.
 		if cyrillic := cyrillicCodepage(data); cyrillic != "" {
 			return cyrillic, confidence
 		}
+		// chardet often mislabels GBK as single-byte Latin; correct it.
 		if looksLikeGBK(data) {
 			return "gbk", min(confidence, gbkConfidenceCap)
+		}
+	case "macroman", "x-mac-roman", "macintosh":
+		// No codec here reads MacRoman, so this verdict can only end in a fallback that garbles the file.
+		if cyrillic := cyrillicCodepage(data); cyrillic != "" {
+			return cyrillic, confidence
 		}
 	case "maccyrillic", "x-mac-cyrillic":
 		// Here chardet has the script right and only the table wrong, so counting letters settles it.

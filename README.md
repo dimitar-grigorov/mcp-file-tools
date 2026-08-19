@@ -353,8 +353,9 @@ valid hanzi pair — so it reads back as Chinese and edits fail with *"gbk canno
 
 A BOM still wins. A guess inside the list keeps its confidence; one outside it is dropped
 and the first listed encoding that decodes the bytes cleanly takes over, so order is your
-priority. Nothing fitting means no answer rather than a wrong one, and unlisted encodings
-stop appearing in `detect_encoding`'s `candidates` too. UTF-16/32 are named only by a BOM
+priority. A file that fits none of them is read as the default and reported as an **ODD
+ENCODING** in `read_text_file`'s hint, so a stray file gets said out loud rather than
+guessed at. Unlisted encodings stop appearing in `detect_encoding`'s `candidates` too. UTF-16/32 are named only by a BOM
 or the structural classifier, so listing them cannot make them a catch-all.
 
 ### Legacy teams (pre-2.0.0 behaviour)

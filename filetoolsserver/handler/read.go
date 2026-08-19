@@ -95,8 +95,11 @@ func (h *Handler) HandleReadTextFile(ctx context.Context, req *mcp.CallToolReque
 			`This file has MIXED line endings (%d CRLF, %d LF) — tell the user, and use manage_line_endings action="convert" to normalise it.`,
 			lineEndings.CRLFCount, lineEndings.LFCount))
 	}
-	if hint := h.plainUTF8HintFor(v.Path, encResult.name, existingBOM(v.Path).HasBOM); hint != "" {
-		hints = append(hints, hint)
+	// Never on a fallback: the file is utf-8 only because detection gave up, and the hint would send the model to tools that cannot read it.
+	if !encResult.fromFallback {
+		if hint := h.plainUTF8HintFor(v.Path, encResult.name, existingBOM(v.Path).HasBOM); hint != "" {
+			hints = append(hints, hint)
+		}
 	}
 	if encResult.fallbackHint != "" {
 		hints = append(hints, encResult.fallbackHint)
