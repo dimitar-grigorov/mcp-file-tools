@@ -186,6 +186,9 @@ Make replacements or apply a unified diff to one text file. Returns a unified di
 - Patch hunks use the same exact then whitespace-flexible matching. Multi-file patches are rejected.
 - Preserves original indentation
 - CRLF line endings normalized to LF, so CRLF/LF differences never block a match
+- Writes back in the file's own style. A file with mixed endings is repaired to whichever
+  style dominates, and the response carries `lineEndingsRepaired: N` for the endings that
+  changed outside the requested edit
 - Atomic write (temp file + rename)
 - Fails on read-only files by default (set `forceWritable: true` only when user explicitly requests it)
 

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 
 	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/encoding"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -67,16 +68,19 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 
 	// Detect on decoded text: UTF-16 has a 00 between CR and LF.
 	lineEndings := DetectLineEndings([]byte(content))
-	if lineEndings.Style == LineEndingMixed {
-		slog.Warn("file has mixed line endings", "path", input.Path, "crlf", lineEndings.CRLFCount, "lf", lineEndings.LFCount)
+
+	// Mixed/none must resolve to crlf or lf: ConvertLineEndings treats any other target as LF.
+	eolStyle := dominantLineEnding(lineEndings)
+	if eolStyle == "" {
+		eolStyle = h.config.DefaultLineEndings
 	}
-	// Resolve to a concrete crlf/lf target before writing back. ConvertLineEndings
-	// only special-cases "crlf" as a target; passing "mixed" or "none" straight
-	// through silently collapsed every line ending in the file to LF. Mixed
-	// repairs to the dominant style, same as write_file's resolveLineEndingStyle.
-	targetLineEndingStyle := dominantLineEnding(lineEndings)
-	if targetLineEndingStyle == "" {
-		targetLineEndingStyle = h.config.DefaultLineEndings
+	eolRepaired := 0
+	if lineEndings.Style == LineEndingMixed {
+		eolRepaired = lineEndings.LFCount
+		if eolStyle == LineEndingLF {
+			eolRepaired = lineEndings.CRLFCount
+		}
+		slog.Warn("file has mixed line endings", "path", input.Path, "crlf", lineEndings.CRLFCount, "lf", lineEndings.LFCount, "repairTo", eolStyle)
 	}
 
 	content = ConvertLineEndings(content, LineEndingLF)
@@ -97,7 +101,7 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 		if r := cancelled(ctx); r != nil {
 			return r, EditFileOutput{}, nil
 		}
-		if err := atomicWriteFileWithEncoding(v.Path, modifiedContent, encodingName, targetLineEndingStyle, originalMode); err != nil {
+		if err := atomicWriteFileWithEncoding(v.Path, modifiedContent, encodingName, eolStyle, originalMode); err != nil {
 			return errorResult(fmt.Sprintf("failed to write file: %v", err)), EditFileOutput{}, nil
 		}
 	}
@@ -106,6 +110,9 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 	if replacements > 1 {
 		text += fmt.Sprintf("\nreplaceAll changed %d places — tell the user how many.", replacements)
 	}
+	if eolRepaired > 0 && !input.DryRun {
+		text += fmt.Sprintf("\nFile had mixed line endings; %d repaired to %s to match the rest of the file.", eolRepaired, strings.ToUpper(eolStyle))
+	}
 	if readOnlyCleared {
 		text += "\nRead-only flag was cleared."
 	}
@@ -113,6 +120,9 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 	output := EditFileOutput{Diff: diff, ReadOnlyCleared: readOnlyCleared}
 	if replacements > 1 {
 		output.Replacements = replacements
+	}
+	if eolRepaired > 0 && !input.DryRun {
+		output.LineEndingsRepaired = eolRepaired
 	}
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{&mcp.TextContent{Text: text}},

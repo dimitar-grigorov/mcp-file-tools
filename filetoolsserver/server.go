@@ -185,6 +185,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 			"In 'ask before edits' mode call dryRun=true first, show the diff, then dryRun=false once the user confirms; with auto-edit permissions go straight to dryRun=false. " +
 			"On no match, prefer fixing oldText from the closest-content hint. Alternatively retry that edit with similarity (0.0-1.0) for whitespace/comment drift, not different code. " +
 			"Do NOT re-read the file afterwards to verify: a success with a diff means the edit is on disk, a failed edit changes nothing. " +
+			"A file with mixed line endings is repaired to its dominant style; the result says how many endings changed, so report that to the user. " +
 			"Parameters: path; exactly one of edits [{oldText, newText, similarity?, replaceAll?}] or patch (---/+++/@@ unified diff for one file); dryRun (default false); encoding (auto). " +
 			"oldText must match ONE place: several matches fail with their line numbers and change nothing — add surrounding lines to pick one, or set replaceAll: true to change them all and report the count to the user. " +
 			"Edits apply in order. Matching ignores per-line leading/trailing whitespace and CRLF/LF, but interior spacing must match; newText is re-indented. " +

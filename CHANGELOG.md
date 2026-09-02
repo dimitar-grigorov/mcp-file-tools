@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`edit_file` collapsed a whole CRLF file to LF if it held even one bare LF.** One stray
+  `\n` anywhere classified the file as mixed, and mixed reached the writer unresolved. Mixed
+  now repairs to the dominant style and the response reports how many endings changed.
+  Thanks to [@igorzlatkov](https://github.com/igorzlatkov) (#24).
 - **Sparse Cyrillic in a mostly-ASCII source read as the wrong encoding.** Too few non-ASCII
   bytes to score, so chardet ranked a Latin table first and the text came out garbled. A Latin
   verdict is now checked against the high bytes; each Cyrillic codepage keeps its own.

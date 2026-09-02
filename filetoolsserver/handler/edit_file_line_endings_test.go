@@ -11,20 +11,13 @@ import (
 	"testing"
 )
 
-// A CRLF file that also contains one bare LF (e.g. embedded in a multi-line
-// string literal, far from the edited line) must stay CRLF after edit_file
-// touches an unrelated line. Regression test for the bug where edit_file
-// passed DetectLineEndings' raw "mixed"/"none" Style straight into
-// ConvertLineEndings, which only special-cases "crlf" — every other target,
-// including "mixed", silently fell through to the LF branch and stripped
-// every CRLF in the file on write-back.
+// One bare LF anywhere made the file "mixed", and every CRLF in it was lost on write-back.
 func TestHandleEditFile_MixedLineEndingsRepairToDominantStyle(t *testing.T) {
 	tempDir := t.TempDir()
 	h := NewHandler([]string{tempDir})
 
 	testFile := filepath.Join(tempDir, "mixed.txt")
-	// 3 CRLF-terminated lines, one bare LF embedded inside a "string literal"
-	// on an unrelated line: file-wide style is CRLF-dominant "mixed", not pure CRLF.
+	// CRLF-dominant mixed: one bare LF on a line the edit never touches.
 	original := "line1\r\nliteral := 'a' + Chr(10) + 'b'\nline3\r\nMARKER_OLD\r\n"
 	if err := os.WriteFile(testFile, []byte(original), 0644); err != nil {
 		t.Fatal(err)
@@ -35,12 +28,17 @@ func TestHandleEditFile_MixedLineEndingsRepairToDominantStyle(t *testing.T) {
 		Edits: []EditOperation{{OldText: "MARKER_OLD", NewText: "MARKER_NEW"}},
 	}
 
-	result, _, err := h.HandleEditFile(context.Background(), nil, input)
+	result, output, err := h.HandleEditFile(context.Background(), nil, input)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if result.IsError {
 		t.Fatalf("expected success, got error result: %+v", result.Content)
+	}
+
+	// The repair touches a line the caller never asked about, so it has to be reported.
+	if output.LineEndingsRepaired != 1 {
+		t.Errorf("lineEndingsRepaired = %d, want 1", output.LineEndingsRepaired)
 	}
 
 	got, err := os.ReadFile(testFile)
@@ -59,8 +57,7 @@ func TestHandleEditFile_MixedLineEndingsRepairToDominantStyle(t *testing.T) {
 	}
 }
 
-// A file that's LF-dominant (more bare LF than CRLF) should repair to LF,
-// not CRLF — dominantLineEnding picks the more common style either way.
+// LF-dominant mixed repairs the other way.
 func TestHandleEditFile_MixedLineEndingsRepairToLFWhenDominant(t *testing.T) {
 	tempDir := t.TempDir()
 	h := NewHandler([]string{tempDir})
