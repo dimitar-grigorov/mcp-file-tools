@@ -40,22 +40,21 @@ claude plugin marketplace add dimitar-grigorov/mcp-file-tools
 claude plugin install mcp-file-tools
 ```
 
-The same two steps inside a session are `/plugin marketplace add …` and `/plugin install …`.
+Inside a session: `/plugin marketplace add …` and `/plugin install …`.
 
-**Requires [Node.js](https://nodejs.org) 18+ on your PATH** — the launcher is a Node
-script, and Claude Code ships as a standalone binary that does not bundle Node. Without
-it the server shows as *not connected* in `/mcp`.
+**Requires [Node.js](https://nodejs.org) 18+ on your PATH.** The launcher is a Node script
+and Claude Code does not bundle Node; without it `/mcp` shows the server as *not connected*.
 
-On first launch the plugin downloads the right binary for your OS, verifies its SHA-256
-and caches it, pinned to a known version. It is scoped to the folder you have open, so
-there is nothing to configure. For directories outside the workspace, or a machine
-without Node, use a [manual install](#manual-install-other-mcp-clients-or-access-outside-your-workspace).
+First launch downloads the binary for your OS at a pinned version, verifies its SHA-256 and
+caches it. It is scoped to the folder you have open, so there is nothing to configure. For
+directories outside the workspace, or a machine without Node, use a
+[manual install](#manual-install-other-mcp-clients-or-access-outside-your-workspace).
 
 #### Coming from a manual install
 
 ```bash
 claude mcp list                                              # find the old file-tools entry
-claude mcp remove file-tools                                 # drop it, or you run two copies
+claude mcp remove file-tools
 claude plugin marketplace add dimitar-grigorov/mcp-file-tools
 claude plugin install mcp-file-tools
 # Old binary, once /mcp shows the plugin connected:
@@ -63,8 +62,8 @@ claude plugin install mcp-file-tools
 #   Linux/macOS  rm ~/.local/bin/mcp-file-tools
 ```
 
-The tool names change with it — `mcp__file-tools__*` becomes
-`mcp__plugin_mcp-file-tools_file-tools__*` — so permission rules need updating too, see
+Tool names change too: `mcp__file-tools__*` becomes
+`mcp__plugin_mcp-file-tools_file-tools__*`, so update your permission rules, see
 [Auto-approve tools](#auto-approve-tools-claude-code).
 
 ### Updating the plugin
@@ -74,7 +73,7 @@ claude plugin marketplace update mcp-file-tools
 claude plugin update mcp-file-tools@mcp-file-tools
 ```
 
-Use the full `plugin@marketplace` id here, not the bare name. Or turn on auto-update in
+Use the full `plugin@marketplace` id, not the bare name, or turn on auto-update in
 `/plugin` → **Marketplaces**.
 
 ### Registries and directories
