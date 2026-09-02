@@ -11,10 +11,14 @@ the main README.
 
 ## Install
 
+```bash
+claude plugin marketplace add dimitar-grigorov/mcp-file-tools
+claude plugin install mcp-file-tools
 ```
-/plugin marketplace add dimitar-grigorov/mcp-file-tools
-/plugin install mcp-file-tools
-```
+
+Inside a session: `/plugin marketplace add …` and `/plugin install …`. Coming from a
+manual `claude mcp add` install, remove that entry first — see
+[Coming from a manual install](https://github.com/dimitar-grigorov/mcp-file-tools#coming-from-a-manual-install).
 
 ## Bundled skill
 

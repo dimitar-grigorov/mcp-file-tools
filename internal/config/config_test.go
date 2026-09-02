@@ -4,15 +4,13 @@
 package config
 
 import (
-	"os"
 	"slices"
 	"testing"
 )
 
 func TestLoad_Defaults(t *testing.T) {
-	// Clear any environment variables
-	os.Unsetenv(EnvDefaultEncoding)
-	os.Unsetenv(EnvMemoryThreshold)
+	t.Setenv(EnvDefaultEncoding, "")
+	t.Setenv(EnvMemoryThreshold, "")
 
 	cfg := Load()
 
@@ -31,8 +29,7 @@ func TestLoad_Defaults(t *testing.T) {
 
 // cp1251 doubles as the pre-2.0.0 default, so this also covers the migration path.
 func TestLoad_CustomEncoding(t *testing.T) {
-	os.Setenv(EnvDefaultEncoding, "cp1251")
-	defer os.Unsetenv(EnvDefaultEncoding)
+	t.Setenv(EnvDefaultEncoding, "cp1251")
 
 	cfg := Load()
 
@@ -46,8 +43,7 @@ func TestLoad_CustomEncoding(t *testing.T) {
 }
 
 func TestLoad_InvalidEncoding(t *testing.T) {
-	os.Setenv(EnvDefaultEncoding, "invalid-encoding-xyz")
-	defer os.Unsetenv(EnvDefaultEncoding)
+	t.Setenv(EnvDefaultEncoding, "invalid-encoding-xyz")
 
 	cfg := Load()
 
@@ -63,8 +59,7 @@ func TestLoad_InvalidEncoding(t *testing.T) {
 }
 
 func TestLoad_CustomMemoryThreshold(t *testing.T) {
-	os.Setenv(EnvMemoryThreshold, "134217728") // 128MB
-	defer os.Unsetenv(EnvMemoryThreshold)
+	t.Setenv(EnvMemoryThreshold, "134217728") // 128MB
 
 	cfg := Load()
 
@@ -74,8 +69,7 @@ func TestLoad_CustomMemoryThreshold(t *testing.T) {
 }
 
 func TestLoad_InvalidMemoryThreshold(t *testing.T) {
-	os.Setenv(EnvMemoryThreshold, "not-a-number")
-	defer os.Unsetenv(EnvMemoryThreshold)
+	t.Setenv(EnvMemoryThreshold, "not-a-number")
 
 	cfg := Load()
 
@@ -86,8 +80,7 @@ func TestLoad_InvalidMemoryThreshold(t *testing.T) {
 }
 
 func TestLoad_NegativeMemoryThreshold(t *testing.T) {
-	os.Setenv(EnvMemoryThreshold, "-1000")
-	defer os.Unsetenv(EnvMemoryThreshold)
+	t.Setenv(EnvMemoryThreshold, "-1000")
 
 	cfg := Load()
 

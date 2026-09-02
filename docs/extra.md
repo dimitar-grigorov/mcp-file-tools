@@ -18,6 +18,10 @@ Skipping the permission prompt for this server's tools. Rules go in one of:
 `/permissions` edits them interactively, and **Always allow** on a prompt writes to the
 local file.
 
+A match resolves ahead of the auto mode classifier too, and is the only way a tool runs
+in `dontAsk`; only `bypassPermissions` ignores allow rules
+([modes](https://code.claude.com/docs/en/permission-modes)).
+
 ### Allow everything
 
 ```json
@@ -68,7 +72,8 @@ If your Claude Code version rejects the wildcard, name the tools explicitly.
 ### Naming every tool
 
 Equivalent to the wildcard plus the `ask` rules above — the two destructive tools are
-left out, so Claude asks before them:
+left out, so Claude asks before them. This is the manual install; the plugin prefix is
+[below](#naming-every-tool-plugin-install):
 
 ```json
 {
@@ -92,6 +97,37 @@ left out, so Claude asks before them:
       "mcp__file-tools__create_directory",
       "mcp__file-tools__list_allowed_directories",
       "mcp__file-tools__check_for_updates"
+    ]
+  }
+}
+```
+
+### Naming every tool, plugin install
+
+The same list with the plugin prefix:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "mcp__plugin_mcp-file-tools_file-tools__read_text_file",
+      "mcp__plugin_mcp-file-tools_file-tools__read_multiple_files",
+      "mcp__plugin_mcp-file-tools_file-tools__write_file",
+      "mcp__plugin_mcp-file-tools_file-tools__edit_file",
+      "mcp__plugin_mcp-file-tools_file-tools__copy_file",
+      "mcp__plugin_mcp-file-tools_file-tools__list_directory",
+      "mcp__plugin_mcp-file-tools_file-tools__tree",
+      "mcp__plugin_mcp-file-tools_file-tools__search_files",
+      "mcp__plugin_mcp-file-tools_file-tools__grep_text_files",
+      "mcp__plugin_mcp-file-tools_file-tools__detect_encoding",
+      "mcp__plugin_mcp-file-tools_file-tools__convert_encoding",
+      "mcp__plugin_mcp-file-tools_file-tools__manage_line_endings",
+      "mcp__plugin_mcp-file-tools_file-tools__manage_bom",
+      "mcp__plugin_mcp-file-tools_file-tools__list_encodings",
+      "mcp__plugin_mcp-file-tools_file-tools__get_file_info",
+      "mcp__plugin_mcp-file-tools_file-tools__create_directory",
+      "mcp__plugin_mcp-file-tools_file-tools__list_allowed_directories",
+      "mcp__plugin_mcp-file-tools_file-tools__check_for_updates"
     ]
   }
 }

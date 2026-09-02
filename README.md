@@ -16,14 +16,13 @@ original encoding — BOM and CRLF/LF intact, still byte-compatible with whateve
 tool owns the file.
 
 - **25 encodings, read and write** — Cyrillic (CP1251, KOI8-R/U, CP866), Windows-125x, ISO-8859-x, UTF-16 LE/BE, GBK/GB18030 ([full list](#supported-encodings))
-- **Encoding-aware across the whole tool set** — not just read and write: `edit_file`, `grep_text_files` and `search_files` decode the same way
-- **Detection you can inspect** — `detect_encoding` reports the charset, a confidence score and any BOM, so garbled text becomes diagnosable instead of mysterious
-- **BOM and line endings are first-class** — add or strip a BOM, convert CRLF↔LF, and do it correctly on UTF-16, where a naive byte-level rewrite corrupts the file
-- **Sandboxed** — every path, including symlink and junction targets, is resolved and checked against the directories you allowed
+- **Encoding-aware across the whole tool set** — `edit_file`, `grep_text_files` and `search_files` decode the same way, not just read and write
+- **Detection you can inspect** — `detect_encoding` reports the charset, a confidence score and any BOM, so garbled text becomes diagnosable
+- **BOM and line endings are first-class** — including on UTF-16, where a naive byte-level rewrite corrupts the file
+- **Sandboxed** — every path, symlink and junction targets included, is checked against the directories you allowed
 
-**Built for:** Delphi/Pascal units with Cyrillic UI text (Windows-1251), VB6 forms
-(Windows-1252), legacy PHP/HTML with localized content (CP1251, ISO-8859-1), and INI or
-data files whose encoding you can't tell from the filename.
+**Built for:** Delphi/Pascal units with Cyrillic UI text, VB6 forms, legacy PHP/HTML with
+localized content, and INI or data files whose encoding you can't tell from the filename.
 
 ```
 User: Read config.ini and change the title to "Настройки"
@@ -32,103 +31,50 @@ Claude: [read_text_file → cp1251 detected] → [edits UTF-8] → [write_file �
 
 > **PRs welcome and merged fast** — no CLA, no style review, one-line fixes count. Forked this to fix something? Please [send it back](#contributing) instead.
 
-## Tools
-
-20 tools — every one that touches text content is encoding-aware:
-- [`read_text_file`](TOOLS.md#read_text_file) - Read files with encoding auto-detection and conversion
-- [`read_multiple_files`](TOOLS.md#read_multiple_files) - Read multiple files concurrently with encoding support
-- [`write_file`](TOOLS.md#write_file) - Write files in specific encodings
-- [`edit_file`](TOOLS.md#edit_file) - Line-based edits with diff preview and whitespace-flexible matching
-- [`copy_file`](TOOLS.md#copy_file) - Copy a file to a new location
-- [`delete_file`](TOOLS.md#delete_file) - Delete a file
-- [`list_directory`](TOOLS.md#list_directory) - Browse directories with pattern filtering
-- [`tree`](TOOLS.md#tree) - Compact indented tree view, optionally annotated with each file's encoding
-- [`search_files`](TOOLS.md#search_files) - Recursively search for files matching glob patterns
-- [`grep_text_files`](TOOLS.md#grep_text_files) - Regex search in file contents with encoding support
-- [`detect_encoding`](TOOLS.md#detect_encoding) - Auto-detect file encoding with confidence score
-- [`convert_encoding`](TOOLS.md#convert_encoding) - Convert file between encodings
-- [`manage_line_endings`](TOOLS.md#manage_line_endings) - Detect or convert line endings (CRLF/LF/mixed)
-- [`manage_bom`](TOOLS.md#manage_bom) - Detect, strip, or add Unicode BOM
-- [`list_encodings`](TOOLS.md#list_encodings) - Show all supported encodings
-- [`get_file_info`](TOOLS.md#get_file_info) - Get file/directory metadata
-- [`create_directory`](TOOLS.md#create_directory) - Create directories recursively (mkdir -p)
-- [`move_file`](TOOLS.md#move_file) - Move or rename files and directories
-- [`list_allowed_directories`](TOOLS.md#list_allowed_directories) - Show accessible directories
-- [`check_for_updates`](TOOLS.md#check_for_updates) - Check whether a newer release is available
-
-Plus three [prompts](TOOLS.md#prompts) — `audit_encodings`, `fix_mojibake`,
-`migrate_to_utf8` — surfaced by clients as user commands.
-
-See [TOOLS.md](TOOLS.md) for detailed parameters and examples. Calls shaped like
-Claude Code's built-in Read/Write/Edit/Grep are accepted too — the
-[alias layer](TOOLS.md#built-in-name-aliases) translates them where the semantics
-match exactly, so a model's habits don't fail the call.
-
-**Out of scope:** binary/media reading (`read_media_file`). This is a *text*
-tool; agents read images with their built-in tools.
-
-### Supported encodings
-
-Every one below reads and writes. Name one explicitly via the `encoding` parameter, or
-leave it to auto-detection.
-
-| Script / region | Encodings |
-|---|---|
-| Unicode | UTF-8, UTF-16 LE, UTF-16 BE |
-| Cyrillic | Windows-1251, KOI8-R, KOI8-U, CP866, ISO-8859-5, MacCyrillic |
-| Western European | Windows-1252, ISO-8859-1, ISO-8859-15 |
-| Central European | Windows-1250, ISO-8859-2 |
-| Greek | Windows-1253, ISO-8859-7 |
-| Turkish | Windows-1254, ISO-8859-9 |
-| Chinese Simplified | GBK, GB18030 |
-| Hebrew, Arabic, Baltic, Vietnamese, Thai | Windows-1255, 1256, 1257, 1258, 874 |
-
-Common aliases are accepted (`cp1251`, `latin1`, `gb2312`, `tis-620`, …) —
-[`list_encodings`](TOOLS.md#list_encodings) prints the whole table with aliases.
-
-UTF-32 is partially supported: LE and BE BOMs are detected, and
-[`manage_bom`](TOOLS.md#manage_bom) can add or strip them, but transcoding to or from
-UTF-32 is not implemented and [`manage_line_endings`](TOOLS.md#manage_line_endings)
-refuses UTF-32 files rather than corrupting their 4-byte alignment.
-
 ## Installation
 
 ### Claude Code plugin (recommended)
 
-The simplest way to use this with Claude Code:
+```bash
+claude plugin marketplace add dimitar-grigorov/mcp-file-tools
+claude plugin install mcp-file-tools
+```
 
-```
-/plugin marketplace add dimitar-grigorov/mcp-file-tools
-/plugin install mcp-file-tools
-```
+The same two steps inside a session are `/plugin marketplace add …` and `/plugin install …`.
 
 **Requires [Node.js](https://nodejs.org) 18+ on your PATH** — the launcher is a Node
-script. Claude Code ships as a standalone binary and does not bundle Node, so
-`node --version` can fail on an otherwise working install; the server then shows as
-*not connected* in `/mcp`.
+script, and Claude Code ships as a standalone binary that does not bundle Node. Without
+it the server shows as *not connected* in `/mcp`.
 
-On first launch the plugin downloads the right binary for your OS, verifies its
-SHA-256, caches it, and keeps it pinned to a known version. The server is
-automatically scoped to the folder you have open, so there is nothing to configure.
+On first launch the plugin downloads the right binary for your OS, verifies its SHA-256
+and caches it, pinned to a known version. It is scoped to the folder you have open, so
+there is nothing to configure. For directories outside the workspace, or a machine
+without Node, use a [manual install](#manual-install-other-mcp-clients-or-access-outside-your-workspace).
 
-The plugin only accesses your current workspace. Without Node, or to grant access to
-directories outside the workspace, use a manual install (below).
+#### Coming from a manual install
 
-**Already added the server the manual way?** Remove the old `claude mcp add` entry so
-you are not running two copies:
-
+```bash
+claude mcp list                                              # find the old file-tools entry
+claude mcp remove file-tools                                 # drop it, or you run two copies
+claude plugin marketplace add dimitar-grigorov/mcp-file-tools
+claude plugin install mcp-file-tools
+# Old binary, once /mcp shows the plugin connected:
+#   Windows      Remove-Item "$env:LOCALAPPDATA\Programs\mcp-file-tools\mcp-file-tools.exe"
+#   Linux/macOS  rm ~/.local/bin/mcp-file-tools
 ```
-claude mcp remove file-tools
-```
+
+The tool names change with it — `mcp__file-tools__*` becomes
+`mcp__plugin_mcp-file-tools_file-tools__*` — so permission rules need updating too, see
+[Auto-approve tools](#auto-approve-tools-claude-code).
 
 ### Updating the plugin
 
-```
+```bash
 claude plugin marketplace update mcp-file-tools
 claude plugin update mcp-file-tools@mcp-file-tools
 ```
 
-Use the full `plugin@marketplace` id, not the bare name. Or enable auto-update in
+Use the full `plugin@marketplace` id here, not the bare name. Or turn on auto-update in
 `/plugin` → **Marketplaces**.
 
 ### Registries and directories
@@ -256,11 +202,13 @@ arguments to grant access outside the current project.
 To skip the permission prompts, add to `.claude/settings.local.json` in your project root:
 
 ```json
-{ "permissions": { "allow": ["mcp__file-tools__*"] } }
+{ "permissions": { "allow": ["mcp__plugin_mcp-file-tools_file-tools__*"] } }
 ```
 
-The plugin install uses a different prefix, and keeping `delete_file` / `move_file` behind
-a prompt takes one more rule — see [docs/extra.md](docs/extra.md#auto-approving-tools-in-claude-code).
+That prefix is the plugin install; a manual one registered as `file-tools` is
+`mcp__file-tools__*` instead, and a rule with the wrong prefix matches nothing and fails
+quietly. Which modes the rules affect, and keeping `delete_file` / `move_file` behind a
+prompt, are in [docs/extra.md](docs/extra.md#auto-approving-tools-in-claude-code).
 
 ### Update
 
@@ -310,6 +258,65 @@ Clients that still speak the MCP roots protocol add their roots on top. A drive 
 your home directory is never granted by that last fallback; name it explicitly instead.
 Paths are resolved before the check, so a symlink or Windows junction pointing outside is
 rejected rather than followed.
+
+## Tools
+
+20 tools — every one that touches text content is encoding-aware:
+- [`read_text_file`](TOOLS.md#read_text_file) - Read files with encoding auto-detection and conversion
+- [`read_multiple_files`](TOOLS.md#read_multiple_files) - Read multiple files concurrently with encoding support
+- [`write_file`](TOOLS.md#write_file) - Write files in specific encodings
+- [`edit_file`](TOOLS.md#edit_file) - Line-based edits with diff preview and whitespace-flexible matching
+- [`copy_file`](TOOLS.md#copy_file) - Copy a file to a new location
+- [`delete_file`](TOOLS.md#delete_file) - Delete a file
+- [`list_directory`](TOOLS.md#list_directory) - Browse directories with pattern filtering
+- [`tree`](TOOLS.md#tree) - Compact indented tree view, optionally annotated with each file's encoding
+- [`search_files`](TOOLS.md#search_files) - Recursively search for files matching glob patterns
+- [`grep_text_files`](TOOLS.md#grep_text_files) - Regex search in file contents with encoding support
+- [`detect_encoding`](TOOLS.md#detect_encoding) - Auto-detect file encoding with confidence score
+- [`convert_encoding`](TOOLS.md#convert_encoding) - Convert file between encodings
+- [`manage_line_endings`](TOOLS.md#manage_line_endings) - Detect or convert line endings (CRLF/LF/mixed)
+- [`manage_bom`](TOOLS.md#manage_bom) - Detect, strip, or add Unicode BOM
+- [`list_encodings`](TOOLS.md#list_encodings) - Show all supported encodings
+- [`get_file_info`](TOOLS.md#get_file_info) - Get file/directory metadata
+- [`create_directory`](TOOLS.md#create_directory) - Create directories recursively (mkdir -p)
+- [`move_file`](TOOLS.md#move_file) - Move or rename files and directories
+- [`list_allowed_directories`](TOOLS.md#list_allowed_directories) - Show accessible directories
+- [`check_for_updates`](TOOLS.md#check_for_updates) - Check whether a newer release is available
+
+Plus three [prompts](TOOLS.md#prompts) — `audit_encodings`, `fix_mojibake`,
+`migrate_to_utf8` — surfaced by clients as user commands.
+
+See [TOOLS.md](TOOLS.md) for detailed parameters and examples. Calls shaped like
+Claude Code's built-in Read/Write/Edit/Grep are accepted too — the
+[alias layer](TOOLS.md#built-in-name-aliases) translates them where the semantics
+match exactly, so a model's habits don't fail the call.
+
+**Out of scope:** binary/media reading (`read_media_file`). This is a *text*
+tool; agents read images with their built-in tools.
+
+### Supported encodings
+
+Every one below reads and writes. Name one explicitly via the `encoding` parameter, or
+leave it to auto-detection.
+
+| Script / region | Encodings |
+|---|---|
+| Unicode | UTF-8, UTF-16 LE, UTF-16 BE |
+| Cyrillic | Windows-1251, KOI8-R, KOI8-U, CP866, ISO-8859-5, MacCyrillic |
+| Western European | Windows-1252, ISO-8859-1, ISO-8859-15 |
+| Central European | Windows-1250, ISO-8859-2 |
+| Greek | Windows-1253, ISO-8859-7 |
+| Turkish | Windows-1254, ISO-8859-9 |
+| Chinese Simplified | GBK, GB18030 |
+| Hebrew, Arabic, Baltic, Vietnamese, Thai | Windows-1255, 1256, 1257, 1258, 874 |
+
+Common aliases are accepted (`cp1251`, `latin1`, `gb2312`, `tis-620`, …) —
+[`list_encodings`](TOOLS.md#list_encodings) prints the whole table with aliases.
+
+UTF-32 is partially supported: LE and BE BOMs are detected, and
+[`manage_bom`](TOOLS.md#manage_bom) can add or strip them, but transcoding to or from
+UTF-32 is not implemented and [`manage_line_endings`](TOOLS.md#manage_line_endings)
+refuses UTF-32 files rather than corrupting their 4-byte alignment.
 
 ## Configuration
 
@@ -410,11 +417,12 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | go run ./cmd
 ## Contributing
 
 **If it fits the scope and works, it gets merged.** Don't ask first — just send the PR.
-
-- No CLA, no style review. `make test` and `make lint` passing is enough; tests are welcome, never required.
-- One-line fixes and half-finished features behind a flag are both fine.
-- Pushed back on (with a comment, not a close): out of scope, or breaking tool contracts other people's agents rely on.
-- Don't want to write the fix? [Open an issue](https://github.com/dimitar-grigorov/mcp-file-tools/issues) with the file, its encoding, and what the tool did.
+No CLA, no style review: `make test` and `make lint` passing is enough, and tests are
+welcome but never required. One-line fixes and half-finished features behind a flag both
+count. Out of scope, or breaking a tool contract other people's agents rely on, gets a
+comment rather than a close. Not writing the fix yourself?
+[Open an issue](https://github.com/dimitar-grigorov/mcp-file-tools/issues) with the file,
+its encoding, and what the tool did.
 
 Details in [CONTRIBUTING.md](CONTRIBUTING.md). Found a way out of an allowed
 directory? That one goes to [SECURITY.md](SECURITY.md), privately, not to an issue.
@@ -423,7 +431,8 @@ directory? That one goes to [SECURITY.md](SECURITY.md), privately, not to an iss
 
 Forking is fine. That's what GPL-3.0 is for. Taking the project over is not.
 
-**GPL-3.0 is a license, not a preference.** Distribute your fork in any form (public repo, release binary, registry listing, product you ship to customers) and you must:
+**GPL-3.0 is a license, not a preference.** Distribute your fork in any form (public repo,
+release binary, registry listing, product you ship to customers) and you must:
 
 - **Keep GPL-3.0** and [LICENSE](LICENSE), copyright notice intact (§4, §5c)
 - **Say what you changed** and when, prominently (§5a)
@@ -435,16 +444,16 @@ Forking is fine. That's what GPL-3.0 is for. Taking the project over is not.
 
 **It will be enforced,** in this order: a request to comply, then a DMCA takedown plus
 delisting from whichever registry or marketplace carries it, then legal action. Complying
-costs one license file, one notice and one source link, so none of this needs to happen.
-Unsure whether what you ship complies?
-[Ask in an issue](https://github.com/dimitar-grigorov/mcp-file-tools/issues) — cheaper than
-finding out later.
+costs one license file, one notice and one source link.
+[Ask in an issue](https://github.com/dimitar-grigorov/mcp-file-tools/issues) if you are
+unsure whether what you ship complies.
 
-**The rest is asked, not enforced:**
-
-- **Leave the credit in.** `Copyright (C) 2026 Dimitar Grigorov` in `LICENSE` and the source headers is the legal minimum. One line near the top of your README, *"Fork of [dimitar-grigorov/mcp-file-tools](https://github.com/dimitar-grigorov/mcp-file-tools)"*, is what actually tells a reader where this came from, and costs you nothing.
-- **Give your fork its own name.** A rebranded fork in a public registry (MCP Registry, plugin marketplaces, Smithery) under this product name with the author swapped reads as if the original project moved. People install it believing it's this one, then file its bugs here.
-- **Try upstream first.** A PR beats carrying merge conflicts forever, and puts your name on the commit rather than in a credits list. Maintaining a long-running fork? Open an issue about upstreaming the parts that fit.
+**Asked, not enforced:** leave the credit in — the copyright notice is the legal minimum,
+one line saying *"Fork of [mcp-file-tools](https://github.com/dimitar-grigorov/mcp-file-tools)"*
+is what tells a reader where it came from. Give your fork its own name, so a registry
+listing under this one with the author swapped doesn't read as if the project moved and
+send its bugs here. And try upstream first: a PR beats carrying merge conflicts forever,
+and puts your name on the commit rather than in a credits list.
 
 ## Credits
 
