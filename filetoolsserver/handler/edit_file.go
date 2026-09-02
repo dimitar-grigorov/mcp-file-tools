@@ -70,6 +70,14 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 	if lineEndings.Style == LineEndingMixed {
 		slog.Warn("file has mixed line endings", "path", input.Path, "crlf", lineEndings.CRLFCount, "lf", lineEndings.LFCount)
 	}
+	// Resolve to a concrete crlf/lf target before writing back. ConvertLineEndings
+	// only special-cases "crlf" as a target; passing "mixed" or "none" straight
+	// through silently collapsed every line ending in the file to LF. Mixed
+	// repairs to the dominant style, same as write_file's resolveLineEndingStyle.
+	targetLineEndingStyle := dominantLineEnding(lineEndings)
+	if targetLineEndingStyle == "" {
+		targetLineEndingStyle = h.config.DefaultLineEndings
+	}
 
 	content = ConvertLineEndings(content, LineEndingLF)
 	var modifiedContent string
@@ -89,7 +97,7 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 		if r := cancelled(ctx); r != nil {
 			return r, EditFileOutput{}, nil
 		}
-		if err := atomicWriteFileWithEncoding(v.Path, modifiedContent, encodingName, lineEndings.Style, originalMode); err != nil {
+		if err := atomicWriteFileWithEncoding(v.Path, modifiedContent, encodingName, targetLineEndingStyle, originalMode); err != nil {
 			return errorResult(fmt.Sprintf("failed to write file: %v", err)), EditFileOutput{}, nil
 		}
 	}
