@@ -33,6 +33,9 @@ make lint    # go vet, go fmt, staticcheck (same pinned version as CI)
 
 Both passing is enough. Skipped tests are fine — just say so. Match the surrounding style.
 
+New functionality should arrive with a test for it in the automated suite; a bug fix should
+arrive with the test that would have caught it.
+
 ## Sending it
 
 ```bash
