@@ -34,7 +34,7 @@ type cache struct {
 	LatestVersion string    `json:"latestVersion"`
 }
 
-// Returns "" if: no update, disabled via MCP_NO_UPDATE_CHECK=1, dev version, or error.
+// Check returns "" if: no update, disabled via MCP_NO_UPDATE_CHECK=1, dev version, or error.
 // force bypasses the cache. env selects the update steps; a zero Env yields client-neutral ones.
 func Check(ctx context.Context, currentVersion string, force bool, env install.Env) string {
 	if os.Getenv("MCP_NO_UPDATE_CHECK") == "1" || currentVersion == "dev" || currentVersion == "" {

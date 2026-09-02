@@ -133,8 +133,8 @@ func searchFiles(ctx context.Context, rootPath string, sOpts searchOptions) ([]s
 	return results, truncated, nil
 }
 
-// "**" spans any number of segments and "{a,b}" tries each alternative; a pattern
-// without a separator matches on the basename alone, so "*.pas" finds files at any depth.
+// The path is slash-separated: "**" spans any number of segments and "{a,b}" tries each
+// alternative; a pattern without a separator matches the basename, so "*.pas" hits any depth.
 func matchGlobPattern(path, pattern string) bool {
 	pattern = strings.TrimSuffix(filepath.ToSlash(pattern), "/")
 	if !strings.Contains(pattern, "{") {
