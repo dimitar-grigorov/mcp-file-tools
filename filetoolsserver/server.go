@@ -306,12 +306,15 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 	}, handler.Wrap(logger, "move_file", h.HandleMoveFile))
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "copy_file",
-		Description: "Copy a file. Fails if destination exists. Parameters: source (required), destination (required).",
+		Name: "copy_file",
+		Description: "Copy one file byte for byte, keeping its encoding, BOM, line endings, permissions and mtime. Use it to back up a file before an edit or a conversion. Parameters: source (required), destination (required). " +
+			"Never overwrites: an existing destination is an error and nothing is written, so the same call repeated fails the second time rather than copying again. " +
+			"Source must be a file, a directory is refused. The destination's parent directory has to exist already (create_directory first), both paths must sit inside the allowed directories, and a relative path resolves against the directory the server was started in. " +
+			"Prefer move_file to relocate a file (the source stops existing), write_file to create one from new content, convert_encoding with backup=true for a .bak beside a converted file.",
 		Annotations: &mcp.ToolAnnotations{
-			Title:           "Copy File",
-			ReadOnlyHint:    false,
-			IdempotentHint:  true,
+			Title:        "Copy File",
+			ReadOnlyHint: false,
+			IdempotentHint:  false,
 			DestructiveHint: boolPtr(false),
 			OpenWorldHint:   boolPtr(false),
 		},

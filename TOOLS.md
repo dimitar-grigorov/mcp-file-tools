@@ -358,11 +358,11 @@ Move or rename files and directories. Fails if destination exists.
 
 ### copy_file
 
-Copy a file. Fails if destination exists. Does not copy directories.
+Copy one file byte for byte, keeping its encoding, BOM, line endings, permissions and mtime. Fails if the destination exists, so it never overwrites and a repeat of the same call fails the second time. Does not copy directories, and the destination's parent directory must already exist. Use [`move_file`](#move_file) to relocate a file instead, [`write_file`](#write_file) to create one from new content.
 
 **Parameters:**
 - `source` (required): Source file path
-- `destination` (required): Destination path
+- `destination` (required): Destination path, must not exist
 
 ### delete_file
 
