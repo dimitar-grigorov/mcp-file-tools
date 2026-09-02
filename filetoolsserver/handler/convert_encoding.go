@@ -111,8 +111,7 @@ func (h *Handler) HandleConvertEncoding(ctx context.Context, req *mcp.CallToolRe
 	return &mcp.CallToolResult{}, output, nil
 }
 
-// convertOne converts a single file. Failures are returned in the result's Error
-// field rather than aborting, so a batch can report every file.
+// convertOne reports a failure in the result's Error field rather than aborting, so a batch can report every file.
 func (h *Handler) convertOne(path string, input ConvertEncodingInput, policy bomPolicy, targetEncodingName string) ConvertFileResult {
 	res := ConvertFileResult{Path: path}
 
