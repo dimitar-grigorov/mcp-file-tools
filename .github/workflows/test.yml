@@ -40,18 +40,32 @@ jobs:
 
       - name: Verify go.mod and go.sum are tidy
         if: matrix.os == 'ubuntu-latest'
-        run: go mod tidy && git diff --exit-code go.mod go.sum
+        run: |
+          go mod tidy
+          go -C tools mod tidy
+          git diff --exit-code go.mod go.sum tools/go.mod tools/go.sum
 
       - name: Run go vet
         run: go vet ./...
 
+      # go vet and staticcheck ignore formatting, and `make lint` rewrites rather than reports.
+      - name: Check gofmt
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "::error::gofmt needed on: $unformatted"
+            gofmt -d .
+            exit 1
+          fi
+
       - name: Run staticcheck
         if: matrix.os == 'ubuntu-latest'
-        run: go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...
+        run: go tool -modfile=tools/go.mod staticcheck ./...
 
       - name: Run govulncheck
         if: matrix.os == 'ubuntu-latest'
-        run: go run golang.org/x/vuln/cmd/govulncheck@v1.6.0 ./...
+        run: go tool -modfile=tools/go.mod govulncheck ./...
 
       - name: Lint GitHub Actions workflows
         if: matrix.os == 'ubuntu-latest'

@@ -112,7 +112,7 @@ claude mcp add --scope user file-tools -- ~/.local/bin/mcp-file-tools ~/Projects
 ### Go install (all platforms)
 
 ```bash
-# Requires Go 1.26+
+# Requires Go 1.27+
 go install github.com/dimitar-grigorov/mcp-file-tools/v4/cmd/mcp-file-tools@latest
 # Linux / macOS
 claude mcp add --scope user file-tools -- $(go env GOPATH)/bin/mcp-file-tools ~/Projects
@@ -385,7 +385,7 @@ their own encoding either way, and no tool adds a BOM to them.
 
 ## Development
 
-**Prerequisites:** Go 1.26+
+**Prerequisites:** Go 1.27+
 
 ```bash
 make test    # go test -race ./...

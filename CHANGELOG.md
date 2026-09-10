@@ -8,303 +8,137 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-
-- **`copy_file` dropped `idempotentHint: true`** — a repeat fails on the destination the first
-  call created. Its description now says what the copy keeps and when to use `move_file`.
+- **`copy_file` dropped `idempotentHint: true`** — a repeat fails on the destination the
+  first call created. Its description now says what the copy keeps.
+- **Lint tooling moved into a `tools/` module** (staticcheck, govulncheck v1.8.0, actionlint)
+  so Dependabot bumps the pins; CI gates on `gofmt -l`, which nothing caught before.
+- **Requires Go 1.27.1**, matching the Docker builder. Bumped `x/text`, `x/sys`, `x/sync`
+  and `codeql-action`.
+- `read_text_file` no longer reopens a file for its BOM; `TOOLS.md` and `docs/PUBLISHING.md`
+  corrected.
 
 ## [4.4.0] - 2026-09-02
 
-### Fixed
-
-- **`edit_file` collapsed a whole CRLF file to LF if it held even one bare LF.** One stray
-  `\n` anywhere classified the file as mixed, and mixed reached the writer unresolved. Mixed
-  now repairs to the dominant style and the response reports how many endings changed.
-  Thanks to [@igorzlatkov](https://github.com/igorzlatkov) (#24).
-- **Sparse Cyrillic in a mostly-ASCII source read as the wrong encoding.** Too few non-ASCII
-  bytes to score, so chardet ranked a Latin table first and the text came out garbled. A Latin
-  verdict is now checked against the high bytes; each Cyrillic codepage keeps its own.
+- **`edit_file` collapsed a whole CRLF file to LF** if it held even one bare LF. Mixed now
+  repairs to the dominant style. Thanks to [@igorzlatkov](https://github.com/igorzlatkov) (#24).
+- **Sparse Cyrillic in a mostly-ASCII source read as a Latin codepage.** A Latin verdict is
+  now checked against the high bytes.
 - **A file read as UTF-8 only because detection gave up was advertised as plain UTF-8**, and
   the model sent to built-in tools that cannot read it.
-
-### Changed
-
-- With `MCP_DETECTION_CANDIDATES` set, a file that fits none of them is reported as an **ODD
+- With `MCP_DETECTION_CANDIDATES` set, a file fitting none of them is reported as **ODD
   ENCODING** rather than read as the default in silence.
 
 ## [4.3.0] - 2026-08-19
 
-### Fixed
-
-- **Zero-config access was gone on Claude Code 2.1.232 and later.** Those clients speak MCP
-  2026-07-28, where SEP-2322 forbids the `roots/list` the plugin relied on, so every file
-  operation failed. The server now derives its baseline from where it was started.
-- **The plugin launcher swallowed `args`**, so directories set in `.mcp.json` never reached
-  the binary.
-
-### Added
-
-- **`MCP_FILE_TOOLS_ALLOWED_DIRS`** — allowed directories as an OS path list, for clients
-  where `env` is all you control.
-- **`MCP_FILE_TOOLS_NO_CWD_FALLBACK`** turns the working-directory fallback off.
-
-### Changed
-
-- Allowed directories resolve `args`, then `MCP_FILE_TOOLS_ALLOWED_DIRS`, then the working
-  directory; MCP roots still merge on top below 2026-07-28.
-- The fallback refuses a filesystem root or the home directory — name them explicitly.
-- Startup logs which directories were granted and why.
+- **Zero-config access was gone on Claude Code 2.1.232 and later** — those clients speak MCP
+  2026-07-28, where SEP-2322 forbids the `roots/list` the plugin relied on. The server now
+  derives its baseline from where it was started.
+- **The plugin launcher swallowed `args`**, so directories set in `.mcp.json` never arrived.
+- Added **`MCP_FILE_TOOLS_ALLOWED_DIRS`** and **`MCP_FILE_TOOLS_NO_CWD_FALLBACK`**.
+- Resolution order is `args`, then the env var, then the working directory — which refuses a
+  filesystem root or the home directory.
 
 ## [4.2.1] - 2026-08-15
 
-### Fixed
-
-- **`go install` silently served v1.8.1, not the current release.** The module path
-  lacked the `/v4` suffix Go requires from v2 on, so the proxy ignored every tag since
-  2.0.0. The module is now `github.com/dimitar-grigorov/mcp-file-tools/v4`.
-
-### Changed
-
-- Go Report Card badge dropped — the service was sunset 2026-07-01 and its endpoint now
-  renders "retired". Downloads and Glama score badges take its place.
-- `scorecard.yml` publishes OpenSSF Scorecard results weekly.
-- `release.yml` defaults to `contents: read`; only the GoReleaser job gets write.
-- Every action is pinned by commit SHA, both Docker images by digest; Dependabot now
-  covers Docker too.
-
-### Added
-
-- **Releases carry build provenance.** `checksums.txt` is attested and the bundle
-  ships as `mcp-file-tools.intoto.jsonl` — `gh attestation verify` checks it.
-- `SECURITY.md` — private reporting, and what counts as a containment bug.
-- `codeql.yml` scans Go on push, PR and weekly.
+- **`go install` silently served v1.8.1, not the current release.** The module path lacked
+  the `/v4` suffix Go requires from v2 on, so the proxy ignored every tag since 2.0.0.
+- **Releases carry build provenance** (`gh attestation verify`), plus `SECURITY.md` and
+  weekly CodeQL and OpenSSF Scorecard runs.
+- Every action pinned by commit SHA, both Docker images by digest.
+- Go Report Card badge dropped — the service was sunset 2026-07-01.
 
 ## [4.2.0] - 2026-08-15
 
-### Added
-
 - **`MCP_DETECTION_CANDIDATES` pins what detection may answer**, in priority order. A BOM
-  still wins and a guess inside the list keeps its confidence; one outside it gives way to
-  the first listed encoding that decodes the bytes cleanly, and nothing fitting means no
-  answer rather than a wrong one. Fixes Spanish CP1252 read as GBK. Unset changes nothing.
-- **`grep_text_files` takes `patterns`** — an array searched as one alternation, so a list
-  of names is one call and one pass; `matchesOnly` says which pattern hit.
-
-Both reimplemented from [Mario Rial](https://github.com/seguridadea1)'s fork.
+  still wins; nothing fitting means no answer rather than a wrong one. Unset changes nothing.
+- **`grep_text_files` takes `patterns`** — an array searched as one alternation, so a list of
+  names is one call and one pass.
+- Both reimplemented from [Mario Rial](https://github.com/seguridadea1)'s fork.
 
 ## [4.1.0] - 2026-08-14
 
-### Added
-
-- **Ranked encoding candidates when detection cannot decide.** `detect_encoding` returns
-  `candidates` (best first, each flagged `supported`) for a verdict under 80% confident or
-  outside the registry; `read_text_file` names them in `hint`, `convert_encoding` in its error.
-- **Progress notifications on a batch `convert_encoding`** — per file, capped at 100 per
-  call, only with a `progressToken`.
-- **Server title, description, website and icon** (SEP-973), the icon an inline data URI.
+- **Ranked encoding candidates when detection cannot decide** — `detect_encoding` returns
+  `candidates`, and `read_text_file` and `convert_encoding` name them.
+- **Progress notifications on a batch `convert_encoding`**, capped at 100 per call.
+- **Server title, description, website and icon** (SEP-973).
 
 ## [4.0.0] - 2026-08-14
 
-### Added
-
-- **Built-in tool parameter names are accepted as aliases.** A call shaped like
-  Claude Code's Read/Write/Edit/Grep — `file_path`, flat `old_string`/`new_string`/
-  `replace_all`, `-A`/`-B`/`-C`/`-i`/`-o`, `head_limit`, `output_mode`, a single
-  grep `path` string — is translated where semantics match exactly, instead of
-  failing schema validation. Canonical names always win; Grep's `glob`/`type` stay
-  unsupported (basename-only `includes` instead).
-- **`{a,b}` glob alternatives.** `search_files` patterns and excludes and grep
-  `include`/`excludes` accept `*.{pas,dfm}`; grep basename globs also ignore a
-  leading `**/`. Both shapes previously matched nothing, silently.
-
-### Fixed
-
-- **`search_files` patterns with several `**` silently matched nothing** (e.g.
-  `src/**/test/**/*.go`). The matcher is now segment-based and `**` may appear
-  any number of times.
-- **`write_file` and `edit_file` stripped the CRLFs from UTF-16 files.** Both read
-  line endings off raw bytes, where the `00` between CR and LF hides every CRLF, so
-  "preserve" rewrote the file as LF. Detection now runs on decoded text, as
-  `change_line_endings` already did.
-- **`grep_text_files` searched with a silently wrong decode** when given an
-  `encoding` it could not resolve. It now detects per file and says so in `hint`.
-- **`grep_text_files` over-reported `filesSearched`** once a full page stopped the
-  search early.
-- **`search_files` reported `truncated` for a result set that exactly filled
-  `maxResults`.**
-- **`detect_encoding` with `mode="chunked"` broke a tie at random**, the winner
-  coming out of a map range. Ties now break by name.
-
-### Changed
-
-- **`edit_file` no longer edits the first of several identical matches.** An `oldText`
-  matching more than one place now fails with their line numbers and changes nothing;
-  add context to pick one, or pass the new `replaceAll: true` to change them all. The
-  response then reports `replacements`. Picking one silently hit the wrong copy as often
-  as the right one, and the tool tells the agent not to re-read and verify.
-- One `Decode` behind every tool that reads encoded bytes.
+- **Built-in tool parameter names are accepted as aliases** — a call shaped like Claude
+  Code's Read/Write/Edit/Grep is translated where semantics match exactly.
+- **`{a,b}` glob alternatives** in search and grep patterns, which previously matched
+  nothing, silently — as did `search_files` patterns with several `**`.
+- **`write_file` and `edit_file` stripped the CRLFs from UTF-16 files**, and
+  `grep_text_files` searched with a silently wrong decode on an unresolvable `encoding`.
+- **`edit_file` no longer edits the first of several identical matches** — it fails with
+  their line numbers; add context, or pass the new `replaceAll: true`.
 
 ## [3.4.1] - 2026-08-14
 
-### Fixed
-
-- **`edit_file` could stall for minutes on a failed edit** — finding the closest
-  match was cubic in `oldText`. A 50-line block against a 2,000-line file: 5.6s
-  → 4ms.
+- **`edit_file` could stall for minutes on a failed edit** — finding the closest match was
+  cubic in `oldText`. A 50-line block against a 2,000-line file: 5.6s → 4ms.
 - **`read_text_file` and `grep_text_files` ignored `MCP_DEFAULT_ENCODING`** on an
-  inconclusive detection; writes and edits already honoured it. No change on the
-  default `utf-8`.
-- **`convert_encoding` converted on a detection it did not trust**, and a bad
-  guess is unrecoverable — the result detects as valid UTF-8. It now stops and
-  names the guess. **Behaviour change:** confirm with `from`, or pass the new
-  `allowLowConfidence`.
+  inconclusive detection. No change on the default `utf-8`.
+- **`convert_encoding` converted on a detection it did not trust**, and a bad guess is
+  unrecoverable. **Behaviour change:** confirm with `from`, or pass `allowLowConfidence`.
 
 ## [3.4.0] - 2026-08-14
 
-### Added
-
-- **MacCyrillic encoding** (`x-mac-cyrillic`, alias `maccyrillic`) — 25 encodings total.
-
-### Fixed
-
-- **CP1251 files no longer come back garbled via a MacCyrillic guess.** Detection
-  keeps whichever of the two decodes better, and a read falling back to raw
-  UTF-8 now says so in the response.
+- **MacCyrillic encoding** (`x-mac-cyrillic`) — 25 encodings total.
+- **CP1251 files no longer come back garbled via a MacCyrillic guess**, and a read falling
+  back to raw UTF-8 now says so.
 
 ## [3.3.0] - 2026-08-03
 
-### Changed
-
-- **Update notices match how the server was installed**: plugin installs get the
-  `claude plugin update` commands, manual installs get re-download steps naming
-  their own client.
-
-### Added
-
-- **`check_for_updates` returns `installMethod`** (`plugin` or `manual`).
-
-### Fixed
-
-- **An allowed directory reached by an alias** (macOS `/var` → `/private/var`)
-  no longer denies every path under it.
-- **A Windows 8.3 short path as an allowed directory** (`C:\Users\DIMITA~1.GRI`)
-  no longer denies everything under it.
-- **An empty client roots list revokes that client's earlier roots** instead of
-  leaving them authorized for the life of the process. CLI args are unaffected.
+- **Update notices match how the server was installed**, and `check_for_updates` returns
+  `installMethod`.
+- **An allowed directory reached by an alias** (macOS `/var` → `/private/var`) or given as a
+  Windows 8.3 short path no longer denies every path under it.
+- **An empty client roots list revokes that client's earlier roots** instead of leaving them
+  authorized for the life of the process. CLI args are unaffected.
 
 ## [3.2.0] - 2026-08-01
 
-### Added
-
-- **`grep_text_files` accepts `includes` and `excludes` arrays**; the singular
-  forms still work.
-- **`edit_file` edits take optional `similarity`** (0.0–1.0) for bounded,
-  line-based fuzzy matching.
-- **`edit_file` accepts a one-file unified diff** through `patch`.
-- **`read_text_file` takes `lineNumbers`** (default false): prefixes every line
-  with `N<tab>`, absolute numbering. Off by default so a read → write round
-  trip cannot bake numbers into a file.
-- **Three MCP prompts**: `audit_encodings`, `fix_mojibake` and `migrate_to_utf8`
-  — guided workflows clients surface as user commands; the server now advertises
-  the `prompts` capability.
-- **`tree`, `search_files` and `grep_text_files` honour `.gitignore`** and skip
-  `.git`. **Behaviour change:** on by default; pass `respectGitignore: false`
-  for the old behaviour.
-
-### Changed
-
-- `edit_file` now tells the model not to re-read a file to verify an edit.
+- **`edit_file` takes `similarity`** for bounded fuzzy matching and a one-file unified diff
+  through `patch`; `grep_text_files` accepts `includes`/`excludes` arrays.
+- **`read_text_file` takes `lineNumbers`**, off by default so a read → write round trip
+  cannot bake numbers into a file.
+- **Three MCP prompts**: `audit_encodings`, `fix_mojibake`, `migrate_to_utf8`.
+- **`tree`, `search_files` and `grep_text_files` honour `.gitignore`.** **Behaviour change:**
+  on by default; pass `respectGitignore: false` for the old behaviour.
 
 ## [3.1.0] - 2026-08-01
 
-### Added
-
-- **`search_files` and `list_directory` take `sortBy` and `reverse`** — `name`
-  (default), `mtime`, `size`. With `mtime`/`size` the whole tree is ranked
-  before `maxResults`, so a truncated result really is the newest/largest N.
-- **`grep_text_files` gains `outputMode`** (`content`, `files_with_matches`,
-  `count`), plus `matchesOnly` and `offset`/`nextOffset` for paging past
-  `truncated`.
-- **A failed conversion names the characters that do not fit** — character,
-  code point, line and column, up to 10 listed — in `convert_encoding`,
-  `write_file` and `edit_file`.
-- **`convert_encoding` takes a batch and a dry run.** `paths` reports per-file
-  `results` instead of stopping at the first failure; `dryRun` shows which files
-  would lose characters before anything is written. A single `path` behaves
-  exactly as before.
-
-### Changed
-
-- **`move_file` now sets `destructiveHint: true`** (a move removes the source);
-  `copy_file` and `create_directory` stay `false`.
+- **`search_files` and `list_directory` take `sortBy` and `reverse`** — with `mtime`/`size`
+  the whole tree is ranked before `maxResults`.
+- **`grep_text_files` gains `outputMode`**, plus `matchesOnly` and `offset`/`nextOffset`.
+- **`convert_encoding` takes a batch and a dry run**, and a failed conversion names the
+  characters that do not fit — character, code point, line and column.
+- **`move_file` now sets `destructiveHint: true`** (a move removes the source).
 
 ## [3.0.0] - 2026-08-01
 
-### Removed — BREAKING
-
-- **`directory_tree` is gone** — use `tree`: same structure, ~85% fewer tokens,
-  `excludePatterns` is spelled `exclude`.
-- **`detect_line_endings` and `change_line_endings` merged into
-  `manage_line_endings`** with `action: "detect" | "convert"`. Behaviour
-  unchanged; the merged tool no longer carries a `readOnlyHint`.
-
-### Fixed
-
-- **`write_file` no longer leaves CRLF files with mixed line endings.** Content
-  converts to the existing file's dominant style; already-mixed files get
-  repaired. New `lineEndings` parameter (`preserve` default, `crlf`, `lf`,
-  `asis`) and `MCP_DEFAULT_LINE_ENDINGS` for new files. **Behaviour change:**
-  no longer byte-verbatim by default — pass `lineEndings: "asis"` for that.
-
-### Added
-
-- **The plugin bundles a skill, `fixing-text-encodings`**: the mojibake
-  symptom-to-cause table, project surveys, and the backup-and-verify checklist
-  for bulk conversions.
-- **`read_text_file` and `write_file` return a `hint`** for mixed line endings
-  and (once per file per session) plain utf-8 files better served by built-in
-  tools. `write_file` also reports normalised line endings in `lineEndings`.
-
-### Changed
-
-- **Upgraded to `modelcontextprotocol/go-sdk` v1.7.0** (MCP spec `2026-07-28`);
-  older clients are unaffected.
-- **Server capabilities declared explicitly** as `tools` only — no deprecated
-  `logging`, no false `listChanged`.
-- `readOnlyHint` and `idempotentHint` are always present in `tools/list`.
-- **Usage examples in the five most ambiguous tool descriptions**, mirrored in
-  `TOOLS.md`.
-- **`anthropic/maxResultSizeChars` declared** on large-output tools so clients
-  do not truncate their results to a file reference.
+- **Removed — BREAKING: `directory_tree`** (use `tree`: same structure, ~85% fewer tokens,
+  `excludePatterns` is spelled `exclude`), and `detect_line_endings`/`change_line_endings`
+  merged into **`manage_line_endings`** with `action: "detect" | "convert"`.
+- **`write_file` no longer leaves CRLF files with mixed line endings.** New `lineEndings`
+  parameter. **Behaviour change:** no longer byte-verbatim by default — pass `"asis"`.
+- **The plugin bundles a skill, `fixing-text-encodings`**, and reads and writes return a
+  `hint` for mixed line endings and plain utf-8 files better served by built-in tools.
+- **Upgraded to `modelcontextprotocol/go-sdk` v1.7.0** (MCP spec `2026-07-28`), capabilities
+  declared explicitly as `tools` only; older clients are unaffected.
 
 ## [2.0.1] - 2026-07-27
 
-### Fixed
-
-- **Pure-ASCII files no longer silently convert to `utf-8` on edit/write.**
-  `ascii` detections fall through to the configured default like any other
-  inconclusive detection instead of overriding `MCP_DEFAULT_ENCODING`.
-- **`edit_file` now honors `MCP_DEFAULT_ENCODING`** instead of hardcoding
-  `utf-8` for inconclusive detection.
+- **Pure-ASCII files no longer silently convert to `utf-8` on edit/write** — `ascii`
+  detections fall through to the configured default like any other inconclusive detection.
+- **`edit_file` now honors `MCP_DEFAULT_ENCODING`** instead of hardcoding `utf-8`.
 
 ## [2.0.0] - 2026-07-26
 
-### Changed — BREAKING
-
-- **`write_file` defaults new files to `utf-8` instead of `cp1251`.** Only
-  callers creating **new** files without `encoding` are affected. Existing
-  files keep their detected encoding — the resolution order (explicit
-  `encoding` > detected > configured default) is unchanged. To restore the old
-  behaviour set `"env": { "MCP_DEFAULT_ENCODING": "cp1251" }`; see
+- **Changed — BREAKING: `write_file` defaults new files to `utf-8` instead of `cp1251`.**
+  Only callers creating **new** files without `encoding` are affected; existing files keep
+  their detected encoding. Set `MCP_DEFAULT_ENCODING=cp1251` to restore — see
   [Legacy teams](README.md#legacy-teams-pre-200-behaviour).
-
-### Added
-
-- **Transitional:** the first `write_file` creating a new file under the
-  built-in default appends a one-line notice about the utf-8 change.
-  **Runs to the end of 2026.**
-- `make lint` runs `staticcheck` at the same pinned version as CI.
-
-### Fixed
-
-- Repo-wide `gofmt` drift.
+- **Transitional:** the first `write_file` creating a new file under the built-in default
+  appends a one-line notice about the change. **Runs to the end of 2026.**

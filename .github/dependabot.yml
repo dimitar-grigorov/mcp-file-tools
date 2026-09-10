@@ -9,6 +9,17 @@ updates:
         update-types:
           - "minor"
           - "patch"
+
+  # Lint tools as `tool` directives, so the pins get PRs instead of rotting in a `go run` line.
+  - package-ecosystem: "gomod"
+    directory: "/tools"
+    schedule:
+      interval: "weekly"
+    groups:
+      lint-tools:
+        patterns:
+          - "*"
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
