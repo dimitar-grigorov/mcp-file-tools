@@ -6,7 +6,7 @@ versions see the [GitHub releases](https://github.com/dimitar-grigorov/mcp-file-
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [4.4.1] - 2026-09-10
 
 - **`copy_file` dropped `idempotentHint: true`** — a repeat fails on the destination the
   first call created. Its description now says what the copy keeps.
