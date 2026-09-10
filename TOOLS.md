@@ -163,9 +163,13 @@ Strip a UTF-8 BOM:
 **Response:**
 ```json
 {
-  "message": "Successfully wrote 48 bytes to /path/to/file.pas"
+  "message": "Successfully wrote 48 bytes to /path/to/file.pas (encoding: cp1251)",
+  "hasBom": false
 }
 ```
+
+The byte count is what landed on disk, so it reflects the target encoding rather than the
+length of `content`. `lineEndings` joins it when the content was normalised.
 
 ### edit_file
 
@@ -673,10 +677,12 @@ Auto-detected source, with a backup:
 **Response:**
 ```json
 {
-  "message": "Converted /path/to/file.pas from windows-1251 to utf-8",
+  "message": "Successfully converted /path/to/file.pas from windows-1251 to utf-8 (backup: /path/to/file.pas.bak)",
   "sourceEncoding": "windows-1251",
   "targetEncoding": "utf-8",
-  "backupPath": "/path/to/file.pas.bak"
+  "backupPath": "/path/to/file.pas.bak",
+  "hasBom": false,
+  "changed": true
 }
 ```
 

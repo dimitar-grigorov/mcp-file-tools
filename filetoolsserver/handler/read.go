@@ -97,7 +97,9 @@ func (h *Handler) HandleReadTextFile(ctx context.Context, req *mcp.CallToolReque
 	}
 	// Never on a fallback: the file is utf-8 only because detection gave up, and the hint would send the model to tools that cannot read it.
 	if !encResult.fromFallback {
-		if hint := h.plainUTF8HintFor(v.Path, encResult.name, existingBOM(v.Path).HasBOM); hint != "" {
+		// Off the bytes already in hand, rather than reopening the file for its first four.
+		_, bom := splitBOM(data)
+		if hint := h.plainUTF8HintFor(v.Path, encResult.name, bom.HasBOM); hint != "" {
 			hints = append(hints, hint)
 		}
 	}

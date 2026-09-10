@@ -63,7 +63,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 		Instructions:       serverInstructions,
 		Logger:             logger,
 		InitializedHandler: createInitializedHandler(h),
-		// Deprecated in 2026-07-28, kept for older clients.
+		//lint:ignore SA1019 roots deprecated in 2026-07-28, kept for older clients
 		RootsListChangedHandler: createRootsListChangedHandler(h),
 		// Explicit: unset, the SDK also advertises logging and listChanged.
 		Capabilities: &mcp.ServerCapabilities{
@@ -312,8 +312,8 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 			"Source must be a file, a directory is refused. The destination's parent directory has to exist already (create_directory first), both paths must sit inside the allowed directories, and a relative path resolves against the directory the server was started in. " +
 			"Prefer move_file to relocate a file (the source stops existing), write_file to create one from new content, convert_encoding with backup=true for a .bak beside a converted file.",
 		Annotations: &mcp.ToolAnnotations{
-			Title:        "Copy File",
-			ReadOnlyHint: false,
+			Title:           "Copy File",
+			ReadOnlyHint:    false,
 			IdempotentHint:  false,
 			DestructiveHint: boolPtr(false),
 			OpenWorldHint:   boolPtr(false),
