@@ -147,6 +147,7 @@ func (h *Handler) convertOne(path string, input ConvertEncodingInput, policy bom
 		detection, trusted := encoding.DetectSample(data)
 		if detection.Charset == "" {
 			res.Error = "could not detect source encoding. Please specify 'from' parameter."
+			res.Error += alternativesSuffix(data, "")
 			return res
 		}
 		// A bad guess writes nonsense that then detects as valid utf-8.

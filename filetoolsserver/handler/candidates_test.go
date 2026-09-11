@@ -15,7 +15,7 @@ import (
 var (
 	latin1Accents = []byte("caf\xE9 na\xEFve r\xF4le\n")                 // iso-8859-1, 73%: trusted, not certain
 	macAccents    = []byte("caf\x8E na\x9Fve r\x99le \xA5\n")            // macroman, 46%: unsupported and untrusted
-	big5Sample    = []byte("\xA4\xE9\xA5\xBB\xB8\xEA\xAE\xC6\xAA\xF8\n") // big5, 99%: trusted, outside the registry
+	big5Sample    = []byte("\xA4\xE9\xA5\xBB\xB8\xEA\xAE\xC6\xAA\xF8\n") // big5, 99%: outside the registry, so never a verdict
 	cp1251Sample  = []byte("\xC4\xEE\xE1\xF0\xE5 \xF3\xF2\xF0\xEE \xF1\xE2\xFF\xF2\n")
 )
 
@@ -41,7 +41,6 @@ func TestDetectEncodingCandidates(t *testing.T) {
 		{"utf8-bom", append([]byte{0xEF, 0xBB, 0xBF}, "Привет"...), false},
 		{"cp1251", cp1251Sample, false},
 		{"latin1-73pct", latin1Accents, true},
-		{"big5-unsupported", big5Sample, true},
 	}
 
 	for _, c := range cases {
@@ -56,24 +55,24 @@ func TestDetectEncodingCandidates(t *testing.T) {
 	}
 }
 
-// The unsupported verdict is listed too, flagged as unusable.
-func TestDetectEncodingCandidatesFlagUnsupported(t *testing.T) {
+// Big5 has no codec here, so detection declines rather than naming it, and the refusal says what to try.
+func TestDetectEncodingDeclinesAnUnreadableCharset(t *testing.T) {
 	dir := t.TempDir()
 	h := NewHandler([]string{dir})
 	path := writeSample(t, dir, "big5.txt", big5Sample)
 
-	_, output, err := h.HandleDetectEncoding(context.Background(), nil, DetectEncodingInput{Path: path})
+	result, output, err := h.HandleDetectEncoding(context.Background(), nil, DetectEncodingInput{Path: path})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(output.Candidates) < 2 {
-		t.Fatalf("want the verdict plus alternatives, got %v", output.Candidates)
+	if output.Encoding == "big5" {
+		t.Fatalf("detection answered big5, which the registry cannot read")
 	}
-	if output.Candidates[0].Encoding != "big5" || output.Candidates[0].Supported {
-		t.Errorf("first candidate = %+v, want big5 marked unsupported", output.Candidates[0])
+	if !result.IsError {
+		return // it found a readable answer instead, which is the other acceptable outcome
 	}
-	if !output.Candidates[1].Supported {
-		t.Errorf("second candidate %+v is unusable, so it is no alternative", output.Candidates[1])
+	if message := extractTextFromResult(result.Content); !strings.Contains(message, "Other candidates:") {
+		t.Errorf("refusal %q leaves the caller nowhere to go", message)
 	}
 }
 
@@ -87,7 +86,7 @@ func TestReadHintNamesAlternatives(t *testing.T) {
 		data []byte
 		want []string
 	}{
-		{"big5", big5Sample, []string{"big5 is not supported", "Ranked alternatives:", "iso-8859-1"}},
+		{"big5", big5Sample, []string{"inconclusive", "retry read_text_file with encoding set to one of:", "iso-8859-1"}},
 		{"macroman", macAccents, []string{"inconclusive", "retry read_text_file with encoding set to one of:", "windows-1254"}},
 	}
 
@@ -129,7 +128,7 @@ func TestConvertEncodingErrorsNameAlternatives(t *testing.T) {
 		want string
 	}{
 		{"untrusted", macAccents, "windows-1254"},
-		{"unsupported", big5Sample, "iso-8859-1"},
+		{"undetected", big5Sample, "iso-8859-1"},
 	}
 
 	for _, c := range cases {

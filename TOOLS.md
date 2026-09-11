@@ -616,18 +616,23 @@ Detect the encoding of a file with confidence percentage. Useful for diagnosing 
 }
 ```
 
-`candidates` is added only when the verdict is in doubt — under 80% confident, or a charset
-outside the [supported list](#supported-encodings). `supported: false` marks a name the
-other tools cannot accept, so pick the next one:
+Detection only ever answers an encoding from the [supported list](#supported-encodings). The
+underlying detector also names charsets this server has no codec for, such as Big5 or Shift_JIS;
+those are treated as a hint rather than a verdict, because naming one leaves every other tool
+with an encoding it cannot act on. When the bytes support no answer, the call fails with
+`could not detect encoding` and lists what to try instead.
+
+`candidates` is added when the verdict is in doubt — under 80% confident. Every entry is usable
+as an `encoding` parameter:
 
 ```json
 {
-  "encoding": "big5",
-  "confidence": 99,
+  "encoding": "iso-8859-1",
+  "confidence": 73,
   "has_bom": false,
   "candidates": [
-    { "encoding": "big5", "confidence": 99, "supported": false },
-    { "encoding": "iso-8859-1", "confidence": 73, "supported": true }
+    { "encoding": "iso-8859-1", "confidence": 73, "supported": true },
+    { "encoding": "windows-874", "confidence": 32, "supported": true }
   ]
 }
 ```

@@ -4,6 +4,7 @@
 package encoding
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -136,6 +137,31 @@ func TestDetectionResult_Conclusive(t *testing.T) {
 	for _, tt := range tests {
 		if got := tt.in.Conclusive(); got != tt.want {
 			t.Errorf("%s: Conclusive() = %v, want %v", tt.name, got, tt.want)
+		}
+	}
+}
+
+// A verdict with no codec behind it left the read path to fall back silently; the label table makes that unrepresentable.
+func TestEveryDetectableCharsetHasACodec(t *testing.T) {
+	for _, charset := range DetectableCharsets() {
+		if _, ok := Get(charset); !ok {
+			t.Errorf("detection may answer %q, which the registry cannot read", charset)
+		}
+	}
+}
+
+// One label naming two encodings would make the verdict depend on map order.
+func TestDetectorLabelsAreUnambiguous(t *testing.T) {
+	owner := make(map[string]string)
+	for canonical, info := range encodings {
+		for _, label := range info.DetectorLabels {
+			if previous, taken := owner[label]; taken {
+				t.Errorf("detector label %q is claimed by both %q and %q", label, previous, canonical)
+			}
+			owner[label] = canonical
+			if label != strings.ToLower(label) {
+				t.Errorf("detector label %q must be lowercase: labels are matched after ToLower", label)
+			}
 		}
 	}
 }

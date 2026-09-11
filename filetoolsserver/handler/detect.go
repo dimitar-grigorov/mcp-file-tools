@@ -28,7 +28,12 @@ func (h *Handler) HandleDetectEncoding(ctx context.Context, req *mcp.CallToolReq
 	}
 
 	if result.Charset == "" {
-		return errorResult("could not detect encoding"), DetectEncodingOutput{}, nil
+		// No verdict is exactly when a caller needs somewhere to go next, so the refusal carries the ranking.
+		message := "could not detect encoding."
+		if alternatives := alternativeEncodings(v.Path, mode, ""); alternatives != "" {
+			message += " Other candidates: " + alternatives + "."
+		}
+		return errorResult(message), DetectEncodingOutput{}, nil
 	}
 
 	output := DetectEncodingOutput{

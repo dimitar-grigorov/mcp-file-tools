@@ -218,7 +218,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "detect_encoding",
 		Description: "Auto-detect file encoding with confidence score (0-100) and BOM detection. ALWAYS use this first when encountering garbled text or � characters. Use before read_text_file to determine the correct encoding. Parameters: path (required), mode (sample=fast default, chunked=thorough, full=entire file). " +
-			"When the answer is in doubt — low confidence, or a charset this server cannot read — the result also ranks candidates; retry the read with a supported one and ask the user if two are plausible.",
+			"When the answer is in doubt the result also ranks candidates, all of them usable; retry the read with one and ask the user if two are plausible. A file the detector cannot place is refused rather than guessed at, with the same ranking in the error.",
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "Detect Encoding",
 			ReadOnlyHint:  true,

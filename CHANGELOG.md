@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **Detection could name a charset no tool here can read**, and the read path then garbled
+  the file. It now answers only what the server can decode.
 - **`read_text_file` returns `contentHash`**; `edit_file` and `write_file` take
   `expectedHash` and fail if the file moved on since that read.
 

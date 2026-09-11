@@ -195,43 +195,40 @@ func guessLegacy(data []byte) DetectionResult {
 	return DetectionResult{Charset: charset, Confidence: confidence}
 }
 
-// correctCharset fixes up one chardet verdict for both the single-verdict and ranked paths; an empty name means unusable.
-func correctCharset(charset string, confidence int, data []byte) (string, int) {
-	// BOM-less UTF-16 is accepted only by the structural classifier.
-	if charset == "utf-16-le" || charset == "utf-16-be" || charset == "utf-16le" || charset == "utf-16be" {
-		return "", 0
-	}
+// correctCharset turns one detector label into a verdict; an empty name means no answer this server can act on.
+func correctCharset(label string, confidence int, data []byte) (string, int) {
+	charset, readable := detectorCharset(label)
 
-	switch charset {
-	case "gb2312", "hz-gb-2312":
-		charset = "gbk" // GBK is the superset real-world files use
-	case "iso-8859-1", "latin-1", "latin1", "windows-1252", "cp1252":
-		// A Latin table wins by default on mostly-ASCII text, so ask the high bytes what script they spell.
-		if cyrillic := cyrillicCodepage(data); cyrillic != "" {
-			return cyrillic, confidence
-		}
-		// chardet often mislabels GBK as single-byte Latin; correct it.
-		if looksLikeGBK(data) {
-			return "gbk", min(confidence, gbkConfidenceCap)
-		}
-	case "macroman", "x-mac-roman", "macintosh":
-		// No codec here reads MacRoman, so this verdict can only end in a fallback that garbles the file.
-		if cyrillic := cyrillicCodepage(data); cyrillic != "" {
-			return cyrillic, confidence
-		}
-	case "maccyrillic", "x-mac-cyrillic":
-		// Here chardet has the script right and only the table wrong, so counting letters settles it.
-		if cyrillicLetters(data, charmap.Windows1251) >= cyrillicLetters(data, charmap.MacintoshCyrillic) {
-			return "windows-1251", confidence
-		}
-	}
-
-	// Valid multi-byte UTF-8 outweighs a single-byte guess: legacy text is virtually never valid UTF-8.
-	if isSingleByteCharset(charset) && hasMultiByteUTF8(data) {
+	// Valid multi-byte UTF-8 outweighs any byte-table guess: legacy text is virtually never valid UTF-8.
+	if (!readable || isSingleByteCharset(charset)) && hasMultiByteUTF8(data) {
 		return "utf-8", max(confidence, utf8FallbackConfidence)
 	}
 
+	// A Latin table wins by default on mostly-ASCII text, and a label with no codec can only end in a garbled fallback, so both ask the bytes.
+	if !readable || isLatinCharset(charset) {
+		if cyrillic := cyrillicCodepage(data); cyrillic != "" {
+			return cyrillic, confidence
+		}
+	}
+	// The detector often mislabels GBK as single-byte Latin; only there, since the test also fires on hanzi-free Delphi source.
+	if isLatinCharset(charset) && looksLikeGBK(data) {
+		return "gbk", min(confidence, gbkConfidenceCap)
+	}
+	if !readable {
+		return "", 0
+	}
+
+	// Here the detector has the script right and only the table wrong, so counting letters settles it.
+	if charset == "x-mac-cyrillic" && cyrillicLetters(data, charmap.Windows1251) >= cyrillicLetters(data, charmap.MacintoshCyrillic) {
+		return "windows-1251", confidence
+	}
+
 	return charset, confidence
+}
+
+// isLatinCharset reports whether charset is a Western table, the default winner on mostly-ASCII text.
+func isLatinCharset(charset string) bool {
+	return charset == "iso-8859-1" || charset == "windows-1252"
 }
 
 // isSingleByteCharset reports whether name is a registered single-byte codec.
