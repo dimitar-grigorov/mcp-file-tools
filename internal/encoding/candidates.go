@@ -27,10 +27,8 @@ func candidates(data []byte) []Candidate {
 	if _, ok := DetectBOM(data); ok {
 		return nil
 	}
-	if mayContainUTF16(data) {
-		if _, handled := detectUTF16(data); handled {
-			return nil
-		}
+	if _, handled := detectUTF16Whole(data); handled {
+		return nil
 	}
 
 	ranked := make([]Candidate, 0, maxCandidates)

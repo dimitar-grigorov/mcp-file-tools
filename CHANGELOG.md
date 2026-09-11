@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **The fast detection modes no longer stop at a file's ASCII head.** `sample` trusted the
+  first 128KB and `chunked` let ASCII chunks outvote the one with evidence, so a unit whose
+  Cyrillic starts on page two came back `ascii`.
+- **One ladder behind every detection path** instead of four copies of BOM, then UTF-16,
+  then detector.
 - **One measure behind every encoding guess** instead of a hand-tuned sniff per case: read
   the bytes as the charset, see how much lands inside real words.
 - **`MCP_DETECTION_CANDIDATES` picks the candidate that reads best, not the first that

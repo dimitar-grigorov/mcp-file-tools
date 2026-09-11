@@ -123,17 +123,28 @@ func DetectFromFile(path string, mode string) (DetectionResult, error) {
 }
 
 func Detect(data []byte) DetectionResult {
-	if result, ok := DetectBOM(data); ok {
+	return decideVerdict(data,
+		func() (DetectionResult, bool) { return detectUTF16Whole(data) },
+		func() DetectionResult { return detectLegacy(data) })
+}
+
+// decideVerdict is the ladder every detection mode climbs: a BOM is a declaration and settles it, UTF-16 is structural rather than statistical, and what is left is the legacy detector under the pin. The modes differ only in how many bytes they can afford to look at, so they differ only in what they hand this.
+func decideVerdict(head []byte, utf16 func() (DetectionResult, bool), legacy func() DetectionResult) DetectionResult {
+	if result, ok := DetectBOM(head); ok {
 		return result
 	}
-
-	// BOM-less UTF-16 is classified structurally; chardet never sees clean UTF-16.
-	if mayContainUTF16(data) {
-		if result, handled := detectUTF16(data); handled && charsetAllowed(result.Charset) {
-			return result
-		}
+	if result, handled := utf16(); handled && charsetAllowed(result.Charset) {
+		return result
 	}
-	return detectLegacy(data)
+	return legacy()
+}
+
+// detectUTF16Whole is the structural classifier behind its cheap gate; chardet never sees clean UTF-16.
+func detectUTF16Whole(data []byte) (DetectionResult, bool) {
+	if !mayContainUTF16(data) {
+		return DetectionResult{}, false
+	}
+	return detectUTF16(data)
 }
 
 // mayContainUTF16 cheaply rules out clean UTF-8/ASCII; sub-0x80 UTF-16 shows up as C0-control soup.
@@ -277,19 +288,20 @@ func detectSampleFromData(data []byte) DetectionResult {
 	if len(data) <= SmallFileThreshold {
 		return Detect(data)
 	}
-	if result, ok := DetectBOM(data); ok {
-		return result
-	}
 	return decideFromSamples(detectionSamplesFromData(data), int64(len(data)))
 }
 
-// decideFromSamples is the shared verdict over samples: UTF-16 structurally, else chardet on the head then on all of them.
+// decideFromSamples is the ladder over the sample chunks; the first sample starts at offset 0, so it carries any BOM.
 func decideFromSamples(samples []byteSample, size int64) DetectionResult {
-	if result, handled := detectUTF16Samples(samples, size); handled && charsetAllowed(result.Charset) {
-		return result
-	}
-	if result := detectLegacy(samples[0].data); result.Confidence >= HighConfidenceThreshold {
-		return result
+	return decideVerdict(samples[0].data,
+		func() (DetectionResult, bool) { return detectUTF16Samples(samples, size) },
+		func() DetectionResult { return legacyFromSamples(samples) })
+}
+
+// legacyFromSamples reads the head alone while that settles the question and widens to every sample when it does not. Plain ASCII never settles it, however sure the detector sounds, or a file whose Cyrillic starts past the first chunk would come back ascii.
+func legacyFromSamples(samples []byteSample) DetectionResult {
+	if head := detectLegacy(samples[0].data); head.Conclusive() && head.Confidence >= HighConfidenceThreshold {
+		return head
 	}
 	return detectLegacy(joinDetectionSamples(samples))
 }
@@ -361,9 +373,6 @@ func detectSampleFromReader(r io.ReaderAt, size int64) (DetectionResult, error) 
 	if err != nil {
 		return DetectionResult{}, err
 	}
-	if result, ok := DetectBOM(samples[0].data); ok {
-		return result, nil
-	}
 	return decideFromSamples(samples, size), nil
 }
 
@@ -395,77 +404,108 @@ func detectChunkedFromReader(r io.ReaderAt, size int64) (DetectionResult, error)
 		return Detect(data), nil
 	}
 
-	bomCheck := make([]byte, 4) // longest BOM is UTF-32's
-	if n, _ := r.ReadAt(bomCheck, 0); n >= 2 {
-		if result, ok := DetectBOM(bomCheck[:n]); ok {
-			return result, nil
-		}
-	}
+	head := make([]byte, 4) // longest BOM is UTF-32's
+	n, _ := r.ReadAt(head, 0)
 
-	type chunkResult struct {
-		encoding   string
-		confidence int
-		weight     int
+	scan := &chunkScan{r: r, size: size}
+	result := decideVerdict(head[:n], scan.utf16, scan.vote)
+	if scan.err != nil {
+		return DetectionResult{}, scan.err
 	}
+	return result, nil
+}
 
-	leAnalyzer := newUTF16Analyzer(utf16LESpec)
-	beAnalyzer := newUTF16Analyzer(utf16BESpec)
-	var results []chunkResult
+// chunkResult is one chunk's verdict and the bytes standing behind it.
+type chunkResult struct {
+	charset    string
+	confidence int
+	weight     int
+}
+
+// chunkScan walks the file once, feeding the UTF-16 analyzers and collecting a verdict per chunk. It runs on the ladder's first question, so a BOM means it never runs at all.
+type chunkScan struct {
+	r       io.ReaderAt
+	size    int64
+	done    bool
+	err     error
+	le, be  utf16Evidence
+	results []chunkResult
+}
+
+// run reads the file once; every later call is free.
+func (s *chunkScan) run() {
+	if s.done {
+		return
+	}
+	s.done = true
+
+	le := newUTF16Analyzer(utf16LESpec)
+	be := newUTF16Analyzer(utf16BESpec)
 	chunk := make([]byte, ChunkSize)
-
-	for offset := int64(0); offset < size; {
-		n, err := r.ReadAt(chunk, offset)
+	for offset := int64(0); offset < s.size; {
+		n, err := s.r.ReadAt(chunk, offset)
 		if err != nil && err != io.EOF {
-			return DetectionResult{}, fmt.Errorf("failed to read chunk at %d: %w", offset, err)
+			s.err = fmt.Errorf("failed to read chunk at %d: %w", offset, err)
+			return
 		}
 		if n == 0 {
 			break
 		}
-
 		data := chunk[:n]
-		leAnalyzer.Write(data)
-		beAnalyzer.Write(data)
-		detected := detectLegacy(data)
-		if detected.Charset != "" {
-			results = append(results, chunkResult{
-				encoding:   detected.Charset,
-				confidence: detected.Confidence,
-				weight:     n,
-			})
+		le.Write(data)
+		be.Write(data)
+		if detected := detectLegacy(data); detected.Charset != "" {
+			s.results = append(s.results, chunkResult{charset: detected.Charset, confidence: detected.Confidence, weight: n})
 		}
 		offset += int64(n)
 	}
+	s.le, s.be = le.Finish(), be.Finish()
+}
 
-	if result, handled := decideUTF16(leAnalyzer.Finish(), beAnalyzer.Finish()); handled && charsetAllowed(result.Charset) {
-		return result, nil
+// utf16 answers the structural question out of the single pass.
+func (s *chunkScan) utf16() (DetectionResult, bool) {
+	if s.run(); s.err != nil {
+		return DetectionResult{}, false
+	}
+	return decideUTF16(s.le, s.be)
+}
+
+// vote weighs each chunk's verdict by the bytes behind it, the name breaking a tie so the answer cannot change between runs. A chunk of plain ASCII is not evidence, so it wins only when no chunk found anything else.
+func (s *chunkScan) vote() DetectionResult {
+	s.run()
+	results := s.results
+	if evidence := withEvidence(results); len(evidence) > 0 {
+		results = evidence
 	}
 	if len(results) == 0 {
-		return DetectionResult{}, nil
+		return DetectionResult{}
 	}
 
-	// Weight each chunk's verdict by its byte count.
-	encodingWeights := make(map[string]int)
-	encodingConfidenceSum := make(map[string]int)
-
-	for _, r := range results {
-		encodingWeights[r.encoding] += r.weight
-		encodingConfidenceSum[r.encoding] += r.confidence * r.weight
+	weights := make(map[string]int)
+	confidence := make(map[string]int)
+	for _, result := range results {
+		weights[result.charset] += result.weight
+		confidence[result.charset] += result.confidence * result.weight
 	}
 
-	// Name breaks a tie: ranging a map alone would pick a different one per run.
-	var bestEncoding string
-	var bestWeight int
-	for enc, weight := range encodingWeights {
-		if weight > bestWeight || (weight == bestWeight && enc < bestEncoding) {
-			bestWeight = weight
-			bestEncoding = enc
+	best, bestWeight := "", 0
+	for charset, weight := range weights {
+		if weight > bestWeight || (weight == bestWeight && charset < best) {
+			best, bestWeight = charset, weight
 		}
 	}
+	return DetectionResult{Charset: best, Confidence: confidence[best] / bestWeight}
+}
 
-	return DetectionResult{
-		Charset:    bestEncoding,
-		Confidence: encodingConfidenceSum[bestEncoding] / encodingWeights[bestEncoding],
-	}, nil
+// withEvidence drops the chunks that were plain ASCII, which reads the same under every encoding here.
+func withEvidence(results []chunkResult) []chunkResult {
+	evidence := make([]chunkResult, 0, len(results))
+	for _, result := range results {
+		if result.charset != ASCII {
+			evidence = append(evidence, result)
+		}
+	}
+	return evidence
 }
 
 func detectFullFromReader(r io.ReaderAt, size int64) (DetectionResult, error) {
