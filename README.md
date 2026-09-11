@@ -358,8 +358,9 @@ valid hanzi pair — so it reads back as Chinese and edits fail with *"gbk canno
 ```
 
 A BOM still wins. A guess inside the list keeps its confidence; one outside it is dropped
-and the first listed encoding that decodes the bytes cleanly takes over, so order is your
-priority. A file that fits none of them is read as the default and reported as an **ODD
+and the listed encoding whose reading of the bytes looks most like text takes over. Order is
+your priority when no reading stands out, which is what settles a file of plain ASCII. A file
+that fits none of them is read as the default and reported as an **ODD
 ENCODING** in `read_text_file`'s hint, so a stray file gets said out loud rather than
 guessed at. Unlisted encodings stop appearing in `detect_encoding`'s `candidates` too. UTF-16/32 are named only by a BOM
 or the structural classifier, so listing them cannot make them a catch-all.

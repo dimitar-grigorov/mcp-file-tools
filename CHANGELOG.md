@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **One measure behind every encoding guess** instead of a hand-tuned sniff per case: read
+  the bytes as the charset, see how much lands inside real words.
+- **`MCP_DETECTION_CANDIDATES` picks the candidate that reads best, not the first that
+  decodes**, which used to win on list order alone and garble the file.
 - **Detection could name a charset no tool here can read**, and the read path then garbled
   the file. It now answers only what the server can decode.
 - **`read_text_file` returns `contentHash`**; `edit_file` and `write_file` take

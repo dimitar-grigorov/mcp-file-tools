@@ -159,6 +159,10 @@ func TestWordLike(t *testing.T) {
 		{"ДуМа", false},
 		{"на", false},
 		{"", false},
+		{"café", true},   // Latin words carry accents, they are not made of them
+		{"àéîôû", false}, // what Cyrillic looks like read under a Latin table
+		{"GrцЯe", false}, // what a Latin word looks like read under a Cyrillic one
+		{"汉字编码", true},   // no case and no ASCII, and still a word
 	}
 	for _, tt := range tests {
 		t.Run(tt.word, func(t *testing.T) {

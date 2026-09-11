@@ -3,7 +3,11 @@
 
 package encoding
 
-import "testing"
+import (
+	"testing"
+
+	"golang.org/x/text/encoding/charmap"
+)
 
 // Real Spanish CP1252: every uppercase accent before an ASCII letter is a valid
 // GBK pair, so the detector reads the file as Chinese.
@@ -36,10 +40,33 @@ func TestDetect_Pinned(t *testing.T) {
 	}{
 		{"guess outside the pin is replaced", []string{"utf-8", "windows-1252"}, []byte(spanishCP1252), "windows-1252"},
 		{"guess inside the pin is kept", []string{"utf-8", "gbk", "windows-1252"}, []byte(spanishCP1252), "gbk"},
-		{"first candidate that decodes wins", []string{"utf-8", "windows-1251"}, []byte(spanishCP1252), "windows-1251"},
+		{"a candidate that only decodes still beats no answer", []string{"utf-8", "windows-1251"}, []byte(spanishCP1252), "windows-1251"},
 		{"nothing fits, no answer", []string{"utf-8"}, []byte(spanishCP1252), ""},
 		{"a BOM outranks the pin", []string{"windows-1252"}, utf16LE, "utf-16-le"},
 		{"aliases resolve", []string{"cp1252"}, []byte(spanishCP1252), "windows-1252"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			pin(t, tc.pin...)
+			if got := Detect(tc.data); got.Charset != tc.want {
+				t.Fatalf("charset = %q, want %q", got.Charset, tc.want)
+			}
+		})
+	}
+}
+
+// Every Western table decodes Cyrillic bytes without complaint, so validation alone would answer with
+// whichever was listed first. Only reading the text tells them apart.
+func TestDetect_PinnedPicksTheBestReading(t *testing.T) {
+	cyrillic := charmapEncode(t, charmap.Windows1251, cyrillicFixture)
+	tests := []struct {
+		name string
+		pin  []string
+		data []byte
+		want string
+	}{
+		{"cyrillic behind a western candidate", []string{"utf-8", "windows-1252", "windows-1251"}, cyrillic, "windows-1251"},
+		{"western behind a cyrillic candidate", []string{"utf-8", "windows-1251", "windows-1252"}, []byte(frenchCP1252), "windows-1252"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

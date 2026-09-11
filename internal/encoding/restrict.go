@@ -4,12 +4,9 @@
 package encoding
 
 import (
-	"bytes"
 	"fmt"
 	"slices"
-	"strings"
 	"sync/atomic"
-	"unicode/utf8"
 )
 
 // Detection is statistical and no tuning removes its blind spots: Spanish CP1252 like
@@ -58,38 +55,27 @@ func charsetAllowed(charset string) bool {
 	return ok && slices.Contains(pinned, canonical)
 }
 
-// pinnedVerdict replaces a ruled-out guess with the first candidate that decodes data. Nothing fitting means no answer, not a wrong one.
+// pinnedVerdict replaces a ruled-out guess with the pinned candidate that reads most like text; one that merely decodes still beats no answer, since the caller pinned the set to say these are the encodings its files are in.
 func pinnedVerdict(data []byte) DetectionResult {
+	best, fallback := "", ""
+	bestShare := 0.0
 	for _, charset := range DetectionCandidates() {
-		if decodesCleanly(charset, data) {
-			return DetectionResult{Charset: charset, Confidence: pinnedConfidence}
+		p := scoreCharset(charset, data)
+		if !p.readable {
+			continue
+		}
+		if fallback == "" {
+			fallback = charset
+		}
+		if p.plausible() && p.share() > bestShare {
+			best, bestShare = charset, p.share()
 		}
 	}
-	return DetectionResult{}
-}
-
-// decodesCleanly reports whether data survives charset without a replacement character.
-func decodesCleanly(charset string, data []byte) bool {
-	switch {
-	case IsUTF8(charset):
-		return utf8.Valid(data)
-	case strings.HasPrefix(charset, "utf-16"), strings.HasPrefix(charset, "utf-32"):
-		// These swallow almost any bytes, so only a BOM or the structural classifier may name them.
-		return false
+	if best == "" {
+		best = fallback
 	}
-	// A single-byte table needs no decode: an undefined byte maps to U+FFFD.
-	if cm := charmapFor(charset); cm != nil {
-		for _, b := range data {
-			if cm.DecodeByte(b) == utf8.RuneError {
-				return false
-			}
-		}
-		return true
+	if best == "" {
+		return DetectionResult{}
 	}
-	enc, ok := Get(charset)
-	if !ok {
-		return false
-	}
-	decoded, err := enc.NewDecoder().Bytes(data)
-	return err == nil && !bytes.ContainsRune(decoded, utf8.RuneError)
+	return DetectionResult{Charset: best, Confidence: pinnedConfidence}
 }

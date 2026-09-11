@@ -455,14 +455,15 @@ func TestDetect_GenuineMacCyrillicKept(t *testing.T) {
 	}
 }
 
-func TestCyrillicLetters(t *testing.T) {
+// The two Cyrillic tables overlap enough that the detector confuses them, so the score has to separate what it cannot.
+func TestScoreCharset_TellsCyrillicTablesApart(t *testing.T) {
 	cp := charmapEncode(t, charmap.Windows1251, cyrillicFixture)
-	if s1251, sMac := cyrillicLetters(cp, charmap.Windows1251), cyrillicLetters(cp, charmap.MacintoshCyrillic); s1251 <= sMac {
-		t.Errorf("cp1251 text: cp1251 score %d should beat mac score %d", s1251, sMac)
+	if s1251, sMac := scoreCharset("windows-1251", cp), scoreCharset("x-mac-cyrillic", cp); s1251.inWords <= sMac.inWords {
+		t.Errorf("cp1251 text: cp1251 score %d should beat mac score %d", s1251.inWords, sMac.inWords)
 	}
 	mac := charmapEncode(t, charmap.MacintoshCyrillic, cyrillicFixture)
-	if s1251, sMac := cyrillicLetters(mac, charmap.Windows1251), cyrillicLetters(mac, charmap.MacintoshCyrillic); sMac <= s1251 {
-		t.Errorf("mac text: mac score %d should beat cp1251 score %d", sMac, s1251)
+	if s1251, sMac := scoreCharset("windows-1251", mac), scoreCharset("x-mac-cyrillic", mac); sMac.inWords <= s1251.inWords {
+		t.Errorf("mac text: mac score %d should beat cp1251 score %d", sMac.inWords, s1251.inWords)
 	}
 }
 
@@ -476,7 +477,7 @@ func TestDetect_GBKChinese(t *testing.T) {
 	}
 }
 
-func TestLooksLikeGBK(t *testing.T) {
+func TestScoreCharset_GBK(t *testing.T) {
 	tests := []struct {
 		name string
 		data []byte
@@ -484,13 +485,14 @@ func TestLooksLikeGBK(t *testing.T) {
 	}{
 		{"chinese text", gbkEncode(t, "汉字编码检测测试内容字符串样例"), true},
 		{"plain ascii", []byte("Hello, World! This is plain ASCII."), false},
-		{"too short", []byte{0xB0, 0xA1}, false}, // valid pair but below minSequences
+		{"too short", []byte{0xB0, 0xA1}, false}, // decodes, but one hanzi is not text
 		{"empty", nil, false},
+		{"latin-1 french", charmapEncode(t, charmap.ISO8859_1, "Le café était très agréable, à côté de l'hôtel où j'ai déjeuné."), false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := looksLikeGBK(tt.data); got != tt.want {
-				t.Errorf("looksLikeGBK = %v, want %v", got, tt.want)
+			if got := scoreCharset("gbk", tt.data).plausible(); got != tt.want {
+				t.Errorf("scoreCharset(gbk).plausible() = %v, want %v", got, tt.want)
 			}
 		})
 	}

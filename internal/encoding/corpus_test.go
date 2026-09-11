@@ -9,6 +9,7 @@ package encoding
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -194,7 +195,7 @@ func TestCorpus_DetectionIsUsable(t *testing.T) {
 		}
 
 		// The mirror failure, and the one a Cyrillic pin can cause: high bytes that spell no Cyrillic word.
-		if isCyrillicCharset(got.Charset) && highBytes(data) >= cyrillicMinBytes && cyrillicWords(text) == 0 {
+		if isCyrillicCharset(got.Charset) && highBytes(data) >= minWordBytes && cyrillicWords(text) == 0 {
 			cyrillicOnWestern = append(cyrillicOnWestern, path)
 		}
 	}
@@ -245,12 +246,7 @@ func isWestern(charset string) bool {
 }
 
 func isCyrillicCharset(charset string) bool {
-	for _, codepage := range cyrillicCodepages {
-		if codepage.name == charset {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(cyrillicCharsets, charset)
 }
 
 func report(t *testing.T, label string, counts map[string]int) {

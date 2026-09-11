@@ -9,7 +9,6 @@ import (
 	"io"
 	"os"
 	"strings"
-	"unicode"
 	"unicode/utf8"
 
 	"github.com/wlynxg/chardet"
@@ -24,36 +23,22 @@ const (
 	utf8FallbackConfidence  = 80         // Confidence when UTF-8 is inferred from the bytes
 )
 
-// GBK two-byte ranges: lead 0x81–0xFE, trail 0x40–0xFE except 0x7F.
-const (
-	gbkLeadMin       = 0x81
-	gbkLeadMax       = 0xFE
-	gbkTrailMin      = 0x40
-	gbkTrailMax      = 0xFE
-	gbkTrailGap      = 0x7F
-	gbkConfidenceCap = 85 // cap when GBK is recovered from a Latin guess
-)
+// gbkConfidenceCap caps GBK when it is recovered from a Latin guess rather than named outright.
+const gbkConfidenceCap = 85
 
-// Cyrillic spells words out of high bytes, in the same range Latin spends on the odd accent — which is why
-// chardet files sparse Cyrillic under a Latin table, and why the bytes can say otherwise.
-const (
-	cyrillicMinRun   = 3   // three letters in a row is a word, not an accent
-	cyrillicMinBytes = 12  // below this there is no text to judge
-	cyrillicMinShare = 0.8 // nearly every high byte belongs to one of those words
-)
+// Cyrillic spells words out of high bytes, in the range Latin spends on the odd accent, which is why chardet files sparse Cyrillic under a Latin table and why the bytes can say otherwise.
 
-// cyrillicCodepages are the tables Cyrillic is written in, cp1251 first so a tie goes to the one the Windows world uses.
-// Only Cyrillic: chardet names Greek, Hebrew and Thai outright, and this test tells tables apart, never alphabets.
-var cyrillicCodepages = []struct {
-	name string
-	cm   *charmap.Charmap
-}{
-	{"windows-1251", charmap.Windows1251},
-	{"koi8-r", charmap.KOI8R},
-	{"koi8-u", charmap.KOI8U},
-	{"ibm866", charmap.CodePage866},
-	{"iso-8859-5", charmap.ISO8859_5},
-	{"x-mac-cyrillic", charmap.MacintoshCyrillic},
+// tableMargin keeps the answer off the noise: cp1251 and MacCyrillic spell the same words out of most Cyrillic text, so a later table must beat an earlier one by this much to take it.
+const tableMargin = 0.05
+
+// cyrillicCharsets are the tables Cyrillic is written in, cp1251 first because it is what the Windows world writes.
+var cyrillicCharsets = []string{
+	"windows-1251",
+	"koi8-r",
+	"koi8-u",
+	"ibm866",
+	"iso-8859-5",
+	"x-mac-cyrillic",
 }
 
 type DetectionResult struct {
@@ -210,17 +195,19 @@ func correctCharset(label string, confidence int, data []byte) (string, int) {
 			return cyrillic, confidence
 		}
 	}
-	// The detector often mislabels GBK as single-byte Latin; only there, since the test also fires on hanzi-free Delphi source.
-	if isLatinCharset(charset) && looksLikeGBK(data) {
+	// The detector often mislabels GBK as single-byte Latin, and a Latin table reads almost any bytes, so only there.
+	if isLatinCharset(charset) && scoreCharset("gbk", data).plausible() {
 		return "gbk", min(confidence, gbkConfidenceCap)
 	}
 	if !readable {
 		return "", 0
 	}
 
-	// Here the detector has the script right and only the table wrong, so counting letters settles it.
-	if charset == "x-mac-cyrillic" && cyrillicLetters(data, charmap.Windows1251) >= cyrillicLetters(data, charmap.MacintoshCyrillic) {
-		return "windows-1251", confidence
+	// MacCyrillic is what the detector reaches for when it sees Cyrillic it cannot place, and the encoding is all but extinct, so the bytes pick the table. No other Cyrillic label is worth second-guessing: measured, it costs more than it fixes.
+	if charset == "x-mac-cyrillic" {
+		if best, _ := bestCyrillicTable(data); best != "" {
+			return best, confidence
+		}
 	}
 
 	return charset, confidence
@@ -259,105 +246,24 @@ func hasMultiByteUTF8(data []byte) bool {
 	return false
 }
 
-func isCyrillicLetter(r rune) bool {
-	return (r >= 'А' && r <= 'я') || r == 'Ё' || r == 'ё'
-}
-
-// cyrillicLetters counts high bytes that decode to modern Cyrillic letters under cm.
-func cyrillicLetters(data []byte, cm *charmap.Charmap) int {
-	n := 0
-	for _, b := range data {
-		if b < 0x80 {
-			continue
-		}
-		if isCyrillicLetter(cm.DecodeByte(b)) {
-			n++
-		}
-	}
-	return n
-}
-
-// cyrillicCodepage names the table whose reading of the high bytes spells Cyrillic words, empty when none does.
+// cyrillicCodepage names the Cyrillic table the bytes spell words in, empty when they spell none; overruling a label that named another script is a strong claim, so it takes the plausibility bar.
 func cyrillicCodepage(data []byte) string {
-	high := 0
-	for _, b := range data {
-		if b >= 0x80 {
-			high++
-		}
-	}
-
-	name, best := "", 0
-	for _, codepage := range cyrillicCodepages {
-		if n := cyrillicWordBytes(data, codepage.cm); n > best {
-			name, best = codepage.name, n
-		}
-	}
-	if best < cyrillicMinBytes || float64(best) < cyrillicMinShare*float64(high) {
+	name, best := bestCyrillicTable(data)
+	if !best.plausible() {
 		return ""
 	}
 	return name
 }
 
-// cyrillicWordBytes counts the high bytes cm reads as Cyrillic words: runs of letters cased the way a word is.
-func cyrillicWordBytes(data []byte, cm *charmap.Charmap) int {
-	total := 0
-	word := make([]rune, 0, 32)
-	endWord := func() {
-		if wordLike(word) {
-			total += len(word)
-		}
-		word = word[:0]
-	}
-	for _, b := range data {
-		if b < 0x80 {
-			endWord()
-			continue
-		}
-		if r := cm.DecodeByte(b); isCyrillicLetter(r) {
-			word = append(word, r)
-			continue
-		}
-		endWord()
-	}
-	endWord()
-
-	return total
-}
-
-// wordLike reports whether the letters are cased as a word is; the wrong table shouts the text back in capitals.
-func wordLike(word []rune) bool {
-	if len(word) < cyrillicMinRun {
-		return false
-	}
-	for _, r := range word[1:] {
-		if unicode.IsUpper(r) {
-			return false
+// bestCyrillicTable ranks the Cyrillic tables by how much of the text each one reads as words.
+func bestCyrillicTable(data []byte) (string, plausibility) {
+	name, best, bestShare := "", plausibility{}, -1.0
+	for _, charset := range cyrillicCharsets {
+		if p := scoreCharset(charset, data); p.readable && p.share() > bestShare+tableMargin {
+			name, best, bestShare = charset, p, p.share()
 		}
 	}
-	return true
-}
-
-// looksLikeGBK reports enough valid GBK pairs, biased toward common hanzi, to trust it over Latin.
-func looksLikeGBK(data []byte) bool {
-	const minSequences = 5
-	const minCommonRatio = 0.2
-
-	var total, common int
-	for i := 0; i+1 < len(data); {
-		lead, trail := data[i], data[i+1]
-		if lead >= gbkLeadMin && lead <= gbkLeadMax &&
-			trail >= gbkTrailMin && trail <= gbkTrailMax && trail != gbkTrailGap {
-			total++
-			if lead >= 0xB0 && lead <= 0xD7 {
-				common++
-			}
-			i += 2
-			continue
-		}
-		i++
-	}
-
-	return total >= minSequences && float64(common)/float64(total) > minCommonRatio
+	return name, best
 }
 
 // DetectSample samples beginning, middle and end; reports whether to trust it.
