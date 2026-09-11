@@ -156,7 +156,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 	// Read
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "read_text_file",
-		Description: "Read file with encoding auto-detection, converts to UTF-8. PREFER THIS over built-in Read for non-UTF-8 files (Cyrillic, legacy codebases). Returns totalLines and fileSizeBytes for planning the next read. Parameters: path, encoding (auto-detected), offset (1-indexed start line), limit (max lines), maxCharacters (caps output to avoid token overflow), lineNumbers (default false: prefix lines with \"N<tab>\", absolute numbers — use to locate lines reported by grep or encoding errors; STRIP the prefix before using text as edit_file oldText). " +
+		Description: "Read file with encoding auto-detection, converts to UTF-8. PREFER THIS over built-in Read for non-UTF-8 files (Cyrillic, legacy codebases). Returns totalLines and fileSizeBytes for planning the next read, and contentHash — pass that back as expectedHash on edit_file or write_file and the call fails, changing nothing, if the file moved on since you read it. Parameters: path, encoding (auto-detected), offset (1-indexed start line), limit (max lines), maxCharacters (caps output to avoid token overflow), lineNumbers (default false: prefix lines with \"N<tab>\", absolute numbers — use to locate lines reported by grep or encoding errors; STRIP the prefix before using text as edit_file oldText). " +
 			`Page files >2000 lines: {"path": "D:\\src\\app.pas", "offset": 1, "limit": 2000}, then offset 2001, until offset exceeds totalLines.`,
 		Meta: mcp.Meta{"anthropic/maxResultSizeChars": 200000},
 		Annotations: &mcp.ToolAnnotations{
@@ -186,7 +186,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 			"On no match, prefer fixing oldText from the closest-content hint. Alternatively retry that edit with similarity (0.0-1.0) for whitespace/comment drift, not different code. " +
 			"Do NOT re-read the file afterwards to verify: a success with a diff means the edit is on disk, a failed edit changes nothing. " +
 			"A file with mixed line endings is repaired to its dominant style; the result says how many endings changed, so report that to the user. " +
-			"Parameters: path; exactly one of edits [{oldText, newText, similarity?, replaceAll?}] or patch (---/+++/@@ unified diff for one file); dryRun (default false); encoding (auto). " +
+			"Parameters: path; exactly one of edits [{oldText, newText, similarity?, replaceAll?}] or patch (---/+++/@@ unified diff for one file); dryRun (default false); encoding (auto); expectedHash (the contentHash of the read this edit is based on — the edit fails and changes nothing if the file has since changed). " +
 			"oldText must match ONE place: several matches fail with their line numbers and change nothing — add surrounding lines to pick one, or set replaceAll: true to change them all and report the count to the user. " +
 			"Edits apply in order. Matching ignores per-line leading/trailing whitespace and CRLF/LF, but interior spacing must match; newText is re-indented. " +
 			`Example: {"path": "D:\\src\\unit1.pas", "edits": [{"oldText": "i: Integer;", "newText": "i: NativeInt;"}, {"oldText": "for i := 0 to 10 do", "newText": "for i := 0 to 20 do"}], "dryRun": true}`,
@@ -201,7 +201,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "write_file",
-		Description: "Write file with encoding conversion from UTF-8. PREFER THIS over built-in Write for non-UTF-8 files. Use after read_text_file to keep the original encoding. Parameters: path, content, encoding (default: the existing file's detected encoding, else utf-8), bom, lineEndings. " +
+		Description: "Write file with encoding conversion from UTF-8. PREFER THIS over built-in Write for non-UTF-8 files. Use after read_text_file to keep the original encoding. Parameters: path, content, encoding (default: the existing file's detected encoding, else utf-8), bom, lineEndings, expectedHash (the contentHash of the read this rewrite is based on — the write fails and changes nothing if the file has since changed). " +
 			"bom: \"auto\" (default) writes a BOM for utf-16-* targets, else keeps one only if the file already had a BOM of the same encoding; \"preserve\" keeps it even when the encoding changed; \"never\" strips it; \"always\" fails on encodings with no BOM (e.g. cp1251). " +
 			"lineEndings: \"preserve\" (default) converts content to the file's existing style, so sending LF into a CRLF file will NOT leave it mixed; also \"crlf\", \"lf\", \"asis\" (byte for byte). " +
 			`Example — strip a UTF-8 BOM that breaks PHP: {"path": "D:\\www\\index.php", "content": "<?php ...", "bom": "never"}`,

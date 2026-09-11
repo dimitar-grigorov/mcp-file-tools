@@ -84,6 +84,7 @@ func (h *Handler) HandleReadTextFile(ctx context.Context, req *mcp.CallToolReque
 		StartLine:     startLine,
 		EndLine:       endLine,
 		Truncated:     truncated,
+		ContentHash:   contentHash(data),
 	}
 	if encResult.autoDetected {
 		output.DetectedEncoding = encResult.detectedEncoding

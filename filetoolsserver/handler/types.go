@@ -25,16 +25,18 @@ type ReadTextFileOutput struct {
 	DetectedEncoding   string `json:"detectedEncoding,omitempty"`
 	EncodingConfidence int    `json:"encodingConfidence,omitempty"`
 	Hint               string `json:"hint,omitempty"`
+	ContentHash        string `json:"contentHash,omitempty"` // short sha256 of the raw bytes; pass as expectedHash to guard an edit
 }
 
 // WriteFileInput - encoding defaults to the existing file's encoding, else utf-8.
 // BOM: "auto" (default), "always", "never", "preserve"; LineEndings: "preserve" (default), "crlf", "lf", "asis".
 type WriteFileInput struct {
-	Path        string `json:"path"`
-	Content     string `json:"content"`
-	Encoding    string `json:"encoding,omitempty"`
-	BOM         string `json:"bom,omitempty"`
-	LineEndings string `json:"lineEndings,omitempty"`
+	Path         string `json:"path"`
+	Content      string `json:"content"`
+	Encoding     string `json:"encoding,omitempty"`
+	BOM          string `json:"bom,omitempty"`
+	LineEndings  string `json:"lineEndings,omitempty"`
+	ExpectedHash string `json:"expectedHash,omitempty"` // contentHash the file must still have; empty skips the check
 }
 
 type WriteFileOutput struct {
@@ -42,6 +44,7 @@ type WriteFileOutput struct {
 	HasBOM      bool   `json:"hasBom"`
 	BOMType     string `json:"bomType,omitempty"`
 	LineEndings string `json:"lineEndings,omitempty"` // set when content was normalised
+	ContentHash string `json:"contentHash,omitempty"` // hash after the write, only when expectedHash was used
 }
 
 // ListDirectoryInput - SortBy is "name" (default), "mtime" or "size".
@@ -151,6 +154,7 @@ type EditFileInput struct {
 	DryRun        bool            `json:"dryRun,omitempty"`
 	Encoding      string          `json:"encoding,omitempty"`
 	ForceWritable *bool           `json:"forceWritable,omitempty"` // default: false - fail on read-only files
+	ExpectedHash  string          `json:"expectedHash,omitempty"`  // contentHash the file must still have; empty skips the check
 }
 
 type EditFileOutput struct {

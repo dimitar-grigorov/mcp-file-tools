@@ -61,9 +61,14 @@ Read file contents with automatic encoding detection and optional partial readin
   "endLine": 149,
   "truncated": false,
   "detectedEncoding": "windows-1251",
-  "encodingConfidence": 95
+  "encodingConfidence": 95,
+  "contentHash": "a4d1b0f3c2e57891"
 }
 ```
+
+`contentHash` is the short sha256 of the raw bytes on disk, so a paged read still
+reports the whole file. Pass it back as `expectedHash` on `edit_file` or `write_file`
+to make the call fail instead of overwriting a file that changed in between.
 
 The response may carry a `hint` field: it reports a file that already has
 **mixed** line endings, and — once per file — notes that a plain utf-8 file with
@@ -117,6 +122,7 @@ Write content to file. UTF-8 writes as-is; other encodings convert from UTF-8.
 - `encoding` (optional): Target encoding. Defaults to the existing file's detected encoding; for a new file, to `MCP_DEFAULT_ENCODING` (`utf-8`)
 - `bom` (optional): `auto` (default — BOM for UTF-16 targets, keeps a BOM the file already had), `always`, `never`, `preserve`
 - `lineEndings` (optional): `preserve` (default), `crlf`, `lf`, `asis`
+- `expectedHash` (optional): The `contentHash` this rewrite is based on. Fails and writes nothing if the file has since changed, or if it does not exist
 
 **Line endings:**
 
@@ -182,6 +188,7 @@ Make replacements or apply a unified diff to one text file. Returns a unified di
 - `dryRun` (optional): If true, returns diff without writing changes (default: false)
 - `encoding` (optional): File encoding (auto-detected if not specified)
 - `forceWritable` (optional): If true, clears read-only flag before editing (default: false — fails on read-only files)
+- `expectedHash` (optional): The `contentHash` this edit is based on. Fails and changes nothing if the file has since changed; checked before the read-only flag is touched
 
 **Features:**
 - Exact text matching, then whitespace-flexible; `oldText` must identify **one** place

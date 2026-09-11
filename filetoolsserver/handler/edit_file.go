@@ -35,6 +35,16 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 
 	originalMode := getFileMode(v.Path)
 
+	data, err := os.ReadFile(v.Path)
+	if err != nil {
+		return errorResult(fmt.Sprintf("failed to read file: %v", err)), EditFileOutput{}, nil
+	}
+
+	// Checked before the read-only flag is touched, so a stale edit leaves the file untouched.
+	if err := checkExpectedHash(input.ExpectedHash, data, input.Path); err != nil {
+		return errorResult(err.Error()), EditFileOutput{}, nil
+	}
+
 	readOnlyCleared := false
 	forceWritable := input.ForceWritable != nil && *input.ForceWritable // default: false
 	if isReadOnly(originalMode) {
@@ -48,11 +58,6 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 			readOnlyCleared = true
 			slog.Info("cleared read-only flag", "path", input.Path)
 		}
-	}
-
-	data, err := os.ReadFile(v.Path)
-	if err != nil {
-		return errorResult(fmt.Sprintf("failed to read file: %v", err)), EditFileOutput{}, nil
 	}
 
 	encodingName, err := h.resolveEncodingFromData(input.Encoding, data, input.Path)
@@ -97,12 +102,16 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 
 	diff := createUnifiedDiff(content, modifiedContent, input.Path)
 
+	newHash := ""
 	if !input.DryRun {
 		if r := cancelled(ctx); r != nil {
 			return r, EditFileOutput{}, nil
 		}
 		if err := atomicWriteFileWithEncoding(v.Path, modifiedContent, encodingName, eolStyle, originalMode); err != nil {
 			return errorResult(fmt.Sprintf("failed to write file: %v", err)), EditFileOutput{}, nil
+		}
+		if input.ExpectedHash != "" {
+			newHash, _ = fileContentHash(v.Path)
 		}
 	}
 
@@ -115,6 +124,9 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 	}
 	if readOnlyCleared {
 		text += "\nRead-only flag was cleared."
+	}
+	if newHash != "" {
+		text += "\ncontentHash: " + newHash + " — pass it as expectedHash on the next edit of this file."
 	}
 
 	output := EditFileOutput{Diff: diff, ReadOnlyCleared: readOnlyCleared}

@@ -18,6 +18,11 @@ func (h *Handler) HandleWriteFile(ctx context.Context, req *mcp.CallToolRequest,
 		return v.Result, WriteFileOutput{}, nil
 	}
 
+	// Guarded before anything else, so a stale write changes nothing.
+	if err := checkExpectedHashOfFile(input.ExpectedHash, v.Path); err != nil {
+		return errorResult(err.Error()), WriteFileOutput{}, nil
+	}
+
 	// Resolve the BOM policy before anything mutates the file
 	policy, err := parseBOMPolicy(input.BOM)
 	if err != nil {
@@ -79,6 +84,9 @@ func (h *Handler) HandleWriteFile(ctx context.Context, req *mcp.CallToolRequest,
 	}
 
 	var output WriteFileOutput
+	if input.ExpectedHash != "" {
+		output.ContentHash = contentHash(contentToWrite)
+	}
 	detail := "encoding: " + encodingName
 	if len(bomBytes) > 0 {
 		output.HasBOM = true
