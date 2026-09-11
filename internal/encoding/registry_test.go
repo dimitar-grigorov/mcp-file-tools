@@ -117,8 +117,8 @@ func TestListEncodings(t *testing.T) {
 		}
 	}
 
-	if len(items) != 25 {
-		t.Errorf("ListEncodings() returned %d items, want 25", len(items))
+	if len(items) != 45 {
+		t.Errorf("ListEncodings() returned %d items, want 45", len(items))
 	}
 }
 
@@ -132,7 +132,7 @@ func TestDetectionResult_Conclusive(t *testing.T) {
 		{"ascii is no evidence", DetectionResult{Charset: "ascii", Confidence: 100}, false},
 		{"empty charset", DetectionResult{Charset: "", Confidence: 100}, false},
 		{"below threshold", DetectionResult{Charset: "windows-1251", Confidence: MinConfidenceThreshold - 1}, false},
-		{"not in the registry", DetectionResult{Charset: "macroman", Confidence: 99}, false},
+		{"not in the registry", DetectionResult{Charset: "euc-tw", Confidence: 99}, false},
 	}
 	for _, tt := range tests {
 		if got := tt.in.Conclusive(); got != tt.want {

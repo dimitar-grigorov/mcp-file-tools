@@ -107,7 +107,7 @@ func TestCandidatesFromSampleLargeBuffer(t *testing.T) {
 
 func TestSupportedAlternativesAndFormat(t *testing.T) {
 	ranked := []Candidate{
-		{Charset: "macroman", Confidence: 90, Supported: false},
+		{Charset: "euc-tw", Confidence: 90, Supported: false},
 		{Charset: "windows-1251", Confidence: 62, Supported: true},
 		{Charset: "utf-8", Confidence: 55, Supported: true},
 	}
@@ -133,8 +133,8 @@ func TestSameCharset(t *testing.T) {
 		{"CP1251", "windows-1251", true},
 		{"utf-8", "utf-8", true},
 		{"windows-1251", "koi8-r", false},
-		{"macroman", "macroman", true}, // unregistered, but the same name
-		{"macroman", "big5", false},
+		{"euc-tw", "euc-tw", true}, // unregistered, but the same name
+		{"euc-tw", "big5", false},
 	}
 	for _, c := range cases {
 		if got := SameCharset(c.a, c.b); got != c.want {
@@ -158,7 +158,7 @@ func TestCorrectCharsetCorrections(t *testing.T) {
 		{"gb2312 folds into gbk", "gb2312", 70, nil, "gbk"},
 		{"single-byte guess loses to valid UTF-8", "windows-1251", 60, utf8Text, "utf-8"},
 		{"a label with no codec behind it is no answer", "macroman", 80, []byte{0xC0, 0xC1}, ""},
-		{"nor is a label the detector never emits", "shift_jis", 80, []byte{0xC0, 0xC1}, ""},
+		{"nor is a label the detector never emits", "euc-tw", 80, []byte{0xC0, 0xC1}, ""},
 	}
 	for _, c := range cases {
 		if got, _ := correctCharset(c.charset, c.confidence, c.data); got != c.want {

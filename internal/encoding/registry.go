@@ -9,8 +9,12 @@ import (
 
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/charmap"
+	"golang.org/x/text/encoding/japanese"
+	"golang.org/x/text/encoding/korean"
 	"golang.org/x/text/encoding/simplifiedchinese"
+	"golang.org/x/text/encoding/traditionalchinese"
 	"golang.org/x/text/encoding/unicode"
+	"golang.org/x/text/encoding/unicode/utf32"
 )
 
 type encodingInfo struct {
@@ -24,6 +28,7 @@ type encodingInfo struct {
 }
 
 // Two questions, one table: what this server can decode, and what detection may name. Labels living on the codec entry keep the second a subset of the first.
+// A single-byte table reads almost any bytes, so one added for decoding gets no label: measured, MacRoman steals a correct cp1251 verdict for the sake of a binary .dfm. A multi-byte label is structural, its bytes have to form valid sequences, so those do answer.
 var encodings = map[string]encodingInfo{
 	"utf-8": {
 		Encoding:       nil, // UTF-8 passthrough
@@ -43,6 +48,18 @@ var encodings = map[string]encodingInfo{
 		DisplayName: "UTF-16 BE",
 		Aliases:     []string{"utf16be", "utf-16be"},
 		Description: "Unicode UTF-16 Big Endian",
+	},
+	"utf-32-le": {
+		Encoding:    utf32.UTF32(utf32.LittleEndian, utf32.IgnoreBOM),
+		DisplayName: "UTF-32 LE",
+		Aliases:     []string{"utf32le", "utf-32le"},
+		Description: "Unicode UTF-32 Little Endian",
+	},
+	"utf-32-be": {
+		Encoding:    utf32.UTF32(utf32.BigEndian, utf32.IgnoreBOM),
+		DisplayName: "UTF-32 BE",
+		Aliases:     []string{"utf32be", "utf-32be"},
+		Description: "Unicode UTF-32 Big Endian",
 	},
 
 	// Cyrillic
@@ -72,6 +89,12 @@ var encodings = map[string]encodingInfo{
 		Aliases:        []string{"cp866", "dos-866"},
 		Description:    "DOS Cyrillic",
 		DetectorLabels: []string{"ibm866"},
+	},
+	"ibm855": {
+		Encoding:    charmap.CodePage855,
+		DisplayName: "CP855",
+		Aliases:     []string{"cp855", "dos-855"},
+		Description: "DOS Cyrillic (IBM)",
 	},
 	"iso-8859-5": {
 		Encoding:       charmap.ISO8859_5,
@@ -207,6 +230,129 @@ var encodings = map[string]encodingInfo{
 		DisplayName: "GB18030",
 		Aliases:     []string{"gb-18030"},
 		Description: "Chinese Simplified (GB18030, full Unicode)",
+	},
+
+	// Baltic
+	"iso-8859-13": {
+		Encoding:    charmap.ISO8859_13,
+		DisplayName: "ISO-8859-13",
+		Aliases:     []string{"iso885913", "latin7"},
+		Description: "Latin-7 Baltic",
+	},
+	"iso-8859-4": {
+		Encoding:    charmap.ISO8859_4,
+		DisplayName: "ISO-8859-4",
+		Aliases:     []string{"iso88594", "latin4"},
+		Description: "Latin-4 North European",
+	},
+
+	// Hebrew and Arabic
+	"iso-8859-8": {
+		Encoding:    charmap.ISO8859_8,
+		DisplayName: "ISO-8859-8",
+		Aliases:     []string{"iso88598", "hebrew"},
+		Description: "ISO Hebrew (visual order)",
+	},
+	"iso-8859-6": {
+		Encoding:    charmap.ISO8859_6,
+		DisplayName: "ISO-8859-6",
+		Aliases:     []string{"iso88596", "arabic"},
+		Description: "ISO Arabic",
+	},
+
+	// Macintosh
+	"macintosh": {
+		Encoding:    charmap.Macintosh,
+		DisplayName: "MacRoman",
+		Aliases:     []string{"macroman", "mac-roman", "x-mac-roman"},
+		Description: "Macintosh Western European",
+	},
+
+	// DOS code pages
+	"ibm437": {
+		Encoding:    charmap.CodePage437,
+		DisplayName: "CP437",
+		Aliases:     []string{"cp437", "dos-437"},
+		Description: "DOS United States (original IBM PC)",
+	},
+	"ibm850": {
+		Encoding:    charmap.CodePage850,
+		DisplayName: "CP850",
+		Aliases:     []string{"cp850", "dos-850"},
+		Description: "DOS Western European",
+	},
+	"ibm852": {
+		Encoding:    charmap.CodePage852,
+		DisplayName: "CP852",
+		Aliases:     []string{"cp852", "dos-852"},
+		Description: "DOS Central European",
+	},
+
+	// Less common ISO tables, no detector probe behind them
+	"iso-8859-3": {
+		Encoding:    charmap.ISO8859_3,
+		DisplayName: "ISO-8859-3",
+		Aliases:     []string{"iso88593", "latin3"},
+		Description: "Latin-3 South European",
+	},
+	"iso-8859-10": {
+		Encoding:    charmap.ISO8859_10,
+		DisplayName: "ISO-8859-10",
+		Aliases:     []string{"iso885910", "latin6"},
+		Description: "Latin-6 Nordic",
+	},
+	"iso-8859-14": {
+		Encoding:    charmap.ISO8859_14,
+		DisplayName: "ISO-8859-14",
+		Aliases:     []string{"iso885914", "latin8"},
+		Description: "Latin-8 Celtic",
+	},
+	"iso-8859-16": {
+		Encoding:    charmap.ISO8859_16,
+		DisplayName: "ISO-8859-16",
+		Aliases:     []string{"iso885916", "latin10"},
+		Description: "Latin-10 South-Eastern European",
+	},
+
+	// Chinese (Traditional)
+	"big5": {
+		Encoding:       traditionalchinese.Big5,
+		DisplayName:    "Big5",
+		Aliases:        []string{"big-5", "cp950"},
+		Description:    "Chinese Traditional (Big5)",
+		DetectorLabels: []string{"big5"},
+	},
+
+	// Japanese
+	"shift_jis": {
+		Encoding:       japanese.ShiftJIS,
+		DisplayName:    "Shift_JIS",
+		Aliases:        []string{"shift-jis", "sjis", "cp932", "windows-31j"},
+		Description:    "Japanese (Shift_JIS)",
+		DetectorLabels: []string{"shift_jis", "cp932"},
+	},
+	"euc-jp": {
+		Encoding:       japanese.EUCJP,
+		DisplayName:    "EUC-JP",
+		Aliases:        []string{"eucjp", "x-euc-jp"},
+		Description:    "Japanese (EUC)",
+		DetectorLabels: []string{"euc-jp"},
+	},
+	"iso-2022-jp": {
+		Encoding:       japanese.ISO2022JP,
+		DisplayName:    "ISO-2022-JP",
+		Aliases:        []string{"iso2022jp", "csiso2022jp"},
+		Description:    "Japanese (ISO-2022, escape sequences)",
+		DetectorLabels: []string{"iso-2022-jp"},
+	},
+
+	// Korean
+	"euc-kr": {
+		Encoding:       korean.EUCKR,
+		DisplayName:    "EUC-KR",
+		Aliases:        []string{"euckr", "cp949", "uhc", "windows-949"},
+		Description:    "Korean (EUC, CP949)",
+		DetectorLabels: []string{"euc-kr", "cp949"},
 	},
 }
 

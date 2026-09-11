@@ -15,7 +15,7 @@ file's bytes rather than its extension, hands the model UTF-8, and writes back i
 original encoding — BOM and CRLF/LF intact, still byte-compatible with whatever legacy
 tool owns the file.
 
-- **25 encodings, read and write** — Cyrillic (CP1251, KOI8-R/U, CP866), Windows-125x, ISO-8859-x, UTF-16 LE/BE, GBK/GB18030 ([full list](#supported-encodings))
+- **45 encodings, read and write** — Cyrillic (CP1251, KOI8-R/U, CP866/855), Windows-125x, ISO-8859-x, DOS code pages, MacRoman, UTF-16/UTF-32, CJK (GBK, Big5, Shift_JIS, EUC-JP/KR) ([full list](#supported-encodings))
 - **Encoding-aware across the whole tool set** — `edit_file`, `grep_text_files` and `search_files` decode the same way, not just read and write
 - **Detection you can inspect** — `detect_encoding` reports the charset, a confidence score and any BOM, so garbled text becomes diagnosable
 - **BOM and line endings are first-class** — including on UTF-16, where a naive byte-level rewrite corrupts the file
@@ -300,22 +300,27 @@ leave it to auto-detection.
 
 | Script / region | Encodings |
 |---|---|
-| Unicode | UTF-8, UTF-16 LE, UTF-16 BE |
-| Cyrillic | Windows-1251, KOI8-R, KOI8-U, CP866, ISO-8859-5, MacCyrillic |
-| Western European | Windows-1252, ISO-8859-1, ISO-8859-15 |
+| Unicode | UTF-8, UTF-16 LE/BE, UTF-32 LE/BE |
+| Cyrillic | Windows-1251, KOI8-R, KOI8-U, CP866, CP855, ISO-8859-5, MacCyrillic |
+| Western European | Windows-1252, ISO-8859-1, ISO-8859-15, MacRoman |
 | Central European | Windows-1250, ISO-8859-2 |
 | Greek | Windows-1253, ISO-8859-7 |
 | Turkish | Windows-1254, ISO-8859-9 |
-| Chinese Simplified | GBK, GB18030 |
-| Hebrew, Arabic, Baltic, Vietnamese, Thai | Windows-1255, 1256, 1257, 1258, 874 |
+| Baltic and Nordic | Windows-1257, ISO-8859-4, ISO-8859-10, ISO-8859-13 |
+| Hebrew, Arabic, Vietnamese, Thai | Windows-1255, 1256, 1258, 874, ISO-8859-6, ISO-8859-8 |
+| Other Latin | ISO-8859-3, ISO-8859-14, ISO-8859-16 |
+| DOS code pages | CP437, CP850, CP852 |
+| Chinese | GBK, GB18030, Big5 |
+| Japanese and Korean | Shift_JIS, EUC-JP, ISO-2022-JP, EUC-KR |
 
 Common aliases are accepted (`cp1251`, `latin1`, `gb2312`, `tis-620`, …) —
 [`list_encodings`](TOOLS.md#list_encodings) prints the whole table with aliases.
 
-UTF-32 is partially supported: LE and BE BOMs are detected, and
-[`manage_bom`](TOOLS.md#manage_bom) can add or strip them, but transcoding to or from
-UTF-32 is not implemented and [`manage_line_endings`](TOOLS.md#manage_line_endings)
-refuses UTF-32 files rather than corrupting their 4-byte alignment.
+Auto-detection answers a subset: a single-byte table reads almost any bytes, so the tables
+added for decoding alone (MacRoman, the DOS pages, the rarer ISO ones) are never guessed.
+Name those explicitly. UTF-32 is found by its BOM alone, so keep one, and
+[`manage_line_endings`](TOOLS.md#manage_line_endings) still refuses UTF-32 files rather
+than corrupting their 4-byte alignment.
 
 ## Configuration
 

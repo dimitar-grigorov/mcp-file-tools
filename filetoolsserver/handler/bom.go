@@ -68,7 +68,8 @@ func checkBOMConflict(bom bomInfo, encodingName string) error {
 // existing is the BOM of the file being replaced (its source, for a conversion).
 func bomBytesForPolicy(policy bomPolicy, charset string, existing bomInfo) ([]byte, error) {
 	canonical := canonicalCharset(charset)
-	utf16Target := canonical == "utf-16-le" || canonical == "utf-16-be"
+	// UTF-16 and UTF-32 are found by their BOM, UTF-32 by nothing else at all.
+	unicodeTarget := strings.HasPrefix(canonical, "utf-16-") || strings.HasPrefix(canonical, "utf-32-")
 	want := false
 	switch policy {
 	case bomNever:
@@ -78,9 +79,8 @@ func bomBytesForPolicy(policy bomPolicy, charset string, existing bomInfo) ([]by
 	case bomPreserve:
 		want = existing.HasBOM
 	case bomAuto:
-		// UTF-16 needs a BOM to stay detectable; otherwise only keep a BOM of the
-		// same flavour, since a UTF-16 BOM is transport rather than intent.
-		want = utf16Target || (existing.HasBOM && existing.Type == canonical)
+		// Otherwise only keep a BOM of the same flavour: on a byte table it is transport rather than intent.
+		want = unicodeTarget || (existing.HasBOM && existing.Type == canonical)
 	default:
 		return nil, fmt.Errorf("%w: %q", ErrBOMPolicyInvalid, policy)
 	}

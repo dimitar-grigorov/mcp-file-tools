@@ -891,10 +891,13 @@ exists — with the update steps that apply to that install and client.
 | utf-8 | utf8, ascii | Unicode, no conversion |
 | utf-16-le | utf16le, utf-16le | Unicode UTF-16 Little Endian |
 | utf-16-be | utf16be, utf-16be | Unicode UTF-16 Big Endian |
+| utf-32-le | utf32le, utf-32le | Unicode UTF-32 Little Endian |
+| utf-32-be | utf32be, utf-32be | Unicode UTF-32 Big Endian |
 | windows-1251 | cp1251 | Windows Cyrillic |
 | koi8-r | koi8r | Russian Cyrillic (Unix/Linux) |
 | koi8-u | koi8u | Ukrainian Cyrillic (Unix/Linux) |
 | ibm866 | cp866, dos-866 | DOS Cyrillic |
+| ibm855 | cp855, dos-855 | DOS Cyrillic (IBM) |
 | iso-8859-5 | iso88595, cyrillic | ISO Cyrillic |
 | x-mac-cyrillic | maccyrillic, mac-cyrillic | Macintosh Cyrillic |
 | windows-1252 | cp1252 | Windows Western European |
@@ -913,12 +916,31 @@ exists — with the update steps that apply to that install and client.
 | windows-874 | cp874, tis-620 | Windows Thai |
 | gbk | cp936, gb2312, gb-2312 | Chinese Simplified (GBK) |
 | gb18030 | gb-18030 | Chinese Simplified (GB18030, full Unicode) |
+| big5 | big-5, cp950 | Chinese Traditional (Big5) |
+| shift_jis | shift-jis, sjis, cp932, windows-31j | Japanese (Shift_JIS) |
+| euc-jp | eucjp, x-euc-jp | Japanese (EUC) |
+| iso-2022-jp | iso2022jp, csiso2022jp | Japanese (ISO-2022, escape sequences) |
+| euc-kr | euckr, cp949, uhc, windows-949 | Korean (EUC, CP949) |
+| macintosh | macroman, mac-roman, x-mac-roman | Macintosh Western European |
+| ibm437 | cp437, dos-437 | DOS United States (original IBM PC) |
+| ibm850 | cp850, dos-850 | DOS Western European |
+| ibm852 | cp852, dos-852 | DOS Central European |
+| iso-8859-3 | iso88593, latin3 | Latin-3 South European |
+| iso-8859-4 | iso88594, latin4 | Latin-4 North European |
+| iso-8859-6 | iso88596, arabic | ISO Arabic |
+| iso-8859-8 | iso88598, hebrew | ISO Hebrew (visual order) |
+| iso-8859-10 | iso885910, latin6 | Latin-6 Nordic |
+| iso-8859-13 | iso885913, latin7 | Latin-7 Baltic |
+| iso-8859-14 | iso885914, latin8 | Latin-8 Celtic |
+| iso-8859-16 | iso885916, latin10 | Latin-10 South-Eastern European |
 
-UTF-32 LE/BE BOMs are detected by [`detect_encoding`](#detect_encoding) and can be added
-or stripped by [`manage_bom`](#manage_bom), but UTF-32 is not a transcoding target:
-`convert_encoding` and the `encoding` parameter do not accept it, and
-[`manage_line_endings`](#manage_line_endings) refuses UTF-32 files rather than breaking
-their 4-byte alignment.
+UTF-32 is found by its BOM alone, so keep one: there is no structural classifier behind it
+the way there is for UTF-16. [`manage_line_endings`](#manage_line_endings) refuses UTF-32
+files rather than breaking their 4-byte alignment.
+
+Detection answers a subset of this table. A single-byte table reads almost any bytes, so the
+ones added for decoding alone (MacRoman, the DOS pages, the rarer ISO tables) are never
+guessed — name them explicitly, or pin them with `MCP_DETECTION_CANDIDATES`.
 
 ## Prompts
 
