@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -21,8 +22,28 @@ import (
 const (
 	envCorpus      = "MCP_FILE_TOOLS_CORPUS"
 	envCorpusExts  = "MCP_FILE_TOOLS_CORPUS_EXTS" // default ".pas,.dfm,.inc,.dpr"
+	envCorpusMax   = "MCP_FILE_TOOLS_CORPUS_MAX"  // raise to cover a tree larger than the default cap
+	envCandidates  = "MCP_DETECTION_CANDIDATES"   // the production name; internal/config cannot be imported here
 	corpusMaxFiles = 4000
 )
+
+// corpusPin applies MCP_DETECTION_CANDIDATES so a run measures what the same env would give the server.
+func corpusPin(t testing.TB) {
+	t.Helper()
+	raw := strings.TrimSpace(os.Getenv(envCandidates))
+	if raw == "" {
+		return
+	}
+	names := strings.Split(raw, ",")
+	for i, name := range names {
+		names[i] = strings.TrimSpace(name)
+	}
+	if err := SetDetectionCandidates(names); err != nil {
+		t.Fatalf("%s=%q: %v", envCandidates, raw, err)
+	}
+	t.Cleanup(func() { _ = SetDetectionCandidates(nil) })
+	t.Logf("detection pinned to %s", strings.Join(DetectionCandidates(), ", "))
+}
 
 func corpusFiles(t testing.TB) []string {
 	t.Helper()
@@ -45,9 +66,18 @@ func corpusFiles(t testing.TB) []string {
 		return false
 	}
 
+	maxFiles := corpusMaxFiles
+	if raw := os.Getenv(envCorpusMax); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil || n <= 0 {
+			t.Fatalf("%s=%q: want a positive count", envCorpusMax, raw)
+		}
+		maxFiles = n
+	}
+
 	var files []string
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
-		if err != nil || len(files) >= corpusMaxFiles {
+		if err != nil || len(files) >= maxFiles {
 			return nil //nolint:nilerr // an unreadable subtree is not this test's problem
 		}
 		if d.IsDir() {
@@ -96,6 +126,7 @@ func cyrillicWords(text string) int {
 }
 
 func TestCorpus_DetectionIsUsable(t *testing.T) {
+	corpusPin(t)
 	files := corpusFiles(t)
 	t.Logf("corpus: %d files", len(files))
 
@@ -103,7 +134,7 @@ func TestCorpus_DetectionIsUsable(t *testing.T) {
 	lowConfidence := map[string]int{}
 	unsupportedBy := map[string]int{}
 	var unsupported, nondeterministic, replacementChars, lossyRoundTrip int
-	var westernOnCyrillic []string
+	var westernOnCyrillic, cyrillicOnWestern []string
 
 	for _, path := range files {
 		data, err := os.ReadFile(path)
@@ -161,6 +192,11 @@ func TestCorpus_DetectionIsUsable(t *testing.T) {
 				}
 			}
 		}
+
+		// The mirror failure, and the one a Cyrillic pin can cause: high bytes that spell no Cyrillic word.
+		if isCyrillicCharset(got.Charset) && highBytes(data) >= cyrillicMinBytes && cyrillicWords(text) == 0 {
+			cyrillicOnWestern = append(cyrillicOnWestern, path)
+		}
 	}
 
 	report(t, "detected", counts)
@@ -170,18 +206,49 @@ func TestCorpus_DetectionIsUsable(t *testing.T) {
 		unsupported, nondeterministic, replacementChars, lossyRoundTrip)
 
 	// Reported, not failed: oddities in someone's tree are not a regression here.
-	if n := len(westernOnCyrillic); n > 0 {
-		t.Logf("%d files hold Cyrillic words under cp1251 but were detected as Western:", n)
-		for _, p := range westernOnCyrillic[:min(10, n)] {
-			t.Logf("  %s", p)
+	listPaths(t, westernOnCyrillic, "hold Cyrillic words under cp1251 but were detected as Western")
+	listPaths(t, cyrillicOnWestern, "were detected as Cyrillic but spell no Cyrillic word")
+}
+
+func listPaths(t *testing.T, paths []string, label string) {
+	t.Helper()
+	n := len(paths)
+	if n == 0 {
+		return
+	}
+	const shown = 50 // enough to triage a suspect list, short of drowning a foreign tree
+	t.Logf("%d files %s:", n, label)
+	for _, p := range paths[:min(shown, n)] {
+		t.Logf("  %s", p)
+	}
+	if n > shown {
+		t.Logf("  ... and %d more", n-shown)
+	}
+}
+
+func highBytes(data []byte) int {
+	n := 0
+	for _, b := range data {
+		if b >= 0x80 {
+			n++
 		}
 	}
+	return n
 }
 
 func isWestern(charset string) bool {
 	switch charset {
 	case "windows-1252", "iso-8859-1", "iso-8859-15", "windows-1250", "iso-8859-2":
 		return true
+	}
+	return false
+}
+
+func isCyrillicCharset(charset string) bool {
+	for _, codepage := range cyrillicCodepages {
+		if codepage.name == charset {
+			return true
+		}
 	}
 	return false
 }
