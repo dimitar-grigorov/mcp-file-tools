@@ -156,6 +156,7 @@ func TestCorrectCharsetCorrections(t *testing.T) {
 	}{
 		{"BOM-less UTF-16 is dropped", "utf-16-le", 90, nil, ""},
 		{"gb2312 folds into gbk", "gb2312", 70, nil, "gbk"},
+		{"HZ is 7-bit, so it is ascii", "hz-gb-2312", 99, []byte("~{<:Ky2;S{#,NpJ)l6~}"), ASCII},
 		{"single-byte guess loses to valid UTF-8", "windows-1251", 60, utf8Text, "utf-8"},
 		{"a label with no codec behind it is no answer", "macroman", 80, []byte{0xC0, 0xC1}, ""},
 		{"nor is a label the detector never emits", "euc-tw", 80, []byte{0xC0, 0xC1}, ""},

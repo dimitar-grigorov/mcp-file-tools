@@ -223,7 +223,7 @@ var encodings = map[string]encodingInfo{
 		DisplayName:    "GBK",
 		Aliases:        []string{"cp936", "gb2312", "gb-2312"},
 		Description:    "Chinese Simplified (GBK)",
-		DetectorLabels: []string{"gb2312", "hz-gb-2312"},
+		DetectorLabels: []string{"gb2312"},
 	},
 	"gb18030": {
 		Encoding:    simplifiedchinese.GB18030,
@@ -383,6 +383,8 @@ func init() {
 	}
 	// "ascii" is a narrower claim than utf-8, not a synonym, and Conclusive leans on the difference.
 	detectorCharsets[ASCII] = ASCII
+	// HZ is 7-bit escapes over ASCII: every table here reads its bytes alike, and gbk would name hanzi it never shows.
+	detectorCharsets["hz-gb-2312"] = ASCII
 }
 
 // ASCII is the detection answer for bytes that are plain ASCII: readable under every encoding here, so it settles nothing.

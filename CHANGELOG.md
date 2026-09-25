@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   bytes, so the tables added for decoding are named explicitly, never guessed.
 - **`manage_line_endings` converts UTF-32** per code unit, as it does UTF-16, with or without
   a BOM, instead of refusing it.
+- **An HZ-GB-2312 verdict reads as `ascii`**, not `gbk`: HZ is 7-bit, so no table here shows
+  its hanzi.
 - **The fast detection modes no longer stop at a file's ASCII head.** `sample` trusted the
   first 128KB and `chunked` let ASCII chunks outvote the one with evidence, so a unit whose
   Cyrillic starts on page two came back `ascii`.
