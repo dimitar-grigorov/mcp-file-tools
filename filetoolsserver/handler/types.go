@@ -161,6 +161,7 @@ type EditFileOutput struct {
 	Diff            string `json:"diff"`
 	ReadOnlyCleared bool   `json:"readOnlyCleared,omitempty"` // true if read-only flag was cleared
 	Replacements    int    `json:"replacements,omitempty"`    // set when replaceAll changed more than one place
+	ContentHash     string `json:"contentHash,omitempty"`     // hash after the write, only when expectedHash was used
 
 	// LineEndingsRepaired counts endings rewritten to the file's dominant style on a mixed file.
 	LineEndingsRepaired int `json:"lineEndingsRepaired,omitempty"`

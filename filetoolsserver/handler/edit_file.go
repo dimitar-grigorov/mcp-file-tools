@@ -107,11 +107,12 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 		if r := cancelled(ctx); r != nil {
 			return r, EditFileOutput{}, nil
 		}
-		if err := atomicWriteFileWithEncoding(v.Path, modifiedContent, encodingName, eolStyle, originalMode); err != nil {
+		written, err := atomicWriteFileWithEncoding(v.Path, modifiedContent, encodingName, eolStyle, originalMode)
+		if err != nil {
 			return errorResult(fmt.Sprintf("failed to write file: %v", err)), EditFileOutput{}, nil
 		}
 		if input.ExpectedHash != "" {
-			newHash, _ = fileContentHash(v.Path)
+			newHash = contentHash(written)
 		}
 	}
 
@@ -129,7 +130,7 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 		text += "\ncontentHash: " + newHash + " — pass it as expectedHash on the next edit of this file."
 	}
 
-	output := EditFileOutput{Diff: diff, ReadOnlyCleared: readOnlyCleared}
+	output := EditFileOutput{Diff: diff, ReadOnlyCleared: readOnlyCleared, ContentHash: newHash}
 	if replacements > 1 {
 		output.Replacements = replacements
 	}
@@ -153,9 +154,9 @@ func createUnifiedDiff(original, modified, filepath string) string {
 	return text
 }
 
-// atomicWriteFileWithEncoding encodes UTF-8 content to the target encoding and writes atomically.
+// atomicWriteFileWithEncoding encodes UTF-8 content to the target encoding, writes atomically and returns the bytes written.
 // mode is passed in because the caller reads it before clearing any read-only flag.
-func atomicWriteFileWithEncoding(path, content, encodingName, lineEndingStyle string, mode os.FileMode) error {
+func atomicWriteFileWithEncoding(path, content, encodingName, lineEndingStyle string, mode os.FileMode) ([]byte, error) {
 	content = ConvertLineEndings(content, lineEndingStyle)
 
 	var dataToWrite []byte
@@ -164,17 +165,20 @@ func atomicWriteFileWithEncoding(path, content, encodingName, lineEndingStyle st
 	} else {
 		enc, ok := encoding.Get(encodingName)
 		if !ok {
-			return fmt.Errorf("unsupported encoding: %s", encodingName)
+			return nil, fmt.Errorf("unsupported encoding: %s", encodingName)
 		}
 		encoded, err := encoding.Encode(content, enc, encodingName)
 		if err != nil {
-			return fmt.Errorf("failed to encode content to %s: %w", encodingName, err)
+			return nil, fmt.Errorf("failed to encode content to %s: %w", encodingName, err)
 		}
 		dataToWrite = encoded
 		slog.Debug("edit_file: encoded content for write", "encoding", encodingName, "utf8Size", len(content), "encodedSize", len(encoded))
 	}
 
-	return atomicWriteFile(path, dataToWrite, mode)
+	if err := atomicWriteFile(path, dataToWrite, mode); err != nil {
+		return nil, err
+	}
+	return dataToWrite, nil
 }
 
 func isReadOnly(mode os.FileMode) bool {

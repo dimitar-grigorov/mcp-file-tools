@@ -86,7 +86,7 @@ func TestHandleEditFile_ExpectedHashCurrentEditsAndReturnsNewHash(t *testing.T) 
 	testFile := filepath.Join(tempDir, "test.txt")
 	os.WriteFile(testFile, []byte("Hello World"), 0644)
 
-	result, _, err := h.HandleEditFile(context.Background(), nil, EditFileInput{
+	result, output, err := h.HandleEditFile(context.Background(), nil, EditFileInput{
 		Path:         testFile,
 		Edits:        []EditOperation{{OldText: "World", NewText: "Go"}},
 		ExpectedHash: contentHash([]byte("Hello World")),
@@ -104,6 +104,9 @@ func TestHandleEditFile_ExpectedHashCurrentEditsAndReturnsNewHash(t *testing.T) 
 	}
 	if want := "contentHash: " + contentHash(content); !strings.Contains(hashResultText(result), want) {
 		t.Errorf("result should carry the post-edit hash %q, got %q", want, hashResultText(result))
+	}
+	if output.ContentHash != contentHash(content) {
+		t.Errorf("structured contentHash = %q, want %q", output.ContentHash, contentHash(content))
 	}
 }
 

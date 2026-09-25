@@ -54,20 +54,15 @@ func hashesMatch(expected, actual string) bool {
 	return strings.HasPrefix(expected, actual)
 }
 
-// checkExpectedHash compares expectedHash against the bytes in hand. An empty
-// expectedHash means the caller opted out of the guard.
+// checkExpectedHash compares expectedHash against the bytes in hand; an empty one means the caller opted out.
 func checkExpectedHash(expected string, data []byte, path string) error {
 	if expected == "" {
 		return nil
 	}
-	if len(normalizeHash(expected)) < minExpectedHashLen {
-		return fmt.Errorf("expectedHash must be at least %d hex characters; use the contentHash from read_text_file", minExpectedHashLen)
+	if err := validateExpectedHash(expected); err != nil {
+		return err
 	}
-	actual := contentHash(data)
-	if !hashesMatch(expected, actual) {
-		return staleFileError(path, expected, actual)
-	}
-	return nil
+	return compareHash(expected, contentHash(data), path)
 }
 
 // checkExpectedHashOfFile is checkExpectedHash for a file not already read into memory.
@@ -75,8 +70,8 @@ func checkExpectedHashOfFile(expected, path string) error {
 	if expected == "" {
 		return nil
 	}
-	if len(normalizeHash(expected)) < minExpectedHashLen {
-		return fmt.Errorf("expectedHash must be at least %d hex characters; use the contentHash from read_text_file", minExpectedHashLen)
+	if err := validateExpectedHash(expected); err != nil {
+		return err
 	}
 	actual, err := fileContentHash(path)
 	if err != nil {
@@ -85,13 +80,20 @@ func checkExpectedHashOfFile(expected, path string) error {
 		}
 		return fmt.Errorf("failed to hash file: %w", err)
 	}
-	if !hashesMatch(expected, actual) {
-		return staleFileError(path, expected, actual)
+	return compareHash(expected, actual, path)
+}
+
+func validateExpectedHash(expected string) error {
+	if len(normalizeHash(expected)) < minExpectedHashLen {
+		return fmt.Errorf("expectedHash must be at least %d hex characters; use the contentHash from read_text_file", minExpectedHashLen)
 	}
 	return nil
 }
 
-func staleFileError(path, expected, actual string) error {
+func compareHash(expected, actual, path string) error {
+	if hashesMatch(expected, actual) {
+		return nil
+	}
 	return fmt.Errorf("file changed since you read it: expectedHash %s, file is now %s. NOTHING was changed. Re-read %s and redo the edit against its current content",
 		normalizeHash(expected), actual, path)
 }
