@@ -169,7 +169,7 @@ func expandBraces(pattern string) []string {
 	}
 	end += open
 	var out []string
-	for _, alt := range strings.Split(pattern[open+1:end], ",") {
+	for alt := range strings.SplitSeq(pattern[open+1:end], ",") {
 		out = append(out, expandBraces(pattern[:open]+alt+pattern[end+1:])...)
 		if len(out) >= 64 {
 			break

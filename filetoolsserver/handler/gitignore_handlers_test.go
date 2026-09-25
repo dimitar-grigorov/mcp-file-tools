@@ -11,8 +11,6 @@ import (
 	"testing"
 )
 
-func boolp(b bool) *bool { return &b }
-
 // gitignoreTree: a .gitignore hiding *.dcu and __history/.
 func gitignoreTree(t *testing.T) (string, *Handler) {
 	t.Helper()
@@ -42,7 +40,7 @@ func TestSearchFilesRespectsGitignore(t *testing.T) {
 	}
 
 	_, out, err = h.HandleSearchFiles(context.Background(), nil, SearchFilesInput{
-		Path: dir, Pattern: "*", RespectGitignore: boolp(false),
+		Path: dir, Pattern: "*", RespectGitignore: new(false),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -64,7 +62,7 @@ func TestGrepRespectsGitignore(t *testing.T) {
 	}
 
 	_, out, err = h.HandleGrep(context.Background(), nil, GrepInput{
-		Pattern: "Alpha", Paths: []string{dir}, RespectGitignore: boolp(false),
+		Pattern: "Alpha", Paths: []string{dir}, RespectGitignore: new(false),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -85,7 +83,7 @@ func TestTreeRespectsGitignore(t *testing.T) {
 		t.Errorf("default tree should skip ignored entries:\n%s", out.Tree)
 	}
 
-	_, out, err = h.HandleTree(context.Background(), nil, TreeInput{Path: dir, RespectGitignore: boolp(false)})
+	_, out, err = h.HandleTree(context.Background(), nil, TreeInput{Path: dir, RespectGitignore: new(false)})
 	if err != nil {
 		t.Fatal(err)
 	}

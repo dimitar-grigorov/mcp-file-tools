@@ -27,8 +27,6 @@ func readChunk(t *testing.T, h *Handler, path string, offset, limit *int) ReadTe
 	return output
 }
 
-func intPtr(v int) *int { return &v }
-
 func TestHandleReadTextFile_OffsetLimitPreservesLineEndings(t *testing.T) {
 	tempDir := t.TempDir()
 	h := NewHandler([]string{tempDir})
@@ -44,47 +42,47 @@ func TestHandleReadTextFile_OffsetLimitPreservesLineEndings(t *testing.T) {
 	}{
 		{
 			name: "crlf first chunk", content: "a\r\nb\r\nc\r\n",
-			offset: intPtr(1), limit: intPtr(2),
+			offset: new(1), limit: new(2),
 			wantContent: "a\r\nb\r\n", wantStart: 1, wantEnd: 2, wantTotalLines: 3,
 		},
 		{
 			name: "crlf middle chunk", content: "a\r\nb\r\nc\r\n",
-			offset: intPtr(2), limit: intPtr(1),
+			offset: new(2), limit: new(1),
 			wantContent: "b\r\n", wantStart: 2, wantEnd: 2, wantTotalLines: 3,
 		},
 		{
 			name: "crlf last chunk", content: "a\r\nb\r\nc\r\n",
-			offset: intPtr(3), limit: intPtr(5),
+			offset: new(3), limit: new(5),
 			wantContent: "c\r\n", wantStart: 3, wantEnd: 3, wantTotalLines: 3,
 		},
 		{
 			name: "crlf unterminated last line", content: "a\r\nb\r\nc",
-			offset: intPtr(2), limit: intPtr(2),
+			offset: new(2), limit: new(2),
 			wantContent: "b\r\nc", wantStart: 2, wantEnd: 3, wantTotalLines: 3,
 		},
 		{
 			name: "crlf offset past end", content: "a\r\nb\r\nc\r\n",
-			offset:      intPtr(4),
+			offset:      new(4),
 			wantContent: "", wantStart: 4, wantEnd: 3, wantTotalLines: 3,
 		},
 		{
 			name: "lf middle chunk", content: "a\nb\nc\n",
-			offset: intPtr(2), limit: intPtr(2),
+			offset: new(2), limit: new(2),
 			wantContent: "b\nc\n", wantStart: 2, wantEnd: 3, wantTotalLines: 3,
 		},
 		{
 			name: "lf unterminated last line", content: "a\nb\nc",
-			offset:      intPtr(3),
+			offset:      new(3),
 			wantContent: "c", wantStart: 3, wantEnd: 3, wantTotalLines: 3,
 		},
 		{
 			name: "lone cr is not a line break", content: "a\rb\nc\n",
-			offset: intPtr(1), limit: intPtr(1),
+			offset: new(1), limit: new(1),
 			wantContent: "a\rb\n", wantStart: 1, wantEnd: 1, wantTotalLines: 2,
 		},
 		{
 			name: "limit beyond end keeps terminator", content: "a\r\n",
-			limit:       intPtr(9),
+			limit:       new(9),
 			wantContent: "a\r\n", wantStart: 1, wantEnd: 1, wantTotalLines: 1,
 		},
 	}

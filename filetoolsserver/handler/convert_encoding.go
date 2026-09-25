@@ -191,8 +191,7 @@ func (h *Handler) convertOne(path string, input ConvertEncodingInput, policy bom
 		if err != nil {
 			// Surface the offending characters as data too, so a dry run over a
 			// whole tree is machine-readable and not just a wall of prose.
-			var ue *encoding.UnsupportedError
-			if errors.As(err, &ue) {
+			if ue, ok := errors.AsType[*encoding.UnsupportedError](err); ok {
 				res.Unsupported = ue.Runes
 				res.UnsupportedCount = ue.Total
 			}

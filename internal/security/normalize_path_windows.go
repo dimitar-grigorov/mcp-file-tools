@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"golang.org/x/sys/windows"
 )
@@ -24,8 +25,8 @@ func expandShortPath(path string) string {
 	for {
 		expanded, err := longPathName(current)
 		if err == nil {
-			for i := len(missing) - 1; i >= 0; i-- {
-				expanded = filepath.Join(expanded, missing[i])
+			for _, m := range slices.Backward(missing) {
+				expanded = filepath.Join(expanded, m)
 			}
 			return filepath.Clean(expanded)
 		}

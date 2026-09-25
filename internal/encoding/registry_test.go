@@ -117,8 +117,8 @@ func TestListEncodings(t *testing.T) {
 		}
 	}
 
-	if len(items) != 45 {
-		t.Errorf("ListEncodings() returned %d items, want 45", len(items))
+	if len(items) != Count() {
+		t.Errorf("ListEncodings() returned %d items, want %d", len(items), Count())
 	}
 }
 

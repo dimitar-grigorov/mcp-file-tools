@@ -197,9 +197,9 @@ func TestHandleGrep_MatchesOnly(t *testing.T) {
 func TestHandleGrep_OffsetPagesPastMaxMatches(t *testing.T) {
 	tempDir := t.TempDir()
 	h := NewHandler([]string{tempDir})
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		var body string
-		for j := 0; j < 10; j++ {
+		for j := range 10 {
 			body += fmt.Sprintf("needle %02d-%02d\n", i, j)
 		}
 		if err := os.WriteFile(filepath.Join(tempDir, fmt.Sprintf("f%d.txt", i)), []byte(body), 0644); err != nil {
@@ -239,7 +239,7 @@ func TestHandleGrep_OffsetPagesPastMaxMatches(t *testing.T) {
 	if len(paged) != 40 {
 		t.Fatalf("paging returned %d matches, want 40", len(paged))
 	}
-	for i := 0; i < 40; i++ {
+	for i := range 40 {
 		want := fmt.Sprintf("needle %02d-%02d", i/10, i%10)
 		if paged[i] != want {
 			t.Fatalf("paged[%d]=%q, want %q", i, paged[i], want)
@@ -252,7 +252,7 @@ func TestHandleGrep_OffsetWithinOneFile(t *testing.T) {
 	tempDir := t.TempDir()
 	h := NewHandler([]string{tempDir})
 	var body string
-	for j := 0; j < 30; j++ {
+	for j := range 30 {
 		body += fmt.Sprintf("hit %02d\n", j)
 	}
 	if err := os.WriteFile(filepath.Join(tempDir, "one.txt"), []byte(body), 0644); err != nil {
@@ -283,7 +283,7 @@ func TestHandleGrep_OffsetWithinOneFile(t *testing.T) {
 func TestHandleGrep_FilesWithMatchesRespectsMaxMatches(t *testing.T) {
 	tempDir := t.TempDir()
 	h := NewHandler([]string{tempDir})
-	for i := 0; i < 6; i++ {
+	for i := range 6 {
 		path := filepath.Join(tempDir, fmt.Sprintf("f%d.txt", i))
 		if err := os.WriteFile(path, []byte("needle\nneedle\n"), 0644); err != nil {
 			t.Fatal(err)

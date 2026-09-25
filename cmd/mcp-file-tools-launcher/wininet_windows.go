@@ -48,8 +48,7 @@ var wininetMessages = map[syscall.Errno]string{
 
 // explain adds WinInet's message text; the numeric code stays for searchability.
 func explain(err error) error {
-	var errno syscall.Errno
-	if errors.As(err, &errno) {
+	if errno, ok := errors.AsType[syscall.Errno](err); ok {
 		if text, ok := wininetMessages[errno]; ok {
 			return fmt.Errorf("%s (wininet %d)", text, uintptr(errno))
 		}

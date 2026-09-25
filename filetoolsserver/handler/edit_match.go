@@ -7,6 +7,7 @@ package handler
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -45,8 +46,8 @@ func applyEdits(content string, edits []EditOperation) (string, int, error) {
 			}
 			oldLineCount := len(strings.Split(normalizedOld, "\n"))
 			// Last to first: replacing later blocks leaves earlier indexes valid.
-			for i := len(starts) - 1; i >= 0; i-- {
-				modifiedContent = replaceLineBlock(modifiedContent, normalizedOld, normalizedNew, starts[i], oldLineCount)
+			for _, start := range slices.Backward(starts) {
+				modifiedContent = replaceLineBlock(modifiedContent, normalizedOld, normalizedNew, start, oldLineCount)
 			}
 			replacements += len(starts)
 			continue

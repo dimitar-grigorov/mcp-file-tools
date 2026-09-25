@@ -34,11 +34,6 @@ Call check_for_updates once per session; report an available update to the user.
 
 Bugs and PRs: https://github.com/dimitar-grigorov/mcp-file-tools`, encoding.Count())
 
-// Helper for bool pointers (DestructiveHint defaults to true, so we need explicit false)
-func boolPtr(b bool) *bool {
-	return &b
-}
-
 // addTool registers a tool and indexes its parameters for RepairGuessedParams.
 func addTool[In, Out any](s *mcp.Server, params handler.ParamIndex, t *mcp.Tool, h mcp.ToolHandlerFor[In, Out]) {
 	handler.IndexParams[In](params, t.Name)
@@ -96,7 +91,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "Tree (Compact)",
 			ReadOnlyHint:  true,
-			OpenWorldHint: boolPtr(false),
+			OpenWorldHint: new(false),
 		},
 	}, handler.Wrap(logger, "tree", h.HandleTree))
 
@@ -106,7 +101,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "List Directory",
 			ReadOnlyHint:  true,
-			OpenWorldHint: boolPtr(false),
+			OpenWorldHint: new(false),
 		},
 	}, handler.Wrap(logger, "list_directory", h.HandleListDirectory))
 
@@ -118,7 +113,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "Search Files",
 			ReadOnlyHint:  true,
-			OpenWorldHint: boolPtr(false),
+			OpenWorldHint: new(false),
 		},
 	}, handler.Wrap(logger, "search_files", h.HandleSearchFiles))
 
@@ -134,7 +129,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "Grep Text Files",
 			ReadOnlyHint:  true,
-			OpenWorldHint: boolPtr(false),
+			OpenWorldHint: new(false),
 		},
 	}, handler.Wrap(logger, "grep_text_files", h.HandleGrep))
 
@@ -144,7 +139,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "Get File Info",
 			ReadOnlyHint:  true,
-			OpenWorldHint: boolPtr(false),
+			OpenWorldHint: new(false),
 		},
 	}, handler.Wrap(logger, "get_file_info", h.HandleGetFileInfo))
 
@@ -154,7 +149,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "List Allowed Directories",
 			ReadOnlyHint:  true,
-			OpenWorldHint: boolPtr(false),
+			OpenWorldHint: new(false),
 		},
 	}, handler.Wrap(logger, "list_allowed_directories", h.HandleListAllowedDirectories))
 
@@ -167,7 +162,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "Read Text File",
 			ReadOnlyHint:  true,
-			OpenWorldHint: boolPtr(false),
+			OpenWorldHint: new(false),
 		},
 	}, handler.Wrap(logger, "read_text_file", h.HandleReadTextFile))
 
@@ -178,7 +173,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "Read Multiple Files",
 			ReadOnlyHint:  true,
-			OpenWorldHint: boolPtr(false),
+			OpenWorldHint: new(false),
 		},
 	}, handler.Wrap(logger, "read_multiple_files", h.HandleReadMultipleFiles))
 
@@ -199,8 +194,8 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 			Title:           "Edit File",
 			ReadOnlyHint:    false,
 			IdempotentHint:  false,
-			DestructiveHint: boolPtr(true),
-			OpenWorldHint:   boolPtr(false),
+			DestructiveHint: new(true),
+			OpenWorldHint:   new(false),
 		},
 	}, handler.WrapContentOnly(logger, "edit_file", h.HandleEditFile))
 
@@ -214,8 +209,8 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 			Title:           "Write File",
 			ReadOnlyHint:    false,
 			IdempotentHint:  true,
-			DestructiveHint: boolPtr(true),
-			OpenWorldHint:   boolPtr(false),
+			DestructiveHint: new(true),
+			OpenWorldHint:   new(false),
 		},
 	}, handler.Wrap(logger, "write_file", h.HandleWriteFile))
 
@@ -227,7 +222,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "Detect Encoding",
 			ReadOnlyHint:  true,
-			OpenWorldHint: boolPtr(false),
+			OpenWorldHint: new(false),
 		},
 	}, handler.Wrap(logger, "detect_encoding", h.HandleDetectEncoding))
 
@@ -242,8 +237,8 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 			Title:           "Convert Encoding",
 			ReadOnlyHint:    false,
 			IdempotentHint:  true,
-			DestructiveHint: boolPtr(true),
-			OpenWorldHint:   boolPtr(false),
+			DestructiveHint: new(true),
+			OpenWorldHint:   new(false),
 		},
 	}, handler.Wrap(logger, "convert_encoding", h.HandleConvertEncoding))
 
@@ -256,8 +251,8 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 			Title:           "Manage Line Endings",
 			ReadOnlyHint:    false,
 			IdempotentHint:  true,
-			DestructiveHint: boolPtr(true),
-			OpenWorldHint:   boolPtr(false),
+			DestructiveHint: new(true),
+			OpenWorldHint:   new(false),
 		},
 	}, handler.Wrap(logger, "manage_line_endings", h.HandleManageLineEndings))
 
@@ -268,8 +263,8 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 			Title:           "Manage BOM",
 			ReadOnlyHint:    false,
 			IdempotentHint:  true,
-			DestructiveHint: boolPtr(true),
-			OpenWorldHint:   boolPtr(false),
+			DestructiveHint: new(true),
+			OpenWorldHint:   new(false),
 		},
 	}, handler.Wrap(logger, "manage_bom", h.HandleManageBom))
 
@@ -279,7 +274,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "List Encodings",
 			ReadOnlyHint:  true,
-			OpenWorldHint: boolPtr(false),
+			OpenWorldHint: new(false),
 		},
 	}, handler.Wrap(logger, "list_encodings", h.HandleListEncodings))
 
@@ -291,8 +286,8 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 			Title:           "Create Directory",
 			ReadOnlyHint:    false,
 			IdempotentHint:  true,
-			DestructiveHint: boolPtr(false),
-			OpenWorldHint:   boolPtr(false),
+			DestructiveHint: new(false),
+			OpenWorldHint:   new(false),
 		},
 	}, handler.Wrap(logger, "create_directory", h.HandleCreateDirectory))
 
@@ -305,8 +300,8 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 			IdempotentHint: false,
 			// Destructive: the source path stops existing, so a wrong move needs the
 			// original location to undo. Matches the reference filesystem server.
-			DestructiveHint: boolPtr(true),
-			OpenWorldHint:   boolPtr(false),
+			DestructiveHint: new(true),
+			OpenWorldHint:   new(false),
 		},
 	}, handler.Wrap(logger, "move_file", h.HandleMoveFile))
 
@@ -320,8 +315,8 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 			Title:           "Copy File",
 			ReadOnlyHint:    false,
 			IdempotentHint:  false,
-			DestructiveHint: boolPtr(false),
-			OpenWorldHint:   boolPtr(false),
+			DestructiveHint: new(false),
+			OpenWorldHint:   new(false),
 		},
 	}, handler.Wrap(logger, "copy_file", h.HandleCopyFile))
 
@@ -332,8 +327,8 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 			Title:           "Delete File",
 			ReadOnlyHint:    false,
 			IdempotentHint:  false,
-			DestructiveHint: boolPtr(true),
-			OpenWorldHint:   boolPtr(false),
+			DestructiveHint: new(true),
+			OpenWorldHint:   new(false),
 		},
 	}, handler.Wrap(logger, "delete_file", h.HandleDeleteFile))
 

@@ -17,9 +17,9 @@ func TestHandleGrep_TruncationIsDeterministic(t *testing.T) {
 	tempDir := t.TempDir()
 	h := NewHandler([]string{tempDir})
 
-	for i := 0; i < 40; i++ {
+	for i := range 40 {
 		var b strings.Builder
-		for j := 0; j < 10; j++ {
+		for j := range 10 {
 			fmt.Fprintf(&b, "needle %02d-%02d\n", i, j)
 		}
 		path := filepath.Join(tempDir, fmt.Sprintf("f%02d.txt", i))
@@ -29,7 +29,7 @@ func TestHandleGrep_TruncationIsDeterministic(t *testing.T) {
 	}
 
 	var first string
-	for run := 0; run < 20; run++ {
+	for run := range 20 {
 		_, output, err := h.HandleGrep(context.Background(), nil, GrepInput{
 			Pattern:    "needle",
 			Paths:      []string{tempDir},
@@ -60,7 +60,7 @@ func TestHandleGrep_TruncationIsDeterministic(t *testing.T) {
 
 	// Input order is file order, so the surviving matches are the first ones.
 	var want strings.Builder
-	for i := 0; i < 25; i++ {
+	for i := range 25 {
 		fmt.Fprintf(&want, "f%02d.txt:%d:needle %02d-%02d\n", i/10, i%10+1, i/10, i%10)
 	}
 	if first != want.String() {

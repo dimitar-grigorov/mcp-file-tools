@@ -272,7 +272,7 @@ func TestHandleSearchFiles_SortBeforeTruncation(t *testing.T) {
 
 	// Walk order is lexical, so the newest files are visited last on purpose.
 	base := time.Now().Add(-100 * time.Hour)
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		path := filepath.Join(tempDir, fmt.Sprintf("f%02d.txt", i))
 		if err := os.WriteFile(path, make([]byte, i+1), 0644); err != nil {
 			t.Fatal(err)
@@ -325,7 +325,7 @@ func TestHandleSearchFiles_SortBeforeTruncation(t *testing.T) {
 func TestHandleSearchFiles_NameTruncatesInWalkOrder(t *testing.T) {
 	tempDir := t.TempDir()
 	h := NewHandler([]string{tempDir})
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		if err := os.WriteFile(filepath.Join(tempDir, fmt.Sprintf("f%02d.txt", i)), []byte("x"), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -348,7 +348,7 @@ func TestHandleSearchFiles_NameTruncatesInWalkOrder(t *testing.T) {
 // The bounded heap must not lose or duplicate entries as it evicts.
 func TestTopN_KeepsTheBestEntries(t *testing.T) {
 	top := newTopN(3, sortBySize, false)
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		top.add(sortEntry{key: fmt.Sprintf("f%02d", i), value: fmt.Sprintf("f%02d", i), size: int64(i)})
 	}
 	if !top.truncated() {

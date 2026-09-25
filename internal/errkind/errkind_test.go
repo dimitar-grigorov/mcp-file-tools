@@ -25,8 +25,7 @@ func TestWrapPreservesMessageAndCause(t *testing.T) {
 		t.Fatalf("Of() = %v, want %v", got, Permission)
 	}
 
-	var typed *Error
-	if !errors.As(err, &typed) {
+	if _, ok := errors.AsType[*Error](err); !ok {
 		t.Fatal("wrapped error must support errors.As to *Error")
 	}
 }

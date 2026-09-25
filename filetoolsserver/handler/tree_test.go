@@ -70,7 +70,7 @@ func TestHandleTree_MaxFiles(t *testing.T) {
 	tempDir := t.TempDir()
 	h := NewHandler([]string{tempDir})
 
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		os.WriteFile(filepath.Join(tempDir, string(rune('a'+i))+".txt"), []byte(""), 0644)
 	}
 

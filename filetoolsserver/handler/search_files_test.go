@@ -191,7 +191,7 @@ func TestHandleSearchFiles_MaxResults(t *testing.T) {
 	tempDir := t.TempDir()
 	h := NewHandler([]string{tempDir})
 
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		os.WriteFile(filepath.Join(tempDir, fmt.Sprintf("file%03d.txt", i)), []byte("test"), 0644)
 	}
 

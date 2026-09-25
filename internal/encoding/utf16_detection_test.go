@@ -115,7 +115,7 @@ func TestDetectBOMlessUTF16RejectsBinaryFalsePositives(t *testing.T) {
 	rand.New(rand.NewSource(42)).Read(randomData)
 
 	alternatingControls := make([]byte, 0, 256)
-	for i := 0; i < 128; i++ {
+	for i := range 128 {
 		alternatingControls = append(alternatingControls, byte(i%8+1), 0x00)
 	}
 

@@ -102,8 +102,8 @@ func bomBytesForPolicy(policy bomPolicy, charset string, existing bomInfo) ([]by
 // trimContentBOM drops a leading U+FEFF from UTF-8 content. read_text_file hands
 // the BOM back as text, so without this a read/write round-trip doubles it.
 func trimContentBOM(content string) (string, bool) {
-	if strings.HasPrefix(content, contentBOM) {
-		return strings.TrimPrefix(content, contentBOM), true
+	if after, ok := strings.CutPrefix(content, contentBOM); ok {
+		return after, true
 	}
 	return content, false
 }

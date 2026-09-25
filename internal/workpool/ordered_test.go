@@ -6,6 +6,7 @@ package workpool
 import (
 	"context"
 	"reflect"
+	"slices"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -36,8 +37,8 @@ func TestRunOrdered_CommitsInInputOrder(t *testing.T) {
 
 	waitForSignals(t, started, len(items))
 	// Finish in reverse order; commits must still come out in input order.
-	for i := len(gates) - 1; i >= 0; i-- {
-		close(gates[i])
+	for _, gate := range slices.Backward(gates) {
+		close(gate)
 	}
 
 	stats := waitForStats(t, done)
@@ -184,7 +185,7 @@ func TestRunOrdered_NoItems(t *testing.T) {
 
 func waitForSignals(t *testing.T, signals <-chan int, count int) {
 	t.Helper()
-	for i := 0; i < count; i++ {
+	for range count {
 		select {
 		case <-signals:
 		case <-time.After(5 * time.Second):

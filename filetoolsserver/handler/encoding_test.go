@@ -5,6 +5,7 @@ package handler
 
 import (
 	"context"
+	"slices"
 	"testing"
 )
 
@@ -36,10 +37,8 @@ func TestHandleListEncodings(t *testing.T) {
 			if enc.Name == name {
 				return true
 			}
-			for _, alias := range enc.Aliases {
-				if alias == name {
-					return true
-				}
+			if slices.Contains(enc.Aliases, name) {
+				return true
 			}
 		}
 		return false

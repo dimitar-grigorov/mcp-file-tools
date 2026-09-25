@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 )
 
@@ -195,8 +196,8 @@ func resolvePathAllowMissing(path string) (resolved string, exists bool, err err
 		resolvedCurrent, resolveErr := resolveExistingPath(current)
 		if resolveErr == nil {
 			resolvedCurrent = filepath.Clean(resolvedCurrent)
-			for i := len(missing) - 1; i >= 0; i-- {
-				resolvedCurrent = filepath.Join(resolvedCurrent, missing[i])
+			for _, m := range slices.Backward(missing) {
+				resolvedCurrent = filepath.Join(resolvedCurrent, m)
 			}
 			return filepath.Clean(resolvedCurrent), len(missing) == 0, nil
 		}

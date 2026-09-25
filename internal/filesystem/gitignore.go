@@ -27,7 +27,7 @@ type ignoreStack []ignoreScope
 // parseGitignore parses .gitignore content. Unsupported or empty lines are dropped.
 func parseGitignore(data []byte) []ignorePattern {
 	var out []ignorePattern
-	for _, line := range strings.Split(string(data), "\n") {
+	for line := range strings.SplitSeq(string(data), "\n") {
 		line = strings.TrimSuffix(line, "\r")
 		// Trailing spaces are ignored unless backslash-escaped
 		for strings.HasSuffix(line, " ") && !strings.HasSuffix(line, "\\ ") {

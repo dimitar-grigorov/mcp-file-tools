@@ -258,7 +258,7 @@ func TestHandleGrep_MaxMatches(t *testing.T) {
 
 	// Create file with many matches
 	content := ""
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		content += "match line\n"
 	}
 	os.WriteFile(filepath.Join(tempDir, "test.txt"), []byte(content), 0644)
@@ -313,7 +313,7 @@ func TestHandleGrep_MaxMatchesMultipleFiles(t *testing.T) {
 	h := NewHandler([]string{tempDir})
 
 	// Create many files, each with a match
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		path := filepath.Join(tempDir, fmt.Sprintf("file%03d.txt", i))
 		os.WriteFile(path, []byte("match line\n"), 0644)
 	}
@@ -472,7 +472,7 @@ func TestHandleGrep_SkipsControlHeavyFiles(t *testing.T) {
 
 	// No NUL bytes, but dense control characters: still binary.
 	blob := []byte("findme")
-	for i := 0; i < 200; i++ {
+	for i := range 200 {
 		blob = append(blob, byte(1+i%8))
 	}
 	os.WriteFile(filepath.Join(tempDir, "blob.bin"), blob, 0644)

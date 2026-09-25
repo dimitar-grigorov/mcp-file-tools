@@ -170,7 +170,7 @@ func writeCache(path, version string) {
 // isNewerVersion compares major.minor.patch; pre-release suffixes are ignored.
 func isNewerVersion(latest, current string) bool {
 	l, c := parseVersion(latest), parseVersion(current)
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		if l[i] > c[i] {
 			return true
 		}
