@@ -25,6 +25,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the file. It now answers only what the server can decode.
 - **`read_text_file` returns `contentHash`**; `edit_file` and `write_file` take
   `expectedHash` and fail if the file moved on since that read.
+- **`grep_text_files` with `patterns` alone failed validation**: the schema still required
+  `pattern`, so the call the description suggests never reached the handler.
+- **Guessed parameter names cost no round trip where the meaning is exact** (`head`,
+  `startLine`/`endLine`, `filePattern`, `contextLines`, `lineEnding`, `fromEncoding`, …), and
+  a number or boolean sent as a string is decoded. Any other unknown name fails with the
+  tool's parameter list and, for the common misses, what to send instead.
+- **Grep's `-i` sent as the string `"true"` was dropped silently**, so the search ran
+  case-sensitive.
 
 ## [4.4.1] - 2026-09-10
 

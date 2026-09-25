@@ -55,7 +55,7 @@ func (h *Handler) HandleGrep(ctx context.Context, req *mcp.CallToolRequest, inpu
 		return errorResult("pattern and patterns cannot be used together"), GrepOutput{}, nil
 	}
 	if input.Pattern == "" && len(input.Patterns) == 0 {
-		return errorResult("pattern is required"), GrepOutput{}, nil
+		return errorResult("pattern or patterns is required"), GrepOutput{}, nil
 	}
 	if len(input.Paths) == 0 {
 		return errorResult("paths is required"), GrepOutput{}, nil

@@ -599,7 +599,7 @@ func TestHandleGrep_PatternsRejected(t *testing.T) {
 		want  string
 	}{
 		{"both", GrepInput{Pattern: "alpha", Patterns: []string{"bravo"}}, "pattern and patterns cannot be used together"},
-		{"neither", GrepInput{}, "pattern is required"},
+		{"neither", GrepInput{}, "pattern or patterns is required"},
 		{"empty entry", GrepInput{Patterns: []string{"alpha", ""}}, "patterns contains an empty pattern, which matches every line"},
 		{"invalid is named", GrepInput{Patterns: []string{"alpha", "charlie("}}, `invalid regex pattern "charlie("`},
 	}

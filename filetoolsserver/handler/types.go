@@ -283,7 +283,7 @@ type ConvertEncodingOutput struct {
 
 // GrepInput for searching file contents with regex; OutputMode is "content" (default), "files_with_matches" or "count".
 type GrepInput struct {
-	Pattern          string   `json:"pattern"`
+	Pattern          string   `json:"pattern,omitempty"`
 	Patterns         []string `json:"patterns,omitempty"` // match any of these, in one pass
 	Paths            []string `json:"paths"`
 	CaseSensitive    *bool    `json:"caseSensitive,omitempty"` // defaults to true

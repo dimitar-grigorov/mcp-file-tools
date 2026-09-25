@@ -16,14 +16,35 @@ full syntax: negation, anchoring, dir-only, `**`) and skip `.git`. Pass
 
 ## Built-in name aliases
 
-Calls shaped like Claude Code's built-in Read/Write/Edit/Grep are translated where the
-semantics match exactly: `file_path`→`path`; Edit's flat `old_string`/`new_string`/
-`replace_all`→a one-entry `edits` array; for `grep_text_files`: `path`→`paths`,
-`-A`/`-B`→`contextAfter`/`contextBefore`, `-C`/`context`→both, `-i`→`caseSensitive`
-(inverted), `-o`→`matchesOnly`, `head_limit`→`maxMatches`, `output_mode`→`outputMode`;
-`-n` is dropped (matches always carry line numbers). An alias never overrides its
-canonical name. Grep's `glob` and `type` are **not** aliased: `include`/`includes`
-match the basename only (`{a,b}` alternatives work).
+Calls shaped like Claude Code's built-in Read/Write/Edit/Grep, and names models guess when
+they call a tool without loading its schema, are translated where the semantics match
+exactly. The schema never lists an alias, and an alias never overrides its canonical name.
+
+| Tool | Accepted | Becomes |
+|---|---|---|
+| `read_text_file`, `write_file`, `edit_file` | `file_path` | `path` |
+| `read_text_file` | `head`, `maxLines` | `limit` |
+| `read_text_file` | `startLine` / `endLine` (inclusive) | `offset` / `limit` |
+| `write_file` | `lineEnding` | `lineEndings` |
+| `edit_file` | flat `old_string`/`new_string`/`replace_all`, or `oldText`/`newText`/`replaceAll` | one-entry `edits` |
+| `grep_text_files` | `path`, a string or an array | `paths` |
+| `grep_text_files` | `-A` / `-B` | `contextAfter` / `contextBefore` |
+| `grep_text_files` | `-C`, `context`, `contextLines`, `context_lines` | both sides |
+| `grep_text_files` | `-i`, `ignoreCase` | `caseSensitive`, inverted |
+| `grep_text_files` | `-o` | `matchesOnly` |
+| `grep_text_files` | `head_limit`, `maxResults` | `maxMatches` |
+| `grep_text_files` | `output_mode` | `outputMode` |
+| `grep_text_files` | `filePattern` | `include` |
+| `grep_text_files` | `-n`, `lineNumbers`; `isRegex`/`useRegex`/`regex` when true | dropped |
+| `manage_line_endings` | `lineEnding`, `lineEndings` | `style` |
+| `convert_encoding` | `fromEncoding`, `from_encoding` / `toEncoding`, `to_encoding` | `from` / `to` |
+| `convert_encoding` | `addBom` true / false | `bom` `"always"` / `"never"` |
+| `tree` | `depth` | `maxDepth` |
+
+A number or boolean sent as a string (`"limit": "50"`) is decoded. Any other unknown name
+fails before validation with the tool's parameter list and, for common misses such as
+`tail`, what to send instead. Grep's `glob` and `type` are **not** aliased:
+`include`/`includes` match the basename only (`{a,b}` alternatives work).
 
 ## File Operations
 
@@ -457,7 +478,7 @@ whose `Info()` fails is kept with a zero mtime/size and sorts last.
 Search file contents using regex patterns with encoding support. Supports context lines and concurrent searching.
 
 **Parameters:**
-- `pattern` (required): Regular expression pattern to search for
+- `pattern` (required unless `patterns` is given): Regular expression pattern to search for
 - `patterns` (optional): Array of regexes; a line matching any of them is a hit
 - `paths` (required): Array of file or directory paths to search
 - `outputMode` (optional): `content` (default), `files_with_matches`, or `count`

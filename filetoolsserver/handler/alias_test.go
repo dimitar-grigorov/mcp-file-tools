@@ -95,3 +95,24 @@ func TestAliasLeavesOtherToolsAlone(t *testing.T) {
 		t.Errorf("tree args changed: %s", out)
 	}
 }
+
+func TestAliasGuessesNeverClobberCanonicalNames(t *testing.T) {
+	m := aliased(t, "convert_encoding", `{"path":"f","to":"utf-8","addBom":true,"bom":"never"}`)
+	if m["bom"] != "never" {
+		t.Errorf("bom = %v, want the explicit never", m["bom"])
+	}
+	m = aliased(t, "read_text_file", `{"path":"f","startLine":5,"endLine":9,"limit":2}`)
+	if m["offset"] != 5.0 || m["limit"] != 2.0 {
+		t.Errorf("offset=%v limit=%v, want 5 and the explicit 2", m["offset"], m["limit"])
+	}
+	if _, ok := m["endLine"]; !ok {
+		t.Error("endLine beside an explicit limit should be left for rejection")
+	}
+}
+
+func TestAliasEndLineCountsFromOffset(t *testing.T) {
+	m := aliased(t, "read_text_file", `{"path":"f","offset":"10","endLine":"12"}`)
+	if m["limit"] != 3.0 {
+		t.Errorf("limit = %v, want 3 (lines 10..12)", m["limit"])
+	}
+}

@@ -5,6 +5,8 @@ package filetoolsserver
 
 import (
 	"context"
+	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -37,6 +39,25 @@ func listTools(t *testing.T) []*mcp.Tool {
 		t.Fatal(err)
 	}
 	return res.Tools
+}
+
+// A model copies the examples, so each {...} in a description must be valid JSON.
+func TestToolDescriptionExamplesAreJSON(t *testing.T) {
+	for _, tool := range listTools(t) {
+		d := tool.Description
+		for i := strings.Index(d, `{"`); i >= 0; {
+			var v map[string]any
+			dec := json.NewDecoder(strings.NewReader(d[i:]))
+			if err := dec.Decode(&v); err != nil {
+				t.Errorf("%s: example at byte %d is not JSON: %v", tool.Name, i, err)
+			}
+			next := strings.Index(d[i+1:], `{"`)
+			if next < 0 {
+				break
+			}
+			i += 1 + next
+		}
+	}
 }
 
 func TestToolDescriptionsFitClientLimit(t *testing.T) {

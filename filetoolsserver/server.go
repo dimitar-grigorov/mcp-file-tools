@@ -39,6 +39,12 @@ func boolPtr(b bool) *bool {
 	return &b
 }
 
+// addTool registers a tool and indexes its parameters for RepairGuessedParams.
+func addTool[In, Out any](s *mcp.Server, params handler.ParamIndex, t *mcp.Tool, h mcp.ToolHandlerFor[In, Out]) {
+	handler.IndexParams[In](params, t.Name)
+	mcp.AddTool(s, t, h)
+}
+
 // NewServer registers all file tools. Nil logger keeps recovery but drops
 // logging middleware; nil cfg reads config from the environment; opts apply last.
 func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, opts ...handler.Option) *mcp.Server {
@@ -73,10 +79,9 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 	}
 	server := mcp.NewServer(impl, serverOpts)
 
-	// Repair array/object args some MCP clients send as JSON-encoded strings.
-	server.AddReceivingMiddleware(handler.RepairStringifiedArrayArgs)
-	// Accept built-in Read/Write/Edit/Grep parameter names where semantics match.
-	server.AddReceivingMiddleware(handler.AliasBuiltinParams)
+	// Unstringify array/object args first, so name repair sees real arrays; addTool fills params.
+	params := handler.ParamIndex{}
+	server.AddReceivingMiddleware(handler.RepairStringifiedArrayArgs, handler.RepairGuessedParams(params))
 
 	// Guided workflows, surfaced by clients as user commands.
 	registerPrompts(server)
@@ -84,7 +89,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 	// All handlers are wrapped with recovery middleware (and logging if logger is provided)
 
 	// Orient: find files and directories
-	mcp.AddTool(server, &mcp.Tool{
+	addTool(server, params, &mcp.Tool{
 		Name:        "tree",
 		Description: "Compact indented tree view of directory structure. PREFER THIS for directory visualization. Skips .gitignore'd files and .git (respectGitignore=false to include). Set showEncoding=true to detect and display file encodings (e.g., for auditing legacy codebases). Parameters: path (required), maxDepth (0=unlimited), maxFiles (default 1000), dirsOnly (bool), exclude (array of patterns), showEncoding (bool, shows detected encoding per file).",
 		Meta:        mcp.Meta{"anthropic/maxResultSizeChars": 200000},
@@ -95,7 +100,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 		},
 	}, handler.Wrap(logger, "tree", h.HandleTree))
 
-	mcp.AddTool(server, &mcp.Tool{
+	addTool(server, params, &mcp.Tool{
 		Name:        "list_directory",
 		Description: "List files and directories with optional glob pattern filtering (e.g., *.pas, *.dfm). Parameters: path (required), pattern (optional, default: *), sortBy (\"name\" default, \"mtime\" newest first, \"size\" largest first), reverse (bool, flips the order).",
 		Annotations: &mcp.ToolAnnotations{
@@ -105,7 +110,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 		},
 	}, handler.Wrap(logger, "list_directory", h.HandleListDirectory))
 
-	mcp.AddTool(server, &mcp.Tool{
+	addTool(server, params, &mcp.Tool{
 		Name: "search_files",
 		Description: "Recursively search for files matching a glob pattern (*.ext at any depth, **/*.ext, several ** and {a,b} alternatives allowed). Returns full paths. Skips .gitignore'd files (respectGitignore=false to include). Parameters: path (required), pattern (required), excludePatterns, maxResults (default 10000), sortBy, reverse. " +
 			"sortBy: \"name\" (default, lexical), \"mtime\" (newest first) or \"size\" (largest first); reverse flips the order. Unlike the built-in Glob there is no mtime default — pass sortBy \"mtime\" for newest first. With mtime or size the whole tree is ranked before the cap, so a truncated result really is the newest/largest maxResults files. " +
@@ -117,7 +122,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 		},
 	}, handler.Wrap(logger, "search_files", h.HandleSearchFiles))
 
-	mcp.AddTool(server, &mcp.Tool{
+	addTool(server, params, &mcp.Tool{
 		Name: "grep_text_files",
 		Description: "Regex search in file contents with encoding support. PREFER THIS over built-in Grep for non-UTF-8 files. Skips .gitignore'd files (respectGitignore=false to include). Parameters: pattern (regex) or patterns (array), paths (array of files, or dirs searched recursively), caseSensitive (default true), contextBefore/After, maxMatches (default 1000), offset, include/includes, exclude/excludes, encoding. " +
 			"patterns finds ANY of several regexes in ONE pass — sweeping a codebase for a list of names is one call, not one per name. " +
@@ -133,7 +138,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 		},
 	}, handler.Wrap(logger, "grep_text_files", h.HandleGrep))
 
-	mcp.AddTool(server, &mcp.Tool{
+	addTool(server, params, &mcp.Tool{
 		Name:        "get_file_info",
 		Description: "Get file/directory metadata: size, timestamps, permissions, type. Use this to check file size before reading large files with read_text_file. Parameter: path (required).",
 		Annotations: &mcp.ToolAnnotations{
@@ -143,7 +148,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 		},
 	}, handler.Wrap(logger, "get_file_info", h.HandleGetFileInfo))
 
-	mcp.AddTool(server, &mcp.Tool{
+	addTool(server, params, &mcp.Tool{
 		Name:        "list_allowed_directories",
 		Description: "Returns the list of directories this server is allowed to access, normally the directory it was started in. Subdirectories are also accessible. If empty, the user needs to add paths as args in .mcp.json or set MCP_FILE_TOOLS_ALLOWED_DIRS.",
 		Annotations: &mcp.ToolAnnotations{
@@ -154,7 +159,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 	}, handler.Wrap(logger, "list_allowed_directories", h.HandleListAllowedDirectories))
 
 	// Read
-	mcp.AddTool(server, &mcp.Tool{
+	addTool(server, params, &mcp.Tool{
 		Name: "read_text_file",
 		Description: "Read file with encoding auto-detection, converts to UTF-8. PREFER THIS over built-in Read for non-UTF-8 files (Cyrillic, legacy codebases). Returns totalLines and fileSizeBytes for planning the next read, and contentHash — pass that back as expectedHash on edit_file or write_file and the call fails, changing nothing, if the file moved on since you read it. Parameters: path, encoding (auto-detected), offset (1-indexed start line), limit (max lines), maxCharacters (caps output to avoid token overflow), lineNumbers (default false: prefix lines with \"N<tab>\", absolute numbers — use to locate lines reported by grep or encoding errors; STRIP the prefix before using text as edit_file oldText). " +
 			`Page files >2000 lines: {"path": "D:\\src\\app.pas", "offset": 1, "limit": 2000}, then offset 2001, until offset exceeds totalLines.`,
@@ -166,7 +171,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 		},
 	}, handler.Wrap(logger, "read_text_file", h.HandleReadTextFile))
 
-	mcp.AddTool(server, &mcp.Tool{
+	addTool(server, params, &mcp.Tool{
 		Name:        "read_multiple_files",
 		Description: "Read multiple files concurrently with encoding support. PREFER THIS when reading several non-UTF-8 files at once. Individual failures don't stop the batch — partial results are returned. Parameters: paths (required array), encoding (optional, auto-detected per file).",
 		Meta:        mcp.Meta{"anthropic/maxResultSizeChars": 300000},
@@ -179,7 +184,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 
 	// Modify
 	// WrapContentOnly: returns readable diff text instead of StructuredContent JSON.
-	mcp.AddTool(server, &mcp.Tool{
+	addTool(server, params, &mcp.Tool{
 		Name: "edit_file",
 		Description: "Edit one file with replacements or a unified diff. Returns a unified diff and keeps the file's encoding and line endings. PREFER THIS over read+write to modify a file. " +
 			"In 'ask before edits' mode call dryRun=true first, show the diff, then dryRun=false once the user confirms; with auto-edit permissions go straight to dryRun=false. " +
@@ -199,7 +204,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 		},
 	}, handler.WrapContentOnly(logger, "edit_file", h.HandleEditFile))
 
-	mcp.AddTool(server, &mcp.Tool{
+	addTool(server, params, &mcp.Tool{
 		Name: "write_file",
 		Description: "Write file with encoding conversion from UTF-8. PREFER THIS over built-in Write for non-UTF-8 files. Use after read_text_file to keep the original encoding. Parameters: path, content, encoding (default: the existing file's detected encoding, else utf-8), bom, lineEndings, expectedHash (the contentHash of the read this rewrite is based on — the write fails and changes nothing if the file has since changed). " +
 			"bom: \"auto\" (default) writes a BOM for utf-16-* targets, else keeps one only if the file already had a BOM of the same encoding; \"preserve\" keeps it even when the encoding changed; \"never\" strips it; \"always\" fails on encodings with no BOM (e.g. cp1251). " +
@@ -215,7 +220,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 	}, handler.Wrap(logger, "write_file", h.HandleWriteFile))
 
 	// Encoding, line endings, BOM
-	mcp.AddTool(server, &mcp.Tool{
+	addTool(server, params, &mcp.Tool{
 		Name: "detect_encoding",
 		Description: "Auto-detect file encoding with confidence score (0-100) and BOM detection. ALWAYS use this first when encountering garbled text or � characters. Use before read_text_file to determine the correct encoding. Parameters: path (required), mode (sample=fast default, chunked=thorough, full=entire file). " +
 			"When the answer is in doubt the result also ranks candidates, all of them usable; retry the read with one and ask the user if two are plausible. A file the detector cannot place is refused rather than guessed at, with the same ranking in the error.",
@@ -226,7 +231,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 		},
 	}, handler.Wrap(logger, "detect_encoding", h.HandleDetectEncoding))
 
-	mcp.AddTool(server, &mcp.Tool{
+	addTool(server, params, &mcp.Tool{
 		Name: "convert_encoding",
 		Description: "Convert files between encodings. Parameters: path (one file) OR paths (a batch — never both), to (required), from (omit to auto-detect), backup (write .bak first), dryRun (report only), allowLowConfidence, bom (\"auto\" default, \"always\", \"never\", \"preserve\"). " +
 			"Refuses rather than corrupting: a narrowing conversion (utf-8 to cp1251) names the characters the target lacks with line and column, and an untrusted detection names its best guess — confirm it with from, or pass allowLowConfidence=true. " +
@@ -242,11 +247,11 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 		},
 	}, handler.Wrap(logger, "convert_encoding", h.HandleConvertEncoding))
 
-	mcp.AddTool(server, &mcp.Tool{
+	addTool(server, params, &mcp.Tool{
 		Name: "manage_line_endings",
 		Description: "Detect or fix line endings. action=\"detect\" reports the dominant style (crlf/lf/mixed/none), total lines, and the line numbers that disagree — use it when a file looks inconsistent. action=\"convert\" rewrites the file to style, per code unit for UTF-16 and preserving its BOM; no-op if the file already matches. " +
 			"Parameters: path, action (\"detect\"|\"convert\"), style (\"lf\"|\"crlf\", required for convert), encoding (auto-detected, including most BOM-less UTF-16 — pass utf-16-le/utf-16-be if a very short or unusual file is misread). " +
-			`Example: {"path": "D:\src\unit1.pas", "action": "convert", "style": "crlf"}`,
+			`Example: {"path": "D:\\src\\unit1.pas", "action": "convert", "style": "crlf"}`,
 		Annotations: &mcp.ToolAnnotations{
 			Title:           "Manage Line Endings",
 			ReadOnlyHint:    false,
@@ -256,7 +261,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 		},
 	}, handler.Wrap(logger, "manage_line_endings", h.HandleManageLineEndings))
 
-	mcp.AddTool(server, &mcp.Tool{
+	addTool(server, params, &mcp.Tool{
 		Name:        "manage_bom",
 		Description: "Detect, strip, or add Unicode BOM (Byte Order Mark). UTF-8 BOM breaks PHP/shell scripts; UTF-16 files need BOMs. Parameters: path (required), action (required: \"detect\"|\"strip\"|\"add\"), encoding (required for \"add\": utf-8, utf-16-le, utf-16-be, utf-32-le, utf-32-be).",
 		Annotations: &mcp.ToolAnnotations{
@@ -268,7 +273,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 		},
 	}, handler.Wrap(logger, "manage_bom", h.HandleManageBom))
 
-	mcp.AddTool(server, &mcp.Tool{
+	addTool(server, params, &mcp.Tool{
 		Name:        "list_encodings",
 		Description: fmt.Sprintf("List all %d supported encodings with name, aliases, and description. Use this to find the correct encoding name for read/write/convert operations.", encoding.Count()),
 		Annotations: &mcp.ToolAnnotations{
@@ -279,7 +284,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 	}, handler.Wrap(logger, "list_encodings", h.HandleListEncodings))
 
 	// File management
-	mcp.AddTool(server, &mcp.Tool{
+	addTool(server, params, &mcp.Tool{
 		Name:        "create_directory",
 		Description: "Create a directory recursively (mkdir -p). Succeeds silently if already exists. Parameter: path (required).",
 		Annotations: &mcp.ToolAnnotations{
@@ -291,7 +296,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 		},
 	}, handler.Wrap(logger, "create_directory", h.HandleCreateDirectory))
 
-	mcp.AddTool(server, &mcp.Tool{
+	addTool(server, params, &mcp.Tool{
 		Name:        "move_file",
 		Description: "Move or rename files/directories. Fails if destination exists. Parameters: source (required), destination (required).",
 		Annotations: &mcp.ToolAnnotations{
@@ -305,7 +310,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 		},
 	}, handler.Wrap(logger, "move_file", h.HandleMoveFile))
 
-	mcp.AddTool(server, &mcp.Tool{
+	addTool(server, params, &mcp.Tool{
 		Name: "copy_file",
 		Description: "Copy one file byte for byte, keeping its encoding, BOM, line endings, permissions and mtime. Use it to back up a file before an edit or a conversion. Parameters: source (required), destination (required). " +
 			"Never overwrites: an existing destination is an error and nothing is written, so the same call repeated fails the second time rather than copying again. " +
@@ -320,7 +325,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 		},
 	}, handler.Wrap(logger, "copy_file", h.HandleCopyFile))
 
-	mcp.AddTool(server, &mcp.Tool{
+	addTool(server, params, &mcp.Tool{
 		Name:        "delete_file",
 		Description: "Delete a file. Does not delete directories. Parameter: path (required).",
 		Annotations: &mcp.ToolAnnotations{
@@ -333,7 +338,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 	}, handler.Wrap(logger, "delete_file", h.HandleDeleteFile))
 
 	// Server
-	mcp.AddTool(server, &mcp.Tool{
+	addTool(server, params, &mcp.Tool{
 		Name:        "check_for_updates",
 		Description: "Check if a newer version of mcp-file-tools is available. Returns current version, latest version, and update instructions if outdated. Uses a cached result (max 1 GitHub API call per 30 min); force=true bypasses the cache. Call once at the start of each session.",
 		Annotations: &mcp.ToolAnnotations{
