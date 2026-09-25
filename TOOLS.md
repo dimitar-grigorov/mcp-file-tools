@@ -804,7 +804,8 @@ in. If empty, add paths as args in config or set `MCP_FILE_TOOLS_ALLOWED_DIRS`.
 ### check_for_updates
 
 Checks whether a newer release is available, at most one GitHub API call per 30 minutes.
-Set `MCP_NO_UPDATE_CHECK=1` to disable the check.
+The server also checks once at startup and appends a found update, once, to the next
+successful tool result. Set `MCP_NO_UPDATE_CHECK=1` to disable both.
 
 **Parameters:**
 - `force` (optional): Bypass the cached result and query GitHub now (default: false)

@@ -32,6 +32,8 @@ type Handler struct {
 	utf8NoticeOnce sync.Once // TODO(2027-01): remove with the utf-8 default transition notice
 	plainUTF8Seen  sync.Map  // path -> struct{}, for the built-in-tooling hint
 	plainUTF8Count atomic.Int64
+
+	updateNotice atomic.Pointer[string] // nil: none yet; &noticeDelivered: already given
 }
 
 // plainUTF8HintCap bounds the seen-set: a session past this has had the hint.

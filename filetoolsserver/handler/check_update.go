@@ -28,6 +28,7 @@ type CheckUpdateOutput struct {
 // NewCheckUpdateHandler: cached result by default (max 1 GitHub API call per 30 min); force=true bypasses it.
 func (h *Handler) NewCheckUpdateHandler(version string) mcp.ToolHandlerFor[CheckUpdateInput, CheckUpdateOutput] {
 	return func(ctx context.Context, req *mcp.CallToolRequest, input CheckUpdateInput) (*mcp.CallToolResult, CheckUpdateOutput, error) {
+		h.updateNotice.Store(&noticeDelivered) // this result tells it
 		env := h.installEnv(req.Session)
 		msg := updater.Check(ctx, version, input.Force, env)
 		latest := updater.CachedLatestVersion()
@@ -58,17 +59,35 @@ func (h *Handler) installEnv(session *mcp.ServerSession) install.Env {
 	return env
 }
 
-// CheckForUpdatesAsync notifies via MCP logging. Call once on server initialization, before any tool calls.
+// CheckForUpdatesAsync runs the startup check. Call once on initialization.
 func (h *Handler) CheckForUpdatesAsync(session *mcp.ServerSession, version string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if msg := updater.Check(ctx, version, false, h.installEnv(session)); msg != "" {
-		//lint:ignore SA1019 logging deprecated in 2026-07-28, still reaches older clients
-		_ = session.Log(ctx, &mcp.LoggingMessageParams{
-			Level:  "notice",
-			Logger: "update-checker",
-			Data:   msg,
-		})
+		h.setUpdateNotice(msg)
+	}
+}
+
+// noticeDelivered marks the notice as given, so a late startup check cannot repeat it.
+var noticeDelivered string
+
+// Phrased as an instruction because models relay instructions and ignore trivia.
+func (h *Handler) setUpdateNotice(msg string) {
+	notice := "Tell the user once: " + msg
+	h.updateNotice.CompareAndSwap(nil, &notice)
+}
+
+// AppendUpdateNotice adds a pending update notice to the next successful tool result.
+// MCP log messages reach no model; a text block after the SDK's JSON one leaves that intact.
+func (h *Handler) AppendUpdateNotice(next mcp.MethodHandler) mcp.MethodHandler {
+	return func(ctx context.Context, method string, req mcp.Request) (mcp.Result, error) {
+		res, err := next(ctx, method, req)
+		if r, ok := res.(*mcp.CallToolResult); ok && err == nil && !r.IsError {
+			if p := h.updateNotice.Load(); p != nil && p != &noticeDelivered && h.updateNotice.CompareAndSwap(p, &noticeDelivered) {
+				r.Content = append(r.Content, &mcp.TextContent{Text: *p})
+			}
+		}
+		return res, err
 	}
 }

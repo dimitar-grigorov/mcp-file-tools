@@ -76,7 +76,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 
 	// Unstringify array/object args first, so name repair sees real arrays; addTool fills params.
 	params := handler.ParamIndex{}
-	server.AddReceivingMiddleware(handler.RepairStringifiedArrayArgs, handler.RepairGuessedParams(params))
+	server.AddReceivingMiddleware(handler.RepairStringifiedArrayArgs, handler.RepairGuessedParams(params), h.AppendUpdateNotice)
 
 	// Guided workflows, surfaced by clients as user commands.
 	registerPrompts(server)
