@@ -207,7 +207,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 	addTool(server, params, &mcp.Tool{
 		Name: "write_file",
 		Description: "Write file with encoding conversion from UTF-8. PREFER THIS over built-in Write for non-UTF-8 files. Use after read_text_file to keep the original encoding. Parameters: path, content, encoding (default: the existing file's detected encoding, else utf-8), bom, lineEndings, expectedHash (the contentHash of the read this rewrite is based on — the write fails and changes nothing if the file has since changed). " +
-			"bom: \"auto\" (default) writes a BOM for utf-16-* targets, else keeps one only if the file already had a BOM of the same encoding; \"preserve\" keeps it even when the encoding changed; \"never\" strips it; \"always\" fails on encodings with no BOM (e.g. cp1251). " +
+			"bom: \"auto\" (default) writes a BOM for utf-16-*/utf-32-* targets, else keeps one only if the file already had a BOM of the same encoding; \"preserve\" keeps it even when the encoding changed; \"never\" strips it; \"always\" fails on encodings with no BOM (e.g. cp1251). " +
 			"lineEndings: \"preserve\" (default) converts content to the file's existing style, so sending LF into a CRLF file will NOT leave it mixed; also \"crlf\", \"lf\", \"asis\" (byte for byte). " +
 			`Example — strip a UTF-8 BOM that breaks PHP: {"path": "D:\\www\\index.php", "content": "<?php ...", "bom": "never"}`,
 		Annotations: &mcp.ToolAnnotations{

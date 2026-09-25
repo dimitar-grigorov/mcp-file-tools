@@ -141,7 +141,7 @@ Write content to file. UTF-8 writes as-is; other encodings convert from UTF-8.
 - `path` (required): Path to the file
 - `content` (required): Content to write
 - `encoding` (optional): Target encoding. Defaults to the existing file's detected encoding; for a new file, to `MCP_DEFAULT_ENCODING` (`utf-8`)
-- `bom` (optional): `auto` (default — BOM for UTF-16 targets, keeps a BOM the file already had), `always`, `never`, `preserve`
+- `bom` (optional): `auto` (default — BOM for UTF-16/32 targets, keeps a BOM the file already had), `always`, `never`, `preserve`
 - `lineEndings` (optional): `preserve` (default), `crlf`, `lf`, `asis`
 - `expectedHash` (optional): The `contentHash` this rewrite is based on. Fails and writes nothing if the file has since changed, or if it does not exist
 
@@ -164,21 +164,12 @@ conversion is never silent.
 
 | Mode | Behaviour |
 |---|---|
-| `auto` (default) | BOM for `utf-16-*` targets; otherwise keeps one only if the file already had a BOM of the *same* encoding |
+| `auto` (default) | BOM for `utf-16-*` and `utf-32-*` targets; otherwise keeps one only if the file already had a BOM of the *same* encoding |
 | `preserve` | Keeps the existing BOM even when the encoding changed |
 | `never` | Writes no BOM (use to strip a UTF-8 BOM that breaks PHP/shell scripts) |
 | `always` | Forces a BOM; fails on encodings that define none (e.g. `cp1251`) |
 
-**Example:**
-```json
-{
-  "path": "/path/to/file.pas",
-  "content": "program Hello;\nbegin\n  writeln('Zdravei');\nend.",
-  "encoding": "cp1251"
-}
-```
-
-Strip a UTF-8 BOM:
+**Example** (strip a UTF-8 BOM):
 ```json
 {
   "path": "D:\\www\\index.php",
@@ -196,7 +187,8 @@ Strip a UTF-8 BOM:
 ```
 
 The byte count is what landed on disk, so it reflects the target encoding rather than the
-length of `content`. `lineEndings` joins it when the content was normalised.
+length of `content`. `lineEndings` joins it when the content was normalised, and
+`contentHash` when `expectedHash` was passed, ready for the next guarded write.
 
 ### edit_file
 
@@ -212,8 +204,7 @@ Make replacements or apply a unified diff to one text file. Returns a unified di
 - `expectedHash` (optional): The `contentHash` this edit is based on. Fails and changes nothing if the file has since changed; checked before the read-only flag is touched
 
 **Features:**
-- Exact text matching, then whitespace-flexible; `oldText` must identify **one** place
-- Whitespace-flexible matching (ignores per-line leading *and* trailing whitespace; interior spacing must still match)
+- Exact text matching, then whitespace-flexible (per-line leading and trailing whitespace ignored, interior spacing must match); `oldText` must identify **one** place
 - Optional fuzzy matching. The score is `1 - line edit distance / longer block length`, after trimming each line. Candidates more than `oldText`'s line count away are rejected.
 - Patch hunks use the same exact then whitespace-flexible matching. Multi-file patches are rejected.
 - Preserves original indentation
@@ -243,28 +234,11 @@ Two ways forward, and they mean different things:
   `replacements: N`, and the diff text says how many places changed so the agent can
   tell you.
 
-Editing the first match silently was the old behaviour; it picked the wrong copy as
-often as the right one, and `edit_file` tells the agent not to re-read and check.
-
 Edits apply in order, each against the content left by the previous one.
 Pass exactly one of `edits` or `patch`. A diff returned by `edit_file` can be passed back as `patch` against the original file.
 If an exact edit fails, prefer copying the hint into `oldText`. Use `similarity` only to tolerate whitespace or comment drift, ideally with `dryRun: true`; it is not for different code. Below threshold, the error includes the best score.
 
 **Example:**
-```json
-{
-  "path": "/path/to/file.go",
-  "edits": [
-    {
-      "oldText": "func oldName()",
-      "newText": "func newName()"
-    }
-  ],
-  "dryRun": false
-}
-```
-
-Multiple edits in one call:
 ```json
 {
   "path": "D:\\src\\unit1.pas",
@@ -279,12 +253,13 @@ Multiple edits in one call:
 **Response:**
 ```json
 {
-  "diff": "--- /path/to/file.go\n+++ /path/to/file.go\n@@ -1,3 +1,3 @@\n-func oldName()\n+func newName()\n",
+  "diff": "--- D:\\src\\unit1.pas\n+++ D:\\src\\unit1.pas\n@@ -1,3 +1,3 @@\n-  i: Integer;\n+  i: NativeInt;\n",
   "readOnlyCleared": true
 }
 ```
 
-The `readOnlyCleared` field indicates if the read-only flag was removed (only present when true).
+`readOnlyCleared` appears only when the flag was removed, and `contentHash` only when
+`expectedHash` was passed: the hash after the write, for the next guarded edit.
 
 ## Directory Operations
 
@@ -331,37 +306,19 @@ Compact indented tree view optimized for AI/LLM consumption.
 **Example:**
 ```json
 {
-  "path": "/path/to/project",
-  "maxDepth": 3,
-  "exclude": ["node_modules", ".git"]
-}
-```
-
-**Example with encoding:**
-```json
-{
   "path": "/path/to/legacy-project",
+  "maxDepth": 3,
   "showEncoding": true,
-  "exclude": [".git"]
-}
-```
-
-**Response (with showEncoding):**
-```json
-{
-  "tree": "src/\n  main.pas  [windows-1251]\n  utils.pas  [windows-1251]\nREADME.md  [utf-8]",
-  "fileCount": 3,
-  "dirCount": 1,
-  "truncated": false
+  "exclude": ["node_modules"]
 }
 ```
 
 **Response:**
 ```json
 {
-  "tree": "src/\n  handler/\n    read.go\n    write.go\n  server.go\nREADME.md",
-  "fileCount": 4,
-  "dirCount": 2,
+  "tree": "src/\n  main.pas  [windows-1251]\n  utils.pas  [windows-1251]\nREADME.md  [utf-8]",
+  "fileCount": 3,
+  "dirCount": 1,
   "truncated": false
 }
 ```
@@ -449,10 +406,6 @@ nothing.
 This follows `ls`: `ls` is alphabetical, `ls -t` is newest first, `ls -S` is
 largest first, and `-r` flips each. So "what changed recently" is plain
 `sortBy: "mtime"`, no `reverse` needed. Ties break on name.
-
-Before this, results came back in **walk order** — close to lexical but not
-guaranteed, because a subdirectory's contents are emitted right after its own
-entry. The default is now an explicit sort.
 
 **`search_files` and `maxResults`.** How the cap interacts with the ordering
 depends on the field, and the difference matters:
@@ -603,9 +556,8 @@ returns the next page.
 {"pattern": "TODO", "paths": ["src"], "maxMatches": 1000, "offset": 1000}
 ```
 
-The default of 1000 is deliberately unchanged; Claude Code's own `Grep` uses 250,
-which is cheaper per call but pages more often. Lower `maxMatches` yourself if you
-prefer that trade.
+Claude Code's own `Grep` pages at 250; lower `maxMatches` for cheaper calls at the cost
+of more of them.
 
 ## Encoding Tools
 
@@ -637,11 +589,10 @@ Detect the encoding of a file with confidence percentage. Useful for diagnosing 
 }
 ```
 
-Detection only ever answers an encoding from the [supported list](#supported-encodings). The
-underlying detector also names charsets this server has no codec for, such as Big5 or Shift_JIS;
-those are treated as a hint rather than a verdict, because naming one leaves every other tool
-with an encoding it cannot act on. When the bytes support no answer, the call fails with
-`could not detect encoding` and lists what to try instead.
+Detection answers only an encoding the other tools can decode, and not every one of those:
+see the note under [Supported Encodings](#supported-encodings). A label the underlying
+detector has no codec for is a hint, not a verdict. When the bytes support no answer, the
+call fails with `could not detect encoding` and lists what to try instead.
 
 `candidates` is added when the verdict is in doubt — under 80% confident. Every entry is usable
 as an `encoding` parameter:
@@ -678,7 +629,7 @@ No write (and no backup) happens if the file already holds the target bytes — 
 - `backup` (optional): Create a `.bak` backup file before converting (default: false)
 - `dryRun` (optional): Report what would change and write nothing (default: false)
 - `allowLowConfidence` (optional): Convert even when the auto-detected source is below the confidence threshold (default: false)
-- `bom` (optional): `auto` (default — BOM for UTF-16 targets, keeps a same-encoding source BOM), `always`, `never`, `preserve`
+- `bom` (optional): `auto` (default — BOM for UTF-16/32 targets, keeps a same-encoding source BOM), `always`, `never`, `preserve`
 
 Omit `from` to auto-detect; pass it only to override detection on a file that misdetects.
 An untrusted detection stops the conversion rather than guessing: a bad guess writes
@@ -688,17 +639,7 @@ A narrowing conversion (e.g. `utf-8` → `cp1251`) fails outright if the content
 characters the target encoding lacks, rather than writing corrupted text — and the error
 names those characters with their line and column, so you can decide what to do about them.
 
-**Example:**
-```json
-{
-  "path": "/path/to/file.pas",
-  "from": "cp1251",
-  "to": "utf-8",
-  "backup": true
-}
-```
-
-Auto-detected source, with a backup:
+**Example** (auto-detected source, with a backup):
 ```json
 {
   "path": "D:\\legacy\\data.txt",
@@ -845,44 +786,8 @@ Detect, strip, or add Unicode BOM (Byte Order Mark). UTF-8 BOM breaks PHP/shell 
 }
 ```
 
-**Example (strip):**
-```json
-{
-  "path": "/path/to/file.php",
-  "action": "strip"
-}
-```
-
-**Response:**
-```json
-{
-  "message": "Stripped utf-8 BOM (3 bytes) from /path/to/file.php",
-  "hasBom": false,
-  "bomType": "utf-8",
-  "bomBytes": 3,
-  "changed": true
-}
-```
-
-**Example (add):**
-```json
-{
-  "path": "/path/to/file.txt",
-  "action": "add",
-  "encoding": "utf-16-le"
-}
-```
-
-**Response:**
-```json
-{
-  "message": "Added utf-16-le BOM (2 bytes) to /path/to/file.txt",
-  "hasBom": true,
-  "bomType": "utf-16-le",
-  "bomBytes": 2,
-  "changed": true
-}
-```
+`strip` and `add` return the same fields: `hasBom` describes the file afterwards, and
+`changed: true` means it was rewritten.
 
 ### list_encodings
 
