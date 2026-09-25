@@ -4,7 +4,7 @@
 package encoding
 
 import (
-	"strings"
+	"slices"
 	"testing"
 
 	"golang.org/x/text/transform"
@@ -57,14 +57,14 @@ func TestEveryEncodingRoundTrips(t *testing.T) {
 
 // A table added for decoding must stay out of detection: it reads almost any bytes, and guessing it costs a correct verdict elsewhere.
 func TestDecodeOnlyTablesAreNeverGuessed(t *testing.T) {
-	detectable := strings.Join(DetectableCharsets(), " ")
+	detectable := DetectableCharsets()
 	for _, name := range []string{"macintosh", "ibm437", "ibm850", "ibm852", "ibm855",
 		"iso-8859-3", "iso-8859-4", "iso-8859-6", "iso-8859-8", "iso-8859-10",
 		"iso-8859-13", "iso-8859-14", "iso-8859-16", "utf-32-le", "utf-32-be"} {
 		if _, ok := Get(name); !ok {
 			t.Errorf("%s should be decodable", name)
 		}
-		if strings.Contains(detectable, name) {
+		if slices.Contains(detectable, name) {
 			t.Errorf("%s is a detection answer, it should only decode", name)
 		}
 	}

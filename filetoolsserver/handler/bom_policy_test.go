@@ -78,7 +78,8 @@ func TestBOMBytesForPolicy(t *testing.T) {
 		{bomAuto, "utf-8", utf16Had, nil, false},    // UTF-16 BOM was transport, not intent
 		{bomAuto, "utf-16-le", bomInfo{}, utf16LEBOM, false},
 		{bomAuto, "utf-16-be", bomInfo{}, utf16BEBOM, false},
-		{bomAuto, "cp1251", utf8Had, nil, false}, // cp1251 has no BOM
+		{bomAuto, "utf-32-le", bomInfo{}, []byte{0xFF, 0xFE, 0x00, 0x00}, false}, // found by its BOM alone
+		{bomAuto, "cp1251", utf8Had, nil, false},                                 // cp1251 has no BOM
 		{bomAlways, "utf-8", bomInfo{}, utf8BOM, false},
 		{bomAlways, "utf16le", bomInfo{}, utf16LEBOM, false}, // alias resolves
 		{bomAlways, "cp1251", bomInfo{}, nil, true},

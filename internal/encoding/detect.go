@@ -26,9 +26,7 @@ const (
 // gbkConfidenceCap caps GBK when it is recovered from a Latin guess rather than named outright.
 const gbkConfidenceCap = 85
 
-// Cyrillic spells words out of high bytes, in the range Latin spends on the odd accent, which is why chardet files sparse Cyrillic under a Latin table and why the bytes can say otherwise.
-
-// tableMargin keeps the answer off the noise: cp1251 and MacCyrillic spell the same words out of most Cyrillic text, so a later table must beat an earlier one by this much to take it.
+// tableMargin keeps noise out: cp1251 and MacCyrillic read most Cyrillic alike, so a later table must beat an earlier one by this much.
 const tableMargin = 0.05
 
 // cyrillicCharsets are the tables Cyrillic is written in, cp1251 first because it is what the Windows world writes.
@@ -49,7 +47,7 @@ type DetectionResult struct {
 
 // Conclusive reports whether the result settles which encoding to use. "ascii" never does: it fits every encoding here.
 func (d DetectionResult) Conclusive() bool {
-	if d.Charset == "" || d.Charset == "ascii" || d.Confidence < MinConfidenceThreshold {
+	if d.Charset == "" || d.Charset == ASCII || d.Confidence < MinConfidenceThreshold {
 		return false
 	}
 	_, ok := Get(d.Charset)
@@ -128,7 +126,7 @@ func Detect(data []byte) DetectionResult {
 		func() DetectionResult { return detectLegacy(data) })
 }
 
-// decideVerdict is the ladder every detection mode climbs: a BOM is a declaration and settles it, UTF-16 is structural rather than statistical, and what is left is the legacy detector under the pin. The modes differ only in how many bytes they can afford to look at, so they differ only in what they hand this.
+// decideVerdict is the ladder every mode climbs: BOM, then structural UTF-16, then the legacy detector under the pin; modes differ only in the bytes they pass.
 func decideVerdict(head []byte, utf16 func() (DetectionResult, bool), legacy func() DetectionResult) DetectionResult {
 	if result, ok := DetectBOM(head); ok {
 		return result
@@ -214,7 +212,7 @@ func correctCharset(label string, confidence int, data []byte) (string, int) {
 		return "", 0
 	}
 
-	// MacCyrillic is what the detector reaches for when it sees Cyrillic it cannot place, and the encoding is all but extinct, so the bytes pick the table. No other Cyrillic label is worth second-guessing: measured, it costs more than it fixes.
+	// MacCyrillic is the detector's catch-all for Cyrillic and all but extinct, so the bytes pick the table; overruling other Cyrillic labels measured worse.
 	if charset == "x-mac-cyrillic" {
 		if best, _ := bestCyrillicTable(data); best != "" {
 			return best, confidence
@@ -257,7 +255,7 @@ func hasMultiByteUTF8(data []byte) bool {
 	return false
 }
 
-// cyrillicCodepage names the Cyrillic table the bytes spell words in, empty when they spell none; overruling a label that named another script is a strong claim, so it takes the plausibility bar.
+// cyrillicCodepage names the Cyrillic table the bytes spell words in, or empty; overruling another script's label takes the plausibility bar.
 func cyrillicCodepage(data []byte) string {
 	name, best := bestCyrillicTable(data)
 	if !best.plausible() {
@@ -298,7 +296,7 @@ func decideFromSamples(samples []byteSample, size int64) DetectionResult {
 		func() DetectionResult { return legacyFromSamples(samples) })
 }
 
-// legacyFromSamples reads the head alone while that settles the question and widens to every sample when it does not. Plain ASCII never settles it, however sure the detector sounds, or a file whose Cyrillic starts past the first chunk would come back ascii.
+// legacyFromSamples trusts the head only when it is conclusive, else reads every sample: an ASCII head would hide Cyrillic further in.
 func legacyFromSamples(samples []byteSample) DetectionResult {
 	if head := detectLegacy(samples[0].data); head.Conclusive() && head.Confidence >= HighConfidenceThreshold {
 		return head
@@ -470,7 +468,7 @@ func (s *chunkScan) utf16() (DetectionResult, bool) {
 	return decideUTF16(s.le, s.be)
 }
 
-// vote weighs each chunk's verdict by the bytes behind it, the name breaking a tie so the answer cannot change between runs. A chunk of plain ASCII is not evidence, so it wins only when no chunk found anything else.
+// vote weighs chunk verdicts by bytes, the name breaking ties for a stable answer; ASCII chunks count only when no chunk found anything else.
 func (s *chunkScan) vote() DetectionResult {
 	s.run()
 	results := s.results

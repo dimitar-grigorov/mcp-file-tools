@@ -28,7 +28,7 @@ type encodingInfo struct {
 }
 
 // Two questions, one table: what this server can decode, and what detection may name. Labels living on the codec entry keep the second a subset of the first.
-// A single-byte table reads almost any bytes, so one added for decoding gets no label: measured, MacRoman steals a correct cp1251 verdict for the sake of a binary .dfm. A multi-byte label is structural, its bytes have to form valid sequences, so those do answer.
+// A byte table added for decoding gets no detector label, since it reads almost any bytes (measured: MacRoman stole cp1251 verdicts); multi-byte labels are structural.
 var encodings = map[string]encodingInfo{
 	"utf-8": {
 		Encoding:       nil, // UTF-8 passthrough

@@ -68,7 +68,7 @@ func TestDetectEncodingDeclinesAnUnreadableCharset(t *testing.T) {
 		t.Fatalf("detection answered macintosh, a table it may only decode")
 	}
 	if !result.IsError {
-		return // it found a readable answer instead, which is the other acceptable outcome
+		t.Fatalf("detection answered %q, want a refusal", output.Encoding)
 	}
 	if message := extractTextFromResult(result.Content); !strings.Contains(message, "Other candidates:") {
 		t.Errorf("refusal %q leaves the caller nowhere to go", message)

@@ -67,6 +67,9 @@ func TestDetect_PinnedPicksTheBestReading(t *testing.T) {
 	}{
 		{"cyrillic behind a western candidate", []string{"utf-8", "windows-1252", "windows-1251"}, cyrillic, "windows-1251"},
 		{"western behind a cyrillic candidate", []string{"utf-8", "windows-1251", "windows-1252"}, []byte(frenchCP1252), "windows-1252"},
+		// Latin-9 and Latin-5 spell French alike, so list order decides.
+		{"a tie goes to the first listed", []string{"iso-8859-15", "iso-8859-9"}, []byte(frenchCP1252), "iso-8859-15"},
+		{"a tie goes to the first listed, reversed", []string{"iso-8859-9", "iso-8859-15"}, []byte(frenchCP1252), "iso-8859-9"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

@@ -14,7 +14,7 @@ import (
 type bomPolicy string
 
 const (
-	// bomAuto adds a BOM for UTF-16 targets and keeps one of the same encoding.
+	// bomAuto adds a BOM for UTF-16/32 targets and keeps one of the same encoding.
 	bomAuto     bomPolicy = "auto"
 	bomAlways   bomPolicy = "always"
 	bomNever    bomPolicy = "never"

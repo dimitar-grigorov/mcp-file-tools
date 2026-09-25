@@ -55,7 +55,7 @@ func charsetAllowed(charset string) bool {
 	return ok && slices.Contains(pinned, canonical)
 }
 
-// pinnedVerdict replaces a ruled-out guess with the pinned candidate that reads most like text; one that merely decodes still beats no answer, since the caller pinned the set to say these are the encodings its files are in.
+// pinnedVerdict picks the pinned candidate that reads most like text, else the first that decodes: the pin says the files are in one of these.
 func pinnedVerdict(data []byte) DetectionResult {
 	best, fallback := "", ""
 	bestShare := 0.0
