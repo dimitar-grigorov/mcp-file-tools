@@ -30,8 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   decodes**, which used to win on list order alone and garble the file.
 - **Detection could name a charset no tool here can read**, and the read path then garbled
   the file. It now answers only what the server can decode.
-- **`read_text_file` returns `contentHash`**; `edit_file` and `write_file` take
-  `expectedHash` and fail if the file moved on since that read.
+- **`read_text_file` and `read_multiple_files` return `contentHash`**; `edit_file` and
+  `write_file` take `expectedHash` and fail if the file moved on since that read.
 - **`grep_text_files` with `patterns` alone failed validation**: the schema still required
   `pattern`, so the call the description suggests never reached the handler.
 - **Guessed parameter names cost no round trip where the meaning is exact** (`head`,

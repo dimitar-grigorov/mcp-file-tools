@@ -89,6 +89,7 @@ func (h *Handler) readSingleFile(path, requestedEncoding string) FileReadResult 
 	}
 
 	result.Content = content
+	result.ContentHash = contentHash(data)
 	if encResult.autoDetected {
 		result.DetectedEncoding = encResult.detectedEncoding
 		result.EncodingConfidence = encResult.encodingConfidence

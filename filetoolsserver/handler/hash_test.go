@@ -302,3 +302,24 @@ func TestHandleReadTextFile_ContentHashRoundTripsThroughEdit(t *testing.T) {
 		t.Fatalf("the hash from read_text_file should satisfy edit_file, got %q", hashResultText(result))
 	}
 }
+
+// A batch read feeds a guarded edit the same way a single read does.
+func TestHandleReadMultipleFiles_ContentHashMatchesSingleRead(t *testing.T) {
+	tempDir := t.TempDir()
+	h := NewHandler([]string{tempDir})
+
+	testFile := filepath.Join(tempDir, "test.txt")
+	os.WriteFile(testFile, []byte{0xcf, 0xf0, 0xe8, 0xe2, 0xe5, 0xf2}, 0644) // "Привет" in cp1251
+
+	_, single, err := h.HandleReadTextFile(context.Background(), nil, ReadTextFileInput{Path: testFile})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, batch, err := h.HandleReadMultipleFiles(context.Background(), nil, ReadMultipleFilesInput{Paths: []string{testFile}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(batch.Results) != 1 || batch.Results[0].ContentHash == "" || batch.Results[0].ContentHash != single.ContentHash {
+		t.Fatalf("batch contentHash %+v, want %q", batch.Results, single.ContentHash)
+	}
+}

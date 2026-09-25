@@ -193,6 +193,7 @@ type FileReadResult struct {
 	DetectedEncoding   string `json:"detectedEncoding,omitempty"`
 	EncodingConfidence int    `json:"encodingConfidence,omitempty"`
 	Hint               string `json:"hint,omitempty"`
+	ContentHash        string `json:"contentHash,omitempty"` // as read_text_file's, usable as expectedHash
 }
 
 type ReadMultipleFilesOutput struct {

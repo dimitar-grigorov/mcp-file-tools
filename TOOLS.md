@@ -120,18 +120,21 @@ Read multiple files concurrently with encoding support. Individual file failures
     {
       "path": "/path/to/file1.pas",
       "content": "program Hello;...",
-      "detectedEncoding": "windows-1251",
-      "encodingConfidence": 95
+      "contentHash": "5c2e1f0a9b83d4e7"
     },
     {
       "path": "/path/to/file2.pas",
-      "content": "unit Utils;..."
+      "content": "unit Utils;...",
+      "contentHash": "e07a6b94d1c3f258"
     }
   ],
   "successCount": 2,
   "errorCount": 0
 }
 ```
+
+Each result carries `contentHash` as `read_text_file` does, and `detectedEncoding` with
+`encodingConfidence` when `encoding` was omitted.
 
 ### write_file
 
