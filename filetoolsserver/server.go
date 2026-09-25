@@ -236,7 +236,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 		Annotations: &mcp.ToolAnnotations{
 			Title:           "Convert Encoding",
 			ReadOnlyHint:    false,
-			IdempotentHint:  true,
+			IdempotentHint:  false, // a repeat with an explicit from decodes the converted file again
 			DestructiveHint: new(true),
 			OpenWorldHint:   new(false),
 		},

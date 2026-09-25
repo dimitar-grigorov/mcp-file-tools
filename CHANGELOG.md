@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **`convert_encoding` could destroy the original.** Run twice with an explicit `from` and
+  `backup: true`, it decoded the converted file again and replaced the `.bak` with it. An
+  existing `.bak` now fails the call, and the tool no longer claims `idempotentHint`.
 - **20 more encodings, 45 in all**: UTF-32 LE/BE, Big5, Shift_JIS, EUC-JP/KR, ISO-2022-JP,
   MacRoman, the DOS code pages (437, 850, 852, 855) and the rest of the ISO-8859 family.
 - **Detection only guesses the new multi-byte ones.** A single-byte table reads almost any

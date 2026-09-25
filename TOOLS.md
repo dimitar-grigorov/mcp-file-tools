@@ -626,7 +626,7 @@ No write (and no backup) happens if the file already holds the target bytes — 
 - `paths`: Array of files to convert as a batch
 - `from` (optional): Source encoding (auto-detected per file if omitted)
 - `to` (required): Target encoding
-- `backup` (optional): Create a `.bak` backup file before converting (default: false)
+- `backup` (optional): Create a `.bak` backup file before converting (default: false). An existing `.bak` is never replaced: the call fails and changes nothing, since a repeat run would overwrite the only copy of the original
 - `dryRun` (optional): Report what would change and write nothing (default: false)
 - `allowLowConfidence` (optional): Convert even when the auto-detected source is below the confidence threshold (default: false)
 - `bom` (optional): `auto` (default — BOM for UTF-16/32 targets, keeps a same-encoding source BOM), `always`, `never`, `preserve`

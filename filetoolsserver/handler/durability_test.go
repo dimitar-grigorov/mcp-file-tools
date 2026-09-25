@@ -8,6 +8,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -117,13 +118,9 @@ func TestHandleConvertEncoding_BackupIsOriginal(t *testing.T) {
 	dir := t.TempDir()
 	h := NewHandler([]string{dir})
 	path := filepath.Join(dir, "convert.txt")
-	backupPath := path + ".bak"
 	original := []byte("Привет")
 
 	if err := os.WriteFile(path, original, 0644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(backupPath, []byte("stale backup"), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -143,12 +140,47 @@ func TestHandleConvertEncoding_BackupIsOriginal(t *testing.T) {
 		t.Fatal("no backup path reported")
 	}
 
-	backup, err := os.ReadFile(backupPath)
+	backup, err := os.ReadFile(path + ".bak")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !bytes.Equal(backup, original) {
 		t.Errorf("backup = %q, want the original bytes", backup)
+	}
+}
+
+// A repeat run with an explicit from decodes the converted file again; replacing the .bak then would lose the original.
+func TestHandleConvertEncoding_ExistingBackupIsNeverReplaced(t *testing.T) {
+	dir := t.TempDir()
+	h := NewHandler([]string{dir})
+	path := filepath.Join(dir, "convert.txt")
+	original := []byte{0xCF, 0xF0, 0xE8, 0xE2, 0xE5, 0xF2} // "Привет" in cp1251
+	if err := os.WriteFile(path, original, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	for i, dryRun := range []bool{false, true, false} {
+		result, _, err := h.HandleConvertEncoding(context.Background(), nil, ConvertEncodingInput{
+			Path: path, From: "cp1251", To: "utf-8", Backup: true, DryRun: dryRun,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		message := extractTextFromResult(result.Content)
+		if i == 0 && result.IsError {
+			t.Fatalf("first conversion failed: %s", message)
+		}
+		if i > 0 && (!result.IsError || !strings.Contains(message, "already exists")) {
+			t.Errorf("call %d (dryRun=%t) should refuse over the existing backup, got %q", i+1, dryRun, message)
+		}
+	}
+
+	backup, _ := os.ReadFile(path + ".bak")
+	if !bytes.Equal(backup, original) {
+		t.Errorf("backup = % x, want the original cp1251 bytes", backup)
+	}
+	if got, _ := os.ReadFile(path); string(got) != "Привет" {
+		t.Errorf("file = %q, want one conversion, not two", got)
 	}
 }
 
