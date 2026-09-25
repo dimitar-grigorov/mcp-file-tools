@@ -3,7 +3,7 @@ module github.com/dimitar-grigorov/mcp-file-tools/v4
 go 1.27.1
 
 require (
-	github.com/modelcontextprotocol/go-sdk v1.7.0
+	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/pmezard/go-difflib v1.0.0
 	github.com/wlynxg/chardet v1.0.5
 	golang.org/x/sys v0.48.0
