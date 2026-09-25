@@ -80,7 +80,7 @@ func fileLineEndings(path, encodingName string) (LineEndingInfo, bool) {
 	}
 	text, err := encoding.Decode(payload, encodingName)
 	if err != nil {
-		return LineEndingInfo{}, false // unsupported (UTF-32) or undecodable: leave content alone
+		return LineEndingInfo{}, false // undecodable: leave content alone
 	}
 	return DetectLineEndings([]byte(text)), true
 }

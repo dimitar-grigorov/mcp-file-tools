@@ -714,8 +714,8 @@ Detect or convert line endings. Mirrors `manage_bom`: one tool, an `action` para
 - `style` (required for `convert`): `"lf"` or `"crlf"`
 - `encoding` (optional): Auto-detected by default, including most BOM-less UTF-16 text. Pass `utf-16-le` or `utf-16-be` explicitly if a very short or unusual file is misdetected.
 
-`convert` is a no-op if the file already uses the target style. UTF-16 files are
-converted per code unit and keep their BOM.
+`convert` is a no-op if the file already uses the target style. UTF-16 and UTF-32 files are
+converted per code unit and keep their BOM; a BOM-less UTF-32 file needs `encoding`.
 
 **Detect:**
 ```json
@@ -861,8 +861,7 @@ exists — with the update steps that apply to that install and client.
 | iso-8859-16 | iso885916, latin10 | Latin-10 South-Eastern European |
 
 UTF-32 is found by its BOM alone, so keep one: there is no structural classifier behind it
-the way there is for UTF-16. [`manage_line_endings`](#manage_line_endings) refuses UTF-32
-files rather than breaking their 4-byte alignment.
+the way there is for UTF-16.
 
 Detection answers a subset of this table. A single-byte table reads almost any bytes, so the
 ones added for decoding alone (MacRoman, the DOS pages, the rarer ISO tables) are never

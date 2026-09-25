@@ -9,32 +9,57 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/encoding"
 )
 
-// change_line_endings must not silently corrupt UTF-32: byte-level \r insertion breaks the
-// 4-byte alignment. Until UTF-32 is handled per code unit, it must refuse and leave the file intact.
-func TestChangeLineEndings_UTF32NotCorrupted(t *testing.T) {
-	dir := t.TempDir()
-	h := NewHandler([]string{dir})
-
-	// UTF-32LE BOM + "a\n" (BOM=FF FE 00 00, 'a'=61.., '\n'=0A..)
-	data := []byte{0xFF, 0xFE, 0x00, 0x00, 0x61, 0x00, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00}
-	path := filepath.Join(dir, "f.txt")
-	if err := os.WriteFile(path, data, 0644); err != nil {
-		t.Fatal(err)
-	}
-	before, _ := os.ReadFile(path)
-
-	result, _, err := h.HandleChangeLineEndings(context.Background(), nil, ChangeLineEndingsInput{Path: path, Style: "crlf"})
+func utf32Bytes(t *testing.T, charset, text string) []byte {
+	t.Helper()
+	enc, _ := encoding.Get(charset)
+	b, err := enc.NewEncoder().Bytes([]byte(text))
 	if err != nil {
 		t.Fatal(err)
 	}
+	return b
+}
 
-	after, _ := os.ReadFile(path)
-	if len(after)%4 != 0 {
-		t.Errorf("UTF-32 corrupted: output is %d bytes, not a multiple of 4", len(after))
+// A byte-level \r insertion breaks UTF-32's 4-byte alignment, BOM or not, so the conversion has to go per code unit.
+func TestChangeLineEndings_UTF32PerCodeUnit(t *testing.T) {
+	tests := []struct {
+		name, charset, encoding string
+		bom                     bool
+		from, style, want       string
+	}{
+		{"le with bom to crlf", "utf-32-le", "", true, "a\nб\n", "crlf", "a\r\nб\r\n"},
+		{"be with bom to lf", "utf-32-be", "", true, "a\r\nб\r\n", "lf", "a\nб\n"},
+		{"le without bom, named", "utf-32-le", "utf-32-le", false, "a\nб\n", "crlf", "a\r\nб\r\n"},
 	}
-	if !result.IsError && !bytes.Equal(before, after) {
-		t.Errorf("silently rewrote UTF-32 (%d -> %d bytes) instead of refusing", len(before), len(after))
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			h := NewHandler([]string{dir})
+
+			var prefix []byte
+			if tc.bom {
+				prefix = encoding.BOMBytesFor(tc.charset)
+			}
+			path := filepath.Join(dir, "f.txt")
+			if err := os.WriteFile(path, append(prefix, utf32Bytes(t, tc.charset, tc.from)...), 0644); err != nil {
+				t.Fatal(err)
+			}
+
+			result, _, err := h.HandleChangeLineEndings(context.Background(), nil, ChangeLineEndingsInput{Path: path, Style: tc.style, Encoding: tc.encoding})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if result.IsError {
+				t.Fatalf("conversion failed: %v", result.Content)
+			}
+
+			got, _ := os.ReadFile(path)
+			if want := append(prefix, utf32Bytes(t, tc.charset, tc.want)...); !bytes.Equal(got, want) {
+				t.Errorf("got % x\nwant % x", got, want)
+			}
+		})
 	}
 }

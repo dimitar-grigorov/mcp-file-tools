@@ -244,7 +244,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 
 	addTool(server, params, &mcp.Tool{
 		Name: "manage_line_endings",
-		Description: "Detect or fix line endings. action=\"detect\" reports the dominant style (crlf/lf/mixed/none), total lines, and the line numbers that disagree — use it when a file looks inconsistent. action=\"convert\" rewrites the file to style, per code unit for UTF-16 and preserving its BOM; no-op if the file already matches. " +
+		Description: "Detect or fix line endings. action=\"detect\" reports the dominant style (crlf/lf/mixed/none), total lines, and the line numbers that disagree — use it when a file looks inconsistent. action=\"convert\" rewrites the file to style, per code unit for UTF-16/32 and preserving its BOM; no-op if the file already matches. " +
 			"Parameters: path, action (\"detect\"|\"convert\"), style (\"lf\"|\"crlf\", required for convert), encoding (auto-detected, including most BOM-less UTF-16 — pass utf-16-le/utf-16-be if a very short or unusual file is misread). " +
 			`Example: {"path": "D:\\src\\unit1.pas", "action": "convert", "style": "crlf"}`,
 		Annotations: &mcp.ToolAnnotations{

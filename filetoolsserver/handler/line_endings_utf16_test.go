@@ -228,7 +228,7 @@ func TestConvertUTF16LineEndings(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := convertUTF16LineEndings(utf16Bytes(tt.input, tt.littleEndian, false), tt.target, tt.littleEndian)
+			got, err := convertWideLineEndings(utf16Bytes(tt.input, tt.littleEndian, false), tt.target, 2, tt.littleEndian)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -239,7 +239,7 @@ func TestConvertUTF16LineEndings(t *testing.T) {
 		})
 	}
 
-	if _, err := convertUTF16LineEndings([]byte{0x41}, LineEndingLF, true); err == nil {
+	if _, err := convertWideLineEndings([]byte{0x41}, LineEndingLF, 2, true); err == nil {
 		t.Error("expected an error for an odd byte length")
 	}
 }

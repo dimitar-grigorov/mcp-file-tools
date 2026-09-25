@@ -318,9 +318,7 @@ Common aliases are accepted (`cp1251`, `latin1`, `gb2312`, `tis-620`, …) —
 
 Auto-detection answers a subset: a single-byte table reads almost any bytes, so the tables
 added for decoding alone (MacRoman, the DOS pages, the rarer ISO ones) are never guessed.
-Name those explicitly. UTF-32 is found by its BOM alone, so keep one, and
-[`manage_line_endings`](TOOLS.md#manage_line_endings) still refuses UTF-32 files rather
-than corrupting their 4-byte alignment.
+Name those explicitly. UTF-32 is found by its BOM alone, so keep one.
 
 ## Configuration
 

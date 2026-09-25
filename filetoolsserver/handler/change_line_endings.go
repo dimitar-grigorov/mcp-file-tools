@@ -5,6 +5,7 @@ package handler
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"os"
 	"strings"
@@ -13,31 +14,38 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// convertUTF16LineEndings rewrites line endings per code unit. Data must be BOM-free.
-func convertUTF16LineEndings(data []byte, targetStyle string, littleEndian bool) ([]byte, error) {
-	if len(data)%2 != 0 {
-		return nil, fmt.Errorf("truncated UTF-16 data: %d bytes", len(data))
+// convertWideLineEndings rewrites line endings per code unit, 2 bytes wide for UTF-16 and 4 for UTF-32. Data must be BOM-free.
+func convertWideLineEndings(data []byte, targetStyle string, width int, littleEndian bool) ([]byte, error) {
+	if len(data)%width != 0 {
+		return nil, fmt.Errorf("truncated data: %d bytes is not a whole number of %d-byte code units", len(data), width)
 	}
 
-	unitAt := func(i int) uint16 {
-		if littleEndian {
-			return uint16(data[i]) | uint16(data[i+1])<<8
-		}
-		return uint16(data[i])<<8 | uint16(data[i+1])
+	var order interface {
+		binary.ByteOrder
+		binary.AppendByteOrder
+	} = binary.BigEndian
+	if littleEndian {
+		order = binary.LittleEndian
 	}
-	putUnit := func(dst []byte, unit uint16) []byte {
-		if littleEndian {
-			return append(dst, byte(unit), byte(unit>>8))
+	unitAt := func(i int) uint32 {
+		if width == 2 {
+			return uint32(order.Uint16(data[i:]))
 		}
-		return append(dst, byte(unit>>8), byte(unit))
+		return order.Uint32(data[i:])
+	}
+	putUnit := func(dst []byte, unit uint32) []byte {
+		if width == 2 {
+			return order.AppendUint16(dst, uint16(unit))
+		}
+		return order.AppendUint32(dst, unit)
 	}
 
 	converted := make([]byte, 0, len(data))
-	for i := 0; i < len(data); i += 2 {
+	for i := 0; i < len(data); i += width {
 		unit := unitAt(i)
-		if unit == '\r' && i+2 < len(data) && unitAt(i+2) == '\n' {
+		if unit == '\r' && i+width < len(data) && unitAt(i+width) == '\n' {
 			unit = '\n'
-			i += 2
+			i += width
 		}
 		if unit == '\n' {
 			if targetStyle == LineEndingCRLF {
@@ -46,7 +54,7 @@ func convertUTF16LineEndings(data []byte, targetStyle string, littleEndian bool)
 			converted = putUnit(converted, '\n')
 			continue
 		}
-		converted = append(converted, data[i], data[i+1])
+		converted = append(converted, data[i:i+width]...)
 	}
 	return converted, nil
 }
@@ -73,11 +81,6 @@ func (h *Handler) HandleChangeLineEndings(ctx context.Context, req *mcp.CallTool
 		return errorResult(fmt.Sprintf("failed to read file: %v", err)), ChangeLineEndingsOutput{}, nil
 	}
 
-	// UTF-32 would corrupt in the byte-level default path; refuse it.
-	if bomRes, ok := encoding.DetectBOM(data); ok && (bomRes.Charset == "utf-32-le" || bomRes.Charset == "utf-32-be") {
-		return errorResult(fmt.Sprintf("changing line endings for %s is not supported; convert to UTF-8 first", bomRes.Charset)), ChangeLineEndingsOutput{}, nil
-	}
-
 	// Detect on decoded text: UTF-16 has a 00 between CR and LF.
 	content, err := decodeContent(data, encResult)
 	if err != nil {
@@ -102,13 +105,17 @@ func (h *Handler) HandleChangeLineEndings(ctx context.Context, req *mcp.CallTool
 		linesChanged = info.LFCount
 	}
 
-	// UTF-16 needs code units; every other registered encoding is ASCII-transparent.
+	// UTF-16 and UTF-32 need code units; every other registered encoding is ASCII-transparent.
 	var converted []byte
 	canonical, _ := encoding.Canonical(encResult.name)
 	switch canonical {
-	case "utf-16-le", "utf-16-be":
+	case "utf-16-le", "utf-16-be", "utf-32-le", "utf-32-be":
+		width := 2
+		if strings.HasPrefix(canonical, "utf-32") {
+			width = 4
+		}
 		bom := bomPrefix(data, canonical)
-		payload, err := convertUTF16LineEndings(data[len(bom):], style, canonical == "utf-16-le")
+		payload, err := convertWideLineEndings(data[len(bom):], style, width, strings.HasSuffix(canonical, "-le"))
 		if err != nil {
 			return errorResult(fmt.Sprintf("failed to convert %s line endings: %v", canonical, err)), ChangeLineEndingsOutput{}, nil
 		}
