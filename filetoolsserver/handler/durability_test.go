@@ -184,6 +184,39 @@ func TestHandleConvertEncoding_ExistingBackupIsNeverReplaced(t *testing.T) {
 	}
 }
 
+// os.Stat follows links, so a dangling .bak link would look absent and be replaced.
+func TestHandleConvertEncoding_DanglingBackupLinkIsNeverReplaced(t *testing.T) {
+	dir := t.TempDir()
+	h := NewHandler([]string{dir})
+	path := filepath.Join(dir, "convert.txt")
+	if err := os.WriteFile(path, []byte{0xCF, 0xF0, 0xE8, 0xE2, 0xE5, 0xF2}, 0644); err != nil {
+		t.Fatal(err)
+	}
+	target := filepath.Join(dir, "gone")
+	if err := os.Mkdir(target, 0755); err != nil {
+		t.Fatal(err)
+	}
+	createDirLink(t, target, path+".bak")
+	if err := os.Remove(target); err != nil {
+		t.Fatal(err)
+	}
+
+	result, _, err := h.HandleConvertEncoding(context.Background(), nil, ConvertEncodingInput{
+		Path: path, From: "cp1251", To: "utf-8", Backup: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if message := extractTextFromResult(result.Content); !result.IsError || !strings.Contains(message, "already exists") {
+		t.Errorf("expected the dangling backup link to be refused as existing, got %q", message)
+	}
+	if info, err := os.Lstat(path + ".bak"); err != nil {
+		t.Errorf("backup link should be untouched: %v", err)
+	} else if info.Mode().IsRegular() {
+		t.Error("backup link was replaced by a regular file")
+	}
+}
+
 func cancelledContext() context.Context {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()

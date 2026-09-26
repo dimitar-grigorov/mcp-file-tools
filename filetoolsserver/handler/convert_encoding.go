@@ -226,7 +226,7 @@ func (h *Handler) convertOne(path string, input ConvertEncodingInput, policy bom
 		// A repeat run would replace the only copy of the original with an already converted file.
 		if _, err := os.Lstat(backupPath); err == nil {
 			res.Changed = false
-			res.Error = fmt.Sprintf("backup %s already exists and may be the only copy of the original. NOTHING was changed. Move it aside, or pass backup=false", backupPath)
+			res.Error = fmt.Sprintf("backup %s already exists and may be the only copy of the original. NOTHING was changed. The file may already be converted: read it before retrying, and move the backup aside only if it is not", backupPath)
 			return res
 		}
 		res.BackupPath = backupPath
