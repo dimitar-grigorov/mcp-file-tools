@@ -95,6 +95,18 @@ func TestApplyEdits_AmbiguousFlexibleMatch(t *testing.T) {
 	}
 }
 
+// Flexible sites go last to first, or a newText with more lines would shift the later ones.
+func TestApplyEdits_FlexibleReplaceAllAddsLines(t *testing.T) {
+	content := "  DoIt;\nx\n\tDoIt;\ny\n"
+	got, n, err := applyEdits(content, []EditOperation{{OldText: "   DoIt;", NewText: "Prepare;\nDoIt;", ReplaceAll: true}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "  Prepare;\nDoIt;\nx\n\tPrepare;\nDoIt;\ny\n"; n != 2 || got != want {
+		t.Errorf("n=%d got %q, want %q", n, got, want)
+	}
+}
+
 // The whole path through the tool: error result, file untouched.
 func TestHandleEditFile_AmbiguousLeavesFileAlone(t *testing.T) {
 	dir := t.TempDir()

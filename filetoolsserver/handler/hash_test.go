@@ -155,13 +155,13 @@ func TestHandleEditFile_ExpectedHashTooShort(t *testing.T) {
 	result, _, err := h.HandleEditFile(context.Background(), nil, EditFileInput{
 		Path:         testFile,
 		Edits:        []EditOperation{{OldText: "World", NewText: "Go"}},
-		ExpectedHash: "abc",
+		ExpectedHash: contentHash([]byte("Hello World"))[:4], // a true prefix, so only the length rule can refuse it
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !result.IsError {
-		t.Fatal("expected an error on a too-short expectedHash")
+	if !result.IsError || !strings.Contains(hashResultText(result), "at least") {
+		t.Fatalf("expected the length rule to refuse a 4-character prefix, got %q", hashResultText(result))
 	}
 }
 
@@ -210,24 +210,25 @@ func TestHandleWriteFile_ExpectedHashOnMissingFileFails(t *testing.T) {
 	}
 }
 
+// The kept BOM is part of the bytes on disk, so the returned hash must cover it.
 func TestHandleWriteFile_ExpectedHashCurrentWritesAndReturnsNewHash(t *testing.T) {
 	tempDir := t.TempDir()
 	h := NewHandler([]string{tempDir})
 
 	testFile := filepath.Join(tempDir, "test.txt")
-	os.WriteFile(testFile, []byte("original"), 0644)
+	os.WriteFile(testFile, []byte("\uFEFForiginal"), 0644)
 
 	_, output, err := h.HandleWriteFile(context.Background(), nil, WriteFileInput{
 		Path:         testFile,
 		Content:      "replacement",
-		ExpectedHash: contentHash([]byte("original")),
+		ExpectedHash: contentHash([]byte("\uFEFForiginal")),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	content, _ := os.ReadFile(testFile)
-	if string(content) != "replacement" {
+	if string(content) != "\uFEFFreplacement" {
 		t.Errorf("file should be rewritten, got %q", content)
 	}
 	if output.ContentHash != contentHash(content) {
@@ -289,7 +290,7 @@ func TestHandleReadTextFile_ContentHashRoundTripsThroughEdit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result, _, err := h.HandleEditFile(context.Background(), nil, EditFileInput{
+	result, edited, err := h.HandleEditFile(context.Background(), nil, EditFileInput{
 		Path:         testFile,
 		Encoding:     "cp1251",
 		Edits:        []EditOperation{{OldText: "Привет", NewText: "Здравей"}},
@@ -300,6 +301,10 @@ func TestHandleReadTextFile_ContentHashRoundTripsThroughEdit(t *testing.T) {
 	}
 	if result.IsError {
 		t.Fatalf("the hash from read_text_file should satisfy edit_file, got %q", hashResultText(result))
+	}
+	// The encoded bytes, not the UTF-8 text the edit produced.
+	if disk, _ := os.ReadFile(testFile); edited.ContentHash != contentHash(disk) {
+		t.Errorf("post-edit contentHash = %q, want %q of the cp1251 bytes on disk", edited.ContentHash, contentHash(disk))
 	}
 }
 
