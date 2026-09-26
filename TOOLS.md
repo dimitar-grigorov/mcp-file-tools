@@ -718,7 +718,8 @@ Detect or convert line endings. Mirrors `manage_bom`: one tool, an `action` para
 - `encoding` (optional): Auto-detected by default, including most BOM-less UTF-16 text. Pass `utf-16-le` or `utf-16-be` explicitly if a very short or unusual file is misdetected.
 
 `convert` is a no-op if the file already uses the target style. UTF-16 and UTF-32 files are
-converted per code unit and keep their BOM; a BOM-less UTF-32 file needs `encoding`.
+converted per code unit and keep their BOM; a BOM-less UTF-32 file needs `encoding`, or its
+NUL bytes refuse the conversion.
 
 **Detect:**
 ```json

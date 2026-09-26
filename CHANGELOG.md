@@ -19,7 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Detection only guesses the new multi-byte ones.** A single-byte table reads almost any
   bytes, so the tables added for decoding are named explicitly, never guessed.
 - **`manage_line_endings` converts UTF-32** per code unit, as it does UTF-16, with or without
-  a BOM, instead of refusing it.
+  a BOM, instead of refusing it. It refuses what it would rewrite at the wrong width: a
+  UTF-16/32 BOM against another named encoding, or NUL bytes in a file read as 8-bit text.
 - **An HZ-GB-2312 verdict reads as `ascii`**, not `gbk`: HZ is 7-bit, so no table here shows
   its hanzi.
 - **The fast detection modes no longer stop at a file's ASCII head.** `sample` trusted the

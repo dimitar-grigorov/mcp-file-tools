@@ -4,6 +4,7 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"fmt"
@@ -106,14 +107,19 @@ func (h *Handler) HandleChangeLineEndings(ctx context.Context, req *mcp.CallTool
 	}
 
 	// UTF-16 and UTF-32 need code units; every other registered encoding is ASCII-transparent.
-	var converted []byte
 	canonical, _ := encoding.Canonical(encResult.name)
-	switch canonical {
-	case "utf-16-le", "utf-16-be", "utf-32-le", "utf-32-be":
-		width := 2
-		if strings.HasPrefix(canonical, "utf-32") {
-			width = 4
-		}
+	width := codeUnitWidth(canonical)
+	// A rewrite at the wrong width corrupts the file: a BOM of another width, or a NUL in 8-bit text, says it would be.
+	if _, bom := splitBOM(data); bom.HasBOM && bom.Type != canonical && (width > 1 || codeUnitWidth(bom.Type) > 1) {
+		return errorResult(checkBOMConflict(bom, encResult.name).Error()), ChangeLineEndingsOutput{}, nil
+	}
+	if width == 1 && bytes.IndexByte(data, 0) >= 0 {
+		return errorResult(fmt.Sprintf("file has NUL bytes, so it is not %s text; pass encoding if it is UTF-16 or UTF-32 without a BOM", encResult.name)), ChangeLineEndingsOutput{}, nil
+	}
+
+	var converted []byte
+	switch width {
+	case 2, 4:
 		bom := bomPrefix(data, canonical)
 		payload, err := convertWideLineEndings(data[len(bom):], style, width, strings.HasSuffix(canonical, "-le"))
 		if err != nil {
@@ -140,6 +146,17 @@ func (h *Handler) HandleChangeLineEndings(ctx context.Context, req *mcp.CallTool
 		NewStyle:      style,
 		LinesChanged:  linesChanged,
 	}, nil
+}
+
+// codeUnitWidth is the byte width of one code unit: 2 for UTF-16, 4 for UTF-32, 1 for the rest.
+func codeUnitWidth(canonical string) int {
+	switch {
+	case strings.HasPrefix(canonical, "utf-16-"):
+		return 2
+	case strings.HasPrefix(canonical, "utf-32-"):
+		return 4
+	}
+	return 1
 }
 
 // bomPrefix returns the leading BOM bytes when they match the given encoding.

@@ -33,6 +33,8 @@ func TestChangeLineEndings_UTF32PerCodeUnit(t *testing.T) {
 		{"le with bom to crlf", "utf-32-le", "", true, "a\nб\n", "crlf", "a\r\nб\r\n"},
 		{"be with bom to lf", "utf-32-be", "", true, "a\r\nб\r\n", "lf", "a\nб\n"},
 		{"le without bom, named", "utf-32-le", "utf-32-le", false, "a\nб\n", "crlf", "a\r\nб\r\n"},
+		// U+1000D and U+1000A share their low 16 bits with CR and LF.
+		{"whole code points compared", "utf-32-be", "", true, "\U0001000D\U0001000A\n", "crlf", "\U0001000D\U0001000A\r\n"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -59,6 +61,40 @@ func TestChangeLineEndings_UTF32PerCodeUnit(t *testing.T) {
 			got, _ := os.ReadFile(path)
 			if want := append(prefix, utf32Bytes(t, tc.charset, tc.want)...); !bytes.Equal(got, want) {
 				t.Errorf("got % x\nwant % x", got, want)
+			}
+		})
+	}
+}
+
+// Rewriting at the wrong width corrupts the file, so these refuse and leave it as it was.
+func TestChangeLineEndings_RefusesTheWrongWidth(t *testing.T) {
+	withBOM := append(encoding.BOMBytesFor("utf-32-le"), utf32Bytes(t, "utf-32-le", "a\nb\n")...)
+	tests := []struct {
+		name, encoding string
+		data           []byte
+	}{
+		{"utf-32 bom read as utf-16", "utf-16-le", withBOM},
+		{"bom-less utf-32, not named", "", utf32Bytes(t, "utf-32-le", "line one\nline two\n")},
+		{"bom-less utf-32 read as utf-8", "utf-8", utf32Bytes(t, "utf-32-be", "a\nb\n")},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			h := NewHandler([]string{dir})
+			path := filepath.Join(dir, "f.txt")
+			if err := os.WriteFile(path, tc.data, 0644); err != nil {
+				t.Fatal(err)
+			}
+
+			result, _, err := h.HandleChangeLineEndings(context.Background(), nil, ChangeLineEndingsInput{Path: path, Style: "crlf", Encoding: tc.encoding})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !result.IsError {
+				t.Error("converted instead of refusing")
+			}
+			if got, _ := os.ReadFile(path); !bytes.Equal(got, tc.data) {
+				t.Errorf("file changed:\ngot  % x\nwant % x", got, tc.data)
 			}
 		})
 	}
