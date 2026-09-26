@@ -212,6 +212,10 @@ func correctCharset(label string, confidence int, data []byte) (string, int) {
 	if !readable {
 		return "", 0
 	}
+	// Without a switch into JIS (ESC $) there is no Japanese, only ASCII whose escapes a re-encode would drop.
+	if charset == "iso-2022-jp" && !bytes.Contains(data, []byte("\x1b$")) {
+		return ASCII, confidence
+	}
 
 	// MacCyrillic is the detector's catch-all for Cyrillic and all but extinct, so the bytes pick the table; overruling other Cyrillic labels measured worse.
 	if charset == "x-mac-cyrillic" {

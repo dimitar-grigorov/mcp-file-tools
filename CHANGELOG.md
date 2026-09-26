@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a BOM, instead of refusing it. It refuses what it would rewrite at the wrong width: a
   UTF-16/32 BOM against another named encoding, or NUL bytes in a file read as 8-bit text.
 - **An HZ-GB-2312 verdict reads as `ascii`**, not `gbk`: HZ is 7-bit, so no table here shows
-  its hanzi.
+  its hanzi. So does ISO-2022-JP that never switches into JIS, whose escapes an edit would drop.
 - **The fast detection modes no longer stop at a file's ASCII head.** `sample` trusted the
   first 128KB and `chunked` let ASCII chunks outvote the one with evidence, so a unit whose
   Cyrillic starts on page two came back `ascii`.
