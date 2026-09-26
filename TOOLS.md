@@ -254,15 +254,19 @@ If an exact edit fails, prefer copying the hint into `oldText`. Use `similarity`
 }
 ```
 
-**Response:**
-```json
-{
-  "diff": "--- D:\\src\\unit1.pas\n+++ D:\\src\\unit1.pas\n@@ -1,3 +1,3 @@\n-  i: Integer;\n+  i: NativeInt;\n",
-  "readOnlyCleared": true
-}
+**Response** (text only, no structured content):
+```
+--- D:\src\unit1.pas
++++ D:\src\unit1.pas
+@@ -1,3 +1,3 @@
+-  i: Integer;
++  i: NativeInt;
+
+Read-only flag was cleared.
+contentHash: 3f2a…
 ```
 
-`readOnlyCleared` appears only when the flag was removed, and `contentHash` only when
+The read-only line appears only when the flag was removed, and `contentHash` only when
 `expectedHash` was passed: the hash after the write, for the next guarded edit.
 
 ## Directory Operations
