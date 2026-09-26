@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -339,10 +340,30 @@ func joinDetectionSamples(samples []byteSample) []byte {
 		total += len(sample.data)
 	}
 	joined := make([]byte, 0, total)
-	for _, sample := range samples {
-		joined = append(joined, sample.data...)
+	for i, sample := range samples {
+		joined = append(joined, utf8Whole(sample.data, i > 0, i < len(samples)-1)...)
 	}
 	return joined
+}
+
+// utf8Whole trims a UTF-8 sequence cut by a sample edge: one broken sequence makes the detector give up on valid UTF-8. Any other text loses at most three bytes.
+func utf8Whole(data []byte, trimStart, trimEnd bool) []byte {
+	if trimStart {
+		for skipped := 0; skipped < utf8.UTFMax-1 && len(data) > 0 && !utf8.RuneStart(data[0]); skipped++ {
+			data = data[1:]
+		}
+	}
+	if trimEnd {
+		for i := len(data) - 1; i >= 0 && i >= len(data)-(utf8.UTFMax-1); i-- {
+			if utf8.RuneStart(data[i]) {
+				if !utf8.FullRune(data[i:]) {
+					data = data[:i]
+				}
+				break
+			}
+		}
+	}
+	return data
 }
 
 func detectFromReader(r io.ReaderAt, size int64, mode string) (DetectionResult, error) {
@@ -453,6 +474,10 @@ func (s *chunkScan) run() {
 		le.Write(data)
 		be.Write(data)
 		if detected := detectLegacy(data); detected.Charset != "" {
+			// The detector can pass on plain ASCII, and the UTF-8 fallback must not make that evidence.
+			if detected.Charset == "utf-8" && !slices.ContainsFunc(data, func(b byte) bool { return b >= utf8.RuneSelf }) {
+				detected.Charset = ASCII
+			}
 			s.results = append(s.results, chunkResult{charset: detected.Charset, confidence: detected.Confidence, weight: n})
 		}
 		offset += int64(n)

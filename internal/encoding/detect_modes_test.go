@@ -75,6 +75,31 @@ func TestDetectFromFile_ASCIIDoesNotOutweighEvidence(t *testing.T) {
 	}
 }
 
+// A Doxygen "~~~{" reads as an HZ escape and the detector passes; the UTF-8 fallback then outvoted the Cyrillic chunk.
+func TestDetectFromFile_ASCIIChunkTheDetectorPassesOn(t *testing.T) {
+	head := charmapEncode(t, charmap.Windows1251, strings.Repeat(cyrillicFixture+"\r\n", 40))
+	doxygen := strings.Repeat("  \t~~~{.pas}\r\n  \tDoSomething(AValue);\r\n  \t~~~\r\n", 2*ChunkSize/48)
+	path := writeTempFile(t, append(append(head, asciiFiller(ChunkSize)...), doxygen...))
+	result, err := DetectFromFile(path, "chunked")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Charset != "windows-1251" {
+		t.Errorf("got %s (%d%%), want windows-1251", result.Charset, result.Confidence)
+	}
+}
+
+// A sample edge can land inside a UTF-8 sequence, and one broken sequence makes the detector give up on a valid file.
+func TestDetectSample_EdgesKeepUTF8Whole(t *testing.T) {
+	body := strings.Repeat(cyrillicFixture+"\r\n", 3000)
+	for pad := range 4 {
+		data := asciiFiller(3*ChunkSize) + strings.Repeat(" ", pad) + body
+		if result, _ := DetectSample([]byte(data)); result.Charset != "utf-8" {
+			t.Errorf("pad %d: got %q (%d%%), want utf-8", pad, result.Charset, result.Confidence)
+		}
+	}
+}
+
 // A file with nothing but ASCII in it must still say so rather than reach for a table at random.
 func TestDetectFromFile_AllASCIIStaysASCII(t *testing.T) {
 	path := writeTempFile(t, []byte(asciiFiller(5*ChunkSize)))
