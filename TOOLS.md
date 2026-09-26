@@ -41,9 +41,10 @@ exactly. The schema never lists an alias, and an alias never overrides its canon
 | `convert_encoding` | `addBom` true / false | `bom` `"always"` / `"never"` |
 | `tree` | `depth` | `maxDepth` |
 
-A number or boolean sent as a string (`"limit": "50"`) is decoded. Any other unknown name
-fails before validation with the tool's parameter list and, for common misses such as
-`tail`, what to send instead. Grep's `glob` and `type` are **not** aliased:
+A number, boolean or array sent as a string (`"limit": "50"`) is decoded where the parameter
+takes one; a string parameter keeps its text. Any other unknown name fails before
+validation with the tool's parameter list and, for common misses such as `tail`, what to
+send instead. Grep's `glob` and `type` are **not** aliased:
 `include`/`includes` match the basename only (`{a,b}` alternatives work).
 
 ## File Operations

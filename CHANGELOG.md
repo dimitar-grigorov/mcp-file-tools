@@ -44,6 +44,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   tool's parameter list and, for the common misses, what to send instead.
 - **Grep's `-i` sent as the string `"true"` was dropped silently**, so the search ran
   case-sensitive.
+- **Text that looked like JSON was decoded out of string parameters**: `write_file` refused
+  `content` holding a JSON document, as did a `pattern` like `[1]` and a flat `oldText`. A
+  stringified array is now decoded only where the parameter is an array.
 
 ## [4.4.1] - 2026-09-10
 

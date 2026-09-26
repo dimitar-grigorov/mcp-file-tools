@@ -59,7 +59,7 @@ func IndexParams[In any](idx ParamIndex, tool string) {
 	idx[tool] = tp
 }
 
-// RepairGuessedParams fixes exact synonyms and stringified scalars; other unknown names fail with the parameter list.
+// RepairGuessedParams fixes exact synonyms and stringified values; other unknown names fail with the parameter list.
 func RepairGuessedParams(idx ParamIndex) mcp.Middleware {
 	return func(next mcp.MethodHandler) mcp.MethodHandler {
 		return func(ctx context.Context, method string, req mcp.Request) (mcp.Result, error) {
@@ -78,7 +78,7 @@ func RepairGuessedParams(idx ParamIndex) mcp.Middleware {
 	}
 }
 
-// check decodes stringified scalars and reports names the tool does not take.
+// check decodes stringified values and reports names the tool does not take.
 func (tp *toolParams) check(tool string, raw json.RawMessage) (json.RawMessage, string) {
 	var m map[string]json.RawMessage
 	if json.Unmarshal(raw, &m) != nil || m == nil {
@@ -92,7 +92,7 @@ func (tp *toolParams) check(tool string, raw json.RawMessage) (json.RawMessage, 
 			unknown = append(unknown, k)
 			continue
 		}
-		if fixed, ok := unstringScalar(spec.kind, v); ok {
+		if fixed, ok := unstringValue(spec.kind, v); ok {
 			m[k] = fixed
 			changed = true
 		}
@@ -110,8 +110,8 @@ func (tp *toolParams) check(tool string, raw json.RawMessage) (json.RawMessage, 
 	return out, ""
 }
 
-// unstringScalar decodes "12" or "true" for a number or boolean parameter; the rest is left to the schema.
-func unstringScalar(kind reflect.Kind, v json.RawMessage) (json.RawMessage, bool) {
+// unstringValue decodes "12", "true" or "[...]" only for a parameter of that type; a string parameter keeps its text.
+func unstringValue(kind reflect.Kind, v json.RawMessage) (json.RawMessage, bool) {
 	var s string
 	if json.Unmarshal(v, &s) != nil {
 		return nil, false
@@ -128,6 +128,10 @@ func unstringScalar(kind reflect.Kind, v json.RawMessage) (json.RawMessage, bool
 		}
 	case reflect.Bool:
 		if s == "true" || s == "false" {
+			return json.RawMessage(s), true
+		}
+	case reflect.Slice:
+		if strings.HasPrefix(s, "[") && json.Valid([]byte(s)) {
 			return json.RawMessage(s), true
 		}
 	}

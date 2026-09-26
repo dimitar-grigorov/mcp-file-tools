@@ -5,11 +5,9 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"runtime/debug"
-	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -63,50 +61,6 @@ func Wrap[In, Out any](logger *slog.Logger, toolName string, handler mcp.ToolHan
 		wrapped = WithLogging(logger, toolName, wrapped)
 	}
 	return wrapped
-}
-
-// RepairStringifiedArrayArgs decodes array/object tool args that some MCP
-// clients send as a JSON-encoded string, so schema validation succeeds.
-func RepairStringifiedArrayArgs(next mcp.MethodHandler) mcp.MethodHandler {
-	return func(ctx context.Context, method string, req mcp.Request) (mcp.Result, error) {
-		if r, ok := req.(*mcp.CallToolRequest); ok && r.Params != nil {
-			r.Params.Arguments = unstringifyJSONArgs(r.Params.Arguments)
-		}
-		return next(ctx, method, req)
-	}
-}
-
-// unstringifyJSONArgs decodes top-level fields whose value is a JSON string
-// wrapping an array or object. Returns input unchanged if nothing needs repair.
-func unstringifyJSONArgs(raw json.RawMessage) json.RawMessage {
-	var fields map[string]json.RawMessage
-	if json.Unmarshal(raw, &fields) != nil {
-		return raw
-	}
-
-	changed := false
-	for name, val := range fields {
-		var s string
-		if json.Unmarshal(val, &s) != nil {
-			continue // not a JSON string
-		}
-		if t := strings.TrimSpace(s); len(t) == 0 || (t[0] != '[' && t[0] != '{') {
-			continue // not a wrapped array/object
-		}
-		if !json.Valid([]byte(s)) {
-			continue
-		}
-		fields[name] = json.RawMessage(s)
-		changed = true
-	}
-
-	if !changed {
-		return raw
-	}
-	if repaired, err := json.Marshal(fields); err == nil {
-		return repaired
-	}
-	return raw
 }
 
 // WrapContentOnly drops StructuredContent, returning only the handler's text (e.g. a diff).

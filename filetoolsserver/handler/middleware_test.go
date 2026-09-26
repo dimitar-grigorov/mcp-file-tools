@@ -170,68 +170,42 @@ func TestWrap_CombinesMiddleware(t *testing.T) {
 	}
 }
 
-func TestUnstringifyJSONArgs(t *testing.T) {
+type stringifiedIn struct {
+	Path  string          `json:"path"`
+	Paths []string        `json:"paths,omitempty"`
+	Edits []EditOperation `json:"edits,omitempty"`
+}
+
+// An array sent as a JSON string is decoded where the parameter is an array, and nowhere else.
+func TestRepairStringifiedArrays(t *testing.T) {
+	idx := ParamIndex{}
+	IndexParams[stringifiedIn](idx, "t")
 	tests := []struct {
 		name string
 		in   string
 		want string
 	}{
-		{
-			name: "edits sent as JSON string",
-			in:   `{"path":"a.txt","edits":"[{\"oldText\":\"x\",\"newText\":\"y\"}]"}`,
-			want: `{"edits":[{"oldText":"x","newText":"y"}],"path":"a.txt"}`,
-		},
-		{
-			name: "paths sent as JSON string",
-			in:   `{"paths":"[\"a\",\"b\"]"}`,
-			want: `{"paths":["a","b"]}`,
-		},
-		{
-			name: "proper array left unchanged",
-			in:   `{"paths":["a","b"]}`,
-			want: `{"paths":["a","b"]}`,
-		},
-		{
-			name: "plain string field left unchanged",
-			in:   `{"path":"C:/dir/file.txt"}`,
-			want: `{"path":"C:/dir/file.txt"}`,
-		},
-		{
-			name: "invalid json returned as-is",
-			in:   `not json`,
-			want: `not json`,
-		},
+		{"edits sent as JSON string", `{"path":"a.txt","edits":"[{\"oldText\":\"x\",\"newText\":\"y\"}]"}`, `{"edits":[{"oldText":"x","newText":"y"}],"path":"a.txt"}`},
+		{"paths sent as JSON string", `{"path":"a","paths":" [\"a\",\"b\"]"}`, `{"path":"a","paths":["a","b"]}`},
+		{"proper array left unchanged", `{"path":"a","paths":["a","b"]}`, `{"path":"a","paths":["a","b"]}`},
+		{"string parameter keeps JSON-shaped text", `{"path":"[\"a\"]"}`, `{"path":"[\"a\"]"}`},
+		{"invalid JSON left for the schema", `{"path":"a","paths":"[a"}`, `{"path":"a","paths":"[a"}`},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := string(unstringifyJSONArgs(json.RawMessage(tt.in)))
-			if !jsonEqual(got, tt.want) {
-				t.Errorf("unstringifyJSONArgs(%s) = %s, want %s", tt.in, got, tt.want)
+			req := &mcp.CallToolRequest{Params: &mcp.CallToolParamsRaw{Name: "t", Arguments: json.RawMessage(tt.in)}}
+			var seen json.RawMessage
+			next := func(ctx context.Context, method string, r mcp.Request) (mcp.Result, error) {
+				seen = r.(*mcp.CallToolRequest).Params.Arguments
+				return nil, nil
+			}
+			if _, err := RepairGuessedParams(idx)(next)(context.Background(), "tools/call", req); err != nil {
+				t.Fatal(err)
+			}
+			if !jsonEqual(string(seen), tt.want) {
+				t.Errorf("downstream saw %s, want %s", seen, tt.want)
 			}
 		})
-	}
-}
-
-func TestRepairStringifiedArrayArgs(t *testing.T) {
-	req := &mcp.CallToolRequest{
-		Params: &mcp.CallToolParamsRaw{
-			Name:      "read_multiple_files",
-			Arguments: json.RawMessage(`{"paths":"[\"a\",\"b\"]"}`),
-		},
-	}
-
-	var seen json.RawMessage
-	next := func(ctx context.Context, method string, r mcp.Request) (mcp.Result, error) {
-		seen = r.(*mcp.CallToolRequest).Params.Arguments
-		return nil, nil
-	}
-
-	if _, err := RepairStringifiedArrayArgs(next)(context.Background(), "tools/call", req); err != nil {
-		t.Fatalf("middleware returned error: %v", err)
-	}
-	if !jsonEqual(string(seen), `{"paths":["a","b"]}`) {
-		t.Errorf("downstream saw %s, want repaired array", seen)
 	}
 }
 

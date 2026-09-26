@@ -151,6 +151,44 @@ func TestGuessedNamesChangeTheFile(t *testing.T) {
 	}
 }
 
+// Text that reads as a number, boolean, array or object is still text where the schema wants a string.
+func TestStringParamsStayStrings(t *testing.T) {
+	dir := t.TempDir()
+	cs := sessionIn(t, dir)
+	w := filepath.Join(dir, "w.txt")
+
+	for _, content := range []string{"true", "120", `{"a":1}`, "[1,2]"} {
+		if text, isErr := call(t, cs, "write_file", `{"path":`+jsonPath(w)+`,"content":`+jsonPath(content)+`}`); isErr {
+			t.Fatalf("write_file content %s: %s", content, text)
+		}
+		if b, _ := os.ReadFile(w); string(b) != content {
+			t.Errorf("write_file content %s: got %q", content, b)
+		}
+	}
+
+	for _, pattern := range []string{"120", "[1]"} {
+		writeFixture(t, w, pattern+"\n")
+		if text, isErr := call(t, cs, "grep_text_files", `{"paths":[`+jsonPath(dir)+`],"pattern":`+jsonPath(pattern)+`}`); isErr || !strings.Contains(text, `"totalMatches":1`) {
+			t.Errorf("grep pattern %s: %s", pattern, text)
+		}
+	}
+
+	writeFixture(t, w, `true {"a":1}`+"\n")
+	edits := []string{
+		`"oldText":"true","newText":"120"`,
+		`"oldText":"{\"a\":1}","newText":"[2]"`,
+		`"edits":[{"oldText":"120","newText":"false"}]`,
+	}
+	for _, e := range edits {
+		if text, isErr := call(t, cs, "edit_file", `{"path":`+jsonPath(w)+`,`+e+`}`); isErr {
+			t.Fatalf("edit_file %s: %s", e, text)
+		}
+	}
+	if b, _ := os.ReadFile(w); string(b) != "false [2]\n" {
+		t.Errorf("edit_file: got %q", b)
+	}
+}
+
 // A name with no exact meaning fails in one round trip that says what to send instead.
 func TestUnknownNameErrorNamesTheFix(t *testing.T) {
 	dir := t.TempDir()

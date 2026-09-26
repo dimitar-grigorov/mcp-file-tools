@@ -200,12 +200,15 @@ func aliasGrepArgs(m map[string]json.RawMessage) {
 			setIfAbsent(m, "contextAfter", v)
 		}
 	}
-	// Built-in Grep takes one path string; ours takes paths. An array under path is paths already.
+	// Built-in Grep takes one path string; ours takes paths. An array under path, stringified or not, is paths already.
 	if v, ok := m["path"]; ok {
 		if _, dup := m["paths"]; !dup {
 			var s string
 			var arr []string
-			if json.Unmarshal(v, &s) == nil {
+			if json.Unmarshal(v, &s) == nil && json.Unmarshal([]byte(s), &arr) == nil {
+				m["paths"] = json.RawMessage(s)
+				delete(m, "path")
+			} else if json.Unmarshal(v, &s) == nil {
 				m["paths"], _ = json.Marshal([]string{s})
 				delete(m, "path")
 			} else if json.Unmarshal(v, &arr) == nil {

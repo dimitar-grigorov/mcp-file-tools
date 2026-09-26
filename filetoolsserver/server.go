@@ -74,9 +74,9 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 	}
 	server := mcp.NewServer(impl, serverOpts)
 
-	// Unstringify array/object args first, so name repair sees real arrays; addTool fills params.
+	// addTool fills params, which tells the repair which arguments are strings and must stay text.
 	params := handler.ParamIndex{}
-	server.AddReceivingMiddleware(handler.RepairStringifiedArrayArgs, handler.RepairGuessedParams(params), h.AppendUpdateNotice)
+	server.AddReceivingMiddleware(handler.RepairGuessedParams(params), h.AppendUpdateNotice)
 
 	// Guided workflows, surfaced by clients as user commands.
 	registerPrompts(server)

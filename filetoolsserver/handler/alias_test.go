@@ -116,3 +116,15 @@ func TestAliasEndLineCountsFromOffset(t *testing.T) {
 		t.Errorf("limit = %v, want 3 (lines 10..12)", m["limit"])
 	}
 }
+
+// A tool gaining a real parameter an alias already claims must fail at startup, not rewrite correct calls.
+func TestIndexParamsRefusesAliasOverRealParameter(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Error("head is aliased to limit for read_text_file, want a panic")
+		}
+	}()
+	IndexParams[struct {
+		Head int `json:"head"`
+	}](ParamIndex{}, "read_text_file")
+}
