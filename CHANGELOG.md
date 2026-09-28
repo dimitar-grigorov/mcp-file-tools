@@ -8,47 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-- **`edit_file` says when bytes outside the edit change**: Shift_JIS, Big5 and ISO-2022-JP
-  do not always encode back to the same bytes, and the diff cannot show it.
-- **`convert_encoding` could destroy the original.** Run twice with an explicit `from` and
-  `backup: true`, it decoded the converted file again and replaced the `.bak` with it. An
-  existing `.bak` now fails the call, and the tool no longer claims `idempotentHint`.
-- **An available update never reached the model.** The startup check sent it as an MCP log
-  message, which the SDK drops until a client sets a log level; it now rides once on the next
-  successful tool result. A client that skips the handshake starts the check on its first call.
-- **20 more encodings, 45 in all**: UTF-32 LE/BE, Big5, Shift_JIS, EUC-JP/KR, ISO-2022-JP,
-  MacRoman, the DOS code pages (437, 850, 852, 855) and the rest of the ISO-8859 family.
-- **Detection only guesses the new multi-byte ones.** A single-byte table reads almost any
-  bytes, so the tables added for decoding are named explicitly, never guessed.
-- **`manage_line_endings` converts UTF-32** per code unit, as it does UTF-16, with or without
-  a BOM, instead of refusing it. It refuses what it would rewrite at the wrong width: a
-  UTF-16/32 BOM against another named encoding, or NUL bytes in a file read as 8-bit text.
-- **An HZ-GB-2312 verdict reads as `ascii`**, not `gbk`: HZ is 7-bit, so no table here shows
-  its hanzi. So does ISO-2022-JP that never switches into JIS, whose escapes an edit would drop.
-- **The fast detection modes no longer stop at a file's ASCII head.** `sample` trusted the
-  first 128KB and `chunked` let ASCII chunks outvote the one with evidence, so a unit whose
-  Cyrillic starts on page two came back `ascii`.
-- **One ladder behind every detection path** instead of four copies of BOM, then UTF-16,
-  then detector.
-- **One measure behind every encoding guess** instead of a hand-tuned sniff per case: read
-  the bytes as the charset, see how much lands inside real words.
-- **`MCP_DETECTION_CANDIDATES` picks the candidate that reads best, not the first that
-  decodes**, which used to win on list order alone and garble the file.
-- **Detection could name a charset no tool here can read**, and the read path then garbled
-  the file. It now answers only what the server can decode, so `candidates` drops `supported`.
-- **`read_text_file` and `read_multiple_files` return `contentHash`**; `edit_file` and
-  `write_file` take `expectedHash` and fail if the file moved on since that read.
-- **`grep_text_files` with `patterns` alone failed validation**: the schema still required
-  `pattern`, so the call the description suggests never reached the handler.
-- **Guessed parameter names cost no round trip where the meaning is exact** (`head`,
-  `startLine`/`endLine`, `filePattern`, `contextLines`, `lineEnding`, `fromEncoding`, …), and
-  a number or boolean sent as a string is decoded. Any other unknown name fails with the
-  tool's parameter list and, for the common misses, what to send instead.
-- **Grep's `-i` sent as the string `"true"` was dropped silently**, so the search ran
-  case-sensitive.
-- **Text that looked like JSON was decoded out of string parameters**: `write_file` refused
-  `content` holding a JSON document, as did a `pattern` like `[1]` and a flat `oldText`. A
-  stringified array is now decoded only where the parameter is an array.
+- **45 encodings**, 20 new: UTF-32, Big5, Shift_JIS, EUC-JP/KR, ISO-2022-JP, MacRoman, DOS
+  code pages, the rest of ISO-8859. Only the multi-byte ones are guessed.
+- **Detection answers only what it can decode** and reads past an ASCII head in every mode;
+  a pin picks the candidate that reads best. HZ, and ISO-2022-JP without JIS, read as `ascii`.
+- **`contentHash`** from `read_text_file` and `read_multiple_files`; `edit_file` and
+  `write_file` take `expectedHash`.
+- **`edit_file` says when bytes outside the edit change** (Shift_JIS, Big5, ISO-2022-JP).
+- **`convert_encoding` never replaces an existing `.bak`**; a second run lost the original.
+- **`manage_line_endings` converts UTF-32** and refuses a rewrite at the wrong width.
+- **Guessed parameter names** map where the meaning is exact, and stringified values decode
+  where the schema wants them. Other unknown names fail with the parameter list.
+- **The update notice reaches the model**, once, in a tool result.
+- Fixed: `patterns` alone failed validation, `-i: "true"` was dropped, JSON-looking text in
+  a string parameter was decoded. `detect_encoding` candidates drop `supported`.
 
 ## [4.4.1] - 2026-09-10
 

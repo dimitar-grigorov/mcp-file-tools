@@ -316,9 +316,8 @@ leave it to auto-detection.
 Common aliases are accepted (`cp1251`, `latin1`, `gb2312`, `tis-620`, …) —
 [`list_encodings`](TOOLS.md#list_encodings) prints the whole table with aliases.
 
-Auto-detection answers a subset: a single-byte table reads almost any bytes, so the tables
-added for decoding alone (MacRoman, the DOS pages, the rarer ISO ones) are never guessed.
-Name those explicitly. UTF-32 is found by its BOM alone, so keep one.
+Auto-detection never guesses MacRoman, the DOS pages or the rarer ISO tables; name them
+explicitly. UTF-32 is found only by its BOM.
 
 ## Configuration
 
@@ -361,10 +360,9 @@ valid hanzi pair — so it reads back as Chinese and edits fail with *"gbk canno
 ```
 
 A BOM still wins. A guess inside the list keeps its confidence; one outside it is dropped
-and the listed encoding whose reading of the bytes looks most like text takes over. Order is
-your priority when no reading stands out, which is what settles a file of plain ASCII. A file
-that fits none of them is read as the default and reported as an **ODD
-ENCODING** in `read_text_file`'s hint, so a stray file gets said out loud rather than
+and the listed encoding that reads most like text takes over, list order breaking ties. A
+file that fits none of them is read as the default and reported as an **ODD ENCODING**
+in `read_text_file`'s hint, so a stray file gets said out loud rather than
 guessed at. Unlisted encodings stop appearing in `detect_encoding`'s `candidates` too. UTF-16/32 are named only by a BOM
 or the structural classifier, so listing them cannot make them a catch-all.
 

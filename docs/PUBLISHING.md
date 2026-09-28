@@ -47,7 +47,7 @@ itself has no runtime dependency.
 
 ## Self-update
 
-internal/updater/updater.go only *notifies* — it checks GitHub on startup and appends a
+internal/updater/updater.go only *notifies* — it checks GitHub once and appends a
 message to the next tool result, gated by MCP_NO_UPDATE_CHECK=1 and skipped on dev
 builds. Its "re-download the binary" advice is wrong for registry/Smithery/package
 installs. Don't build real auto-update for a filesystem server.

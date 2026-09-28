@@ -41,11 +41,9 @@ exactly. The schema never lists an alias, and an alias never overrides its canon
 | `convert_encoding` | `addBom` true / false | `bom` `"always"` / `"never"` |
 | `tree` | `depth` | `maxDepth` |
 
-A number, boolean or array sent as a string (`"limit": "50"`) is decoded where the parameter
-takes one; a string parameter keeps its text. Any other unknown name fails before
-validation with the tool's parameter list and, for common misses such as `tail`, what to
-send instead. Grep's `glob` and `type` are **not** aliased:
-`include`/`includes` match the basename only (`{a,b}` alternatives work).
+A value sent as a string (`"limit": "50"`) is decoded where the parameter is a number,
+boolean or array. Any other unknown name fails with the tool's parameter list. Grep's `glob`
+and `type` are **not** aliased: `include`/`includes` match the basename only (`{a,b}` works).
 
 ## File Operations
 
@@ -88,9 +86,8 @@ Read file contents with automatic encoding detection and optional partial readin
 }
 ```
 
-`contentHash` is the short sha256 of the raw bytes on disk, so a paged read still
-reports the whole file. Pass it back as `expectedHash` on `edit_file` or `write_file`
-to make the call fail instead of overwriting a file that changed in between.
+`contentHash` is the short sha256 of the whole file, even on a paged read. Pass it as
+`expectedHash` to `edit_file` or `write_file` so they fail if the file changed.
 
 The response may carry a `hint` field: it reports a file that already has
 **mixed** line endings, and — once per file — notes that a plain utf-8 file with
@@ -205,7 +202,7 @@ Make replacements or apply a unified diff to one text file. Returns a unified di
 - `dryRun` (optional): If true, returns diff without writing changes (default: false)
 - `encoding` (optional): File encoding (auto-detected if not specified)
 - `forceWritable` (optional): If true, clears read-only flag before editing (default: false — fails on read-only files)
-- `expectedHash` (optional): The `contentHash` this edit is based on. Fails and changes nothing if the file has since changed; checked before the read-only flag is touched
+- `expectedHash` (optional): The `contentHash` this edit is based on. Fails and changes nothing if the file has since changed
 
 **Features:**
 - Exact text matching, then whitespace-flexible (per-line leading and trailing whitespace ignored, interior spacing must match); `oldText` must identify **one** place
@@ -597,13 +594,9 @@ Detect the encoding of a file with confidence percentage. Useful for diagnosing 
 }
 ```
 
-Detection answers only an encoding the other tools can decode, and not every one of those:
-see the note under [Supported Encodings](#supported-encodings). A label the underlying
-detector has no codec for is a hint, not a verdict. When the bytes support no answer, the
-call fails with `could not detect encoding` and lists what to try instead.
-
-`candidates` is added when the verdict is in doubt — under 80% confident. Every entry is usable
-as an `encoding` parameter:
+Detection answers only encodings the other tools can decode ([list](#supported-encodings)).
+With no answer the call fails with `could not detect encoding` and lists what to try.
+`candidates` is added under 80% confidence; each entry is usable as `encoding`:
 
 ```json
 {
@@ -634,7 +627,7 @@ No write (and no backup) happens if the file already holds the target bytes — 
 - `paths`: Array of files to convert as a batch
 - `from` (optional): Source encoding (auto-detected per file if omitted)
 - `to` (required): Target encoding
-- `backup` (optional): Create a `.bak` backup file before converting (default: false). An existing `.bak` is never replaced: the call fails and changes nothing, since a repeat run would overwrite the only copy of the original
+- `backup` (optional): Create a `.bak` backup file before converting (default: false). An existing `.bak` fails the call, so the original is never lost
 - `dryRun` (optional): Report what would change and write nothing (default: false)
 - `allowLowConfidence` (optional): Convert even when the auto-detected source is below the confidence threshold (default: false)
 - `bom` (optional): `auto` (default — BOM for UTF-16/32 targets, keeps a same-encoding source BOM), `always`, `never`, `preserve`
@@ -810,8 +803,8 @@ in. If empty, add paths as args in config or set `MCP_FILE_TOOLS_ALLOWED_DIRS`.
 ### check_for_updates
 
 Checks whether a newer release is available, at most one GitHub API call per 30 minutes.
-The server also checks once at startup and appends a found update, once, to the next
-successful tool result. Set `MCP_NO_UPDATE_CHECK=1` to disable both.
+The server also checks once by itself and adds a found update to the next successful tool
+result. `MCP_NO_UPDATE_CHECK=1` disables both.
 
 **Parameters:**
 - `force` (optional): Bypass the cached result and query GitHub now (default: false)
@@ -870,12 +863,8 @@ exists — with the update steps that apply to that install and client.
 | iso-8859-14 | iso885914, latin8 | Latin-8 Celtic |
 | iso-8859-16 | iso885916, latin10 | Latin-10 South-Eastern European |
 
-UTF-32 is found by its BOM alone, so keep one: there is no structural classifier behind it
-the way there is for UTF-16.
-
-Detection answers a subset of this table. A single-byte table reads almost any bytes, so the
-ones added for decoding alone (MacRoman, the DOS pages, the rarer ISO tables) are never
-guessed — name them explicitly, or pin them with `MCP_DETECTION_CANDIDATES`.
+Detection never guesses MacRoman, the DOS pages or the rarer ISO tables: name them, or pin
+them with `MCP_DETECTION_CANDIDATES`. UTF-32 is found only by its BOM.
 
 ## Prompts
 
