@@ -82,7 +82,6 @@ type DetectEncodingOutput struct {
 type EncodingCandidate struct {
 	Encoding   string `json:"encoding"`
 	Confidence int    `json:"confidence"`
-	Supported  bool   `json:"supported"` // false: cannot be passed as an encoding parameter
 }
 
 type ListAllowedDirectoriesInput struct{}

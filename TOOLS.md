@@ -611,8 +611,8 @@ as an `encoding` parameter:
   "confidence": 73,
   "has_bom": false,
   "candidates": [
-    { "encoding": "iso-8859-1", "confidence": 73, "supported": true },
-    { "encoding": "windows-874", "confidence": 32, "supported": true }
+    { "encoding": "iso-8859-1", "confidence": 73 },
+    { "encoding": "windows-874", "confidence": 32 }
   ]
 }
 ```

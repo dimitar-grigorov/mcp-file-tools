@@ -19,7 +19,6 @@ const maxCandidates = 3
 type Candidate struct {
 	Charset    string
 	Confidence int
-	Supported  bool // in the registry, so usable as an encoding parameter
 }
 
 // candidates ranks what the bytes could be, best first; nil once a BOM or the UTF-16 classifier decided, as there is nothing to choose between.
@@ -39,17 +38,14 @@ func candidates(data []byte) []Candidate {
 		if charset == "" || !charsetAllowed(charset) {
 			continue
 		}
-		// The registry's own name, so the agent can pass it straight back.
-		supported := false
-		if canonical, ok := Canonical(charset); ok {
-			charset, supported = canonical, true
-		}
+		// The registry's own name, so the agent can pass it straight back; correctCharset answers nothing else.
+		charset, _ = Canonical(charset)
 		if seen[charset] {
 			continue
 		}
 		seen[charset] = true
 
-		ranked = append(ranked, Candidate{Charset: charset, Confidence: confidence, Supported: supported})
+		ranked = append(ranked, Candidate{Charset: charset, Confidence: confidence})
 		if len(ranked) == maxCandidates {
 			break
 		}
@@ -94,11 +90,11 @@ func CandidatesFromFile(path string, mode string) ([]Candidate, error) {
 	return candidates(joinDetectionSamples(samples)), nil
 }
 
-// SupportedAlternatives keeps what a caller could retry with: in the registry, and not `exclude`.
-func SupportedAlternatives(ranked []Candidate, exclude string) []Candidate {
+// Alternatives keeps what a caller could retry with: everything but `exclude`.
+func Alternatives(ranked []Candidate, exclude string) []Candidate {
 	alternatives := make([]Candidate, 0, len(ranked))
 	for _, candidate := range ranked {
-		if !candidate.Supported || SameCharset(candidate.Charset, exclude) {
+		if SameCharset(candidate.Charset, exclude) {
 			continue
 		}
 		alternatives = append(alternatives, candidate)

@@ -35,9 +35,6 @@ func TestCandidatesRanksCyrillicFirst(t *testing.T) {
 	if ranked[0].Charset != "windows-1251" {
 		t.Errorf("top candidate = %q, want windows-1251 (full list: %v)", ranked[0].Charset, ranked)
 	}
-	if !ranked[0].Supported {
-		t.Error("windows-1251 reported as unsupported")
-	}
 	for i := 1; i < len(ranked); i++ {
 		if ranked[i].Confidence > ranked[i-1].Confidence {
 			t.Errorf("candidates out of order: %v", ranked)
@@ -105,18 +102,17 @@ func TestCandidatesFromSampleLargeBuffer(t *testing.T) {
 	}
 }
 
-func TestSupportedAlternativesAndFormat(t *testing.T) {
+func TestAlternativesAndFormat(t *testing.T) {
 	ranked := []Candidate{
-		{Charset: "euc-tw", Confidence: 90, Supported: false},
-		{Charset: "windows-1251", Confidence: 62, Supported: true},
-		{Charset: "utf-8", Confidence: 55, Supported: true},
+		{Charset: "windows-1251", Confidence: 62},
+		{Charset: "utf-8", Confidence: 55},
 	}
 
-	alternatives := SupportedAlternatives(ranked, "ascii") // ascii == utf-8, so it drops out
+	alternatives := Alternatives(ranked, "ascii") // ascii == utf-8, so it drops out
 	if got := FormatCandidates(alternatives); got != "windows-1251 (62%)" {
 		t.Errorf("alternatives = %q", got)
 	}
-	if got := FormatCandidates(SupportedAlternatives(ranked, "windows-1251")); got != "utf-8 (55%)" {
+	if got := FormatCandidates(Alternatives(ranked, "windows-1251")); got != "utf-8 (55%)" {
 		t.Errorf("excluding the verdict itself = %q", got)
 	}
 	if got := FormatCandidates(nil); got != "" {

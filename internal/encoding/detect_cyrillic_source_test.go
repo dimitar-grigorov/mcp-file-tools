@@ -102,8 +102,8 @@ func TestCandidates_SparseCyrillicInSource(t *testing.T) {
 	if len(ranked) == 0 {
 		t.Fatal("no candidates ranked")
 	}
-	if ranked[0].Charset != "windows-1251" || !ranked[0].Supported {
-		t.Errorf("top candidate = %+v, want supported windows-1251", ranked[0])
+	if ranked[0].Charset != "windows-1251" {
+		t.Errorf("top candidate = %+v, want windows-1251", ranked[0])
 	}
 	for _, candidate := range ranked {
 		if candidate.Charset == "gbk" {

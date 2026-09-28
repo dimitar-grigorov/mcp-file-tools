@@ -76,7 +76,6 @@ func rankedCandidates(path string, mode string, detected string) []EncodingCandi
 		out = append(out, EncodingCandidate{
 			Encoding:   candidate.Charset,
 			Confidence: candidate.Confidence,
-			Supported:  candidate.Supported,
 		})
 	}
 	return out

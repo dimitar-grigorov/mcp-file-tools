@@ -178,12 +178,12 @@ func alternativeEncodings(filePath string, mode string, exclude string) string {
 	if err != nil {
 		return ""
 	}
-	return encoding.FormatCandidates(encoding.SupportedAlternatives(ranked, exclude))
+	return encoding.FormatCandidates(encoding.Alternatives(ranked, exclude))
 }
 
 // alternativesSuffix appends the same list to an error, so a refusal says what to try.
 func alternativesSuffix(data []byte, exclude string) string {
-	alternatives := encoding.FormatCandidates(encoding.SupportedAlternatives(encoding.CandidatesFromSample(data), exclude))
+	alternatives := encoding.FormatCandidates(encoding.Alternatives(encoding.CandidatesFromSample(data), exclude))
 	if alternatives == "" {
 		return ""
 	}
