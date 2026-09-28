@@ -4,6 +4,7 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log/slog"
@@ -88,6 +89,7 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 		slog.Warn("file has mixed line endings", "path", input.Path, "crlf", lineEndings.CRLFCount, "lf", lineEndings.LFCount, "repairTo", eolStyle)
 	}
 
+	drift := reencodeDrifts(data, content, encodingName)
 	content = ConvertLineEndings(content, LineEndingLF)
 	var modifiedContent string
 	var replacements int
@@ -122,6 +124,9 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 	}
 	if eolRepaired > 0 && !input.DryRun {
 		text += fmt.Sprintf("\nFile had mixed line endings; %d repaired to %s to match the rest of the file.", eolRepaired, strings.ToUpper(eolStyle))
+	}
+	if drift {
+		text += fmt.Sprintf("\n%s writes some untouched bytes back as other codes for the same characters, so a version-control diff shows more than this edit.", encodingName)
 	}
 	if readOnlyCleared {
 		text += "\nRead-only flag was cleared."
@@ -179,6 +184,19 @@ func atomicWriteFileWithEncoding(path, content, encodingName, lineEndingStyle st
 		return nil, err
 	}
 	return dataToWrite, nil
+}
+
+// reencodeDrifts reports whether the unedited text encodes back to other bytes, which the text diff cannot show: duplicate code points in Shift_JIS or Big5, escapes in ISO-2022-JP.
+func reencodeDrifts(data []byte, content, encodingName string) bool {
+	if encoding.IsUTF8(encodingName) {
+		return false
+	}
+	enc, ok := encoding.Get(encodingName)
+	if !ok {
+		return false
+	}
+	encoded, err := encoding.Encode(content, enc, encodingName)
+	return err == nil && !bytes.Equal(encoded, data)
 }
 
 func isReadOnly(mode os.FileMode) bool {

@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **`edit_file` says when bytes outside the edit change**: Shift_JIS, Big5 and ISO-2022-JP
+  do not always encode back to the same bytes, and the diff cannot show it.
 - **`convert_encoding` could destroy the original.** Run twice with an explicit `from` and
   `backup: true`, it decoded the converted file again and replaced the `.bak` with it. An
   existing `.bak` now fails the call, and the tool no longer claims `idempotentHint`.
