@@ -18,11 +18,6 @@ func (h *Handler) HandleWriteFile(ctx context.Context, req *mcp.CallToolRequest,
 		return v.Result, WriteFileOutput{}, nil
 	}
 
-	// Guarded before anything else, so a stale write changes nothing.
-	if err := checkExpectedHashOfFile(input.ExpectedHash, v.Path); err != nil {
-		return errorResult(err.Error()), WriteFileOutput{}, nil
-	}
-
 	// Resolve the BOM policy before anything mutates the file
 	policy, err := parseBOMPolicy(input.BOM)
 	if err != nil {
@@ -79,6 +74,10 @@ func (h *Handler) HandleWriteFile(ctx context.Context, req *mcp.CallToolRequest,
 		return r, WriteFileOutput{}, nil
 	}
 
+	// Checked last, right before the rename, to keep the window for another writer small; nothing above touches the file.
+	if err := checkExpectedHashOfFile(input.ExpectedHash, v.Path); err != nil {
+		return errorResult(err.Error()), WriteFileOutput{}, nil
+	}
 	if err := rewriteFile(v.Path, contentToWrite); err != nil {
 		return errorResult(fmt.Sprintf("failed to write file: %v", err)), WriteFileOutput{}, nil
 	}
