@@ -1,7 +1,9 @@
 name: Test
 
 on:
+  # main only: a PR branch is covered by pull_request, a tag by release.yml.
   push:
+    branches: [main]
     paths-ignore:
       - '**.md'
       - 'LICENSE'
@@ -35,8 +37,9 @@ jobs:
         with:
           go-version-file: go.mod
 
+      # -race on Linux and Windows; on macOS it would only add minutes.
       - name: Run tests
-        run: go test -race ./...
+        run: go test ${{ matrix.os != 'macos-latest' && '-race' || '' }} ./...
 
       - name: Verify go.mod and go.sum are tidy
         if: matrix.os == 'ubuntu-latest'

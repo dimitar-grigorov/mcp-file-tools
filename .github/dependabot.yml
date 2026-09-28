@@ -20,12 +20,21 @@ updates:
         patterns:
           - "*"
 
+  # One PR: codeql-action's init, analyze and upload-sarif fail CI when bumped apart.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      actions:
+        patterns:
+          - "*"
   # Both are pinned by digest, so nothing updates them without this.
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      images:
+        patterns:
+          - "*"
