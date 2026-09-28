@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   existing `.bak` now fails the call, and the tool no longer claims `idempotentHint`.
 - **An available update never reached the model.** The startup check sent it as an MCP log
   message, which the SDK drops until a client sets a log level; it now rides once on the next
-  successful tool result.
+  successful tool result. A client that skips the handshake starts the check on its first call.
 - **20 more encodings, 45 in all**: UTF-32 LE/BE, Big5, Shift_JIS, EUC-JP/KR, ISO-2022-JP,
   MacRoman, the DOS code pages (437, 850, 852, 855) and the rest of the ISO-8859 family.
 - **Detection only guesses the new multi-byte ones.** A single-byte table reads almost any

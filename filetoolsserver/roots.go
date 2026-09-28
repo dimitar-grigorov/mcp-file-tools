@@ -35,8 +35,7 @@ func listRootURIs(ctx context.Context, session *mcp.ServerSession) ([]string, er
 
 func createInitializedHandler(h *handler.Handler) func(context.Context, *mcp.InitializedRequest) {
 	return func(ctx context.Context, req *mcp.InitializedRequest) {
-		// Async update check — runs regardless of roots support.
-		go h.CheckForUpdatesAsync(req.Session, Version)
+		h.StartUpdateCheck(req.Session, Version)
 
 		// 2026-07-28 clients cannot be asked at all (SEP-2322), so failure is routine.
 		uris, err := listRootURIs(ctx, req.Session)

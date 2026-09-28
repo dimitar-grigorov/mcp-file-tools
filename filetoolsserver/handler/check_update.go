@@ -59,8 +59,12 @@ func (h *Handler) installEnv(session *mcp.ServerSession) install.Env {
 	return env
 }
 
-// CheckForUpdatesAsync runs the startup check. Call once on initialization.
-func (h *Handler) CheckForUpdatesAsync(session *mcp.ServerSession, version string) {
+// StartUpdateCheck runs the startup check once, in the background, from whichever comes first: the handshake or a tool call.
+func (h *Handler) StartUpdateCheck(session *mcp.ServerSession, version string) {
+	h.updateCheck.Do(func() { go h.checkForUpdates(session, version) })
+}
+
+func (h *Handler) checkForUpdates(session *mcp.ServerSession, version string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -80,14 +84,20 @@ func (h *Handler) setUpdateNotice(msg string) {
 
 // AppendUpdateNotice adds a pending update notice to the next successful tool result.
 // MCP log messages reach no model; a text block after the SDK's JSON one leaves that intact.
-func (h *Handler) AppendUpdateNotice(next mcp.MethodHandler) mcp.MethodHandler {
-	return func(ctx context.Context, method string, req mcp.Request) (mcp.Result, error) {
-		res, err := next(ctx, method, req)
-		if r, ok := res.(*mcp.CallToolResult); ok && err == nil && !r.IsError {
-			if p := h.updateNotice.Load(); p != nil && p != &noticeDelivered && h.updateNotice.CompareAndSwap(p, &noticeDelivered) {
-				r.Content = append(r.Content, &mcp.TextContent{Text: *p})
+func (h *Handler) AppendUpdateNotice(version string) mcp.Middleware {
+	return func(next mcp.MethodHandler) mcp.MethodHandler {
+		return func(ctx context.Context, method string, req mcp.Request) (mcp.Result, error) {
+			// A 2026-07-28 client may never send notifications/initialized.
+			if ss, ok := req.GetSession().(*mcp.ServerSession); ok && method == "tools/call" {
+				h.StartUpdateCheck(ss, version)
 			}
+			res, err := next(ctx, method, req)
+			if r, ok := res.(*mcp.CallToolResult); ok && err == nil && !r.IsError {
+				if p := h.updateNotice.Load(); p != nil && p != &noticeDelivered && h.updateNotice.CompareAndSwap(p, &noticeDelivered) {
+					r.Content = append(r.Content, &mcp.TextContent{Text: *p})
+				}
+			}
+			return res, err
 		}
-		return res, err
 	}
 }

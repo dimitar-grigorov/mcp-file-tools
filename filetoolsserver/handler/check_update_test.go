@@ -18,7 +18,7 @@ type noticeOut struct {
 func TestAppendUpdateNotice(t *testing.T) {
 	h := NewHandler([]string{t.TempDir()})
 	server := mcp.NewServer(&mcp.Implementation{Name: "t", Version: "0"}, nil)
-	server.AddReceivingMiddleware(h.AppendUpdateNotice)
+	server.AddReceivingMiddleware(h.AppendUpdateNotice("dev"))
 	mcp.AddTool(server, &mcp.Tool{Name: "ok"}, func(context.Context, *mcp.CallToolRequest, struct{}) (*mcp.CallToolResult, noticeOut, error) {
 		return nil, noticeOut{OK: true}, nil
 	})
@@ -51,6 +51,12 @@ func TestAppendUpdateNotice(t *testing.T) {
 
 	if got := texts("ok"); len(got) != 1 {
 		t.Fatalf("nothing pending, got %q", got)
+	}
+	// This server has no InitializedHandler, so only the tool call could have started it.
+	started := true
+	h.updateCheck.Do(func() { started = false })
+	if !started {
+		t.Error("a tool call did not start the update check")
 	}
 	h.setUpdateNotice("v2 is out")
 	if got := texts("fail"); len(got) != 1 {

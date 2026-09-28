@@ -76,7 +76,7 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 
 	// addTool fills params, which tells the repair which arguments are strings and must stay text.
 	params := handler.ParamIndex{}
-	server.AddReceivingMiddleware(handler.RepairGuessedParams(params), h.AppendUpdateNotice)
+	server.AddReceivingMiddleware(handler.RepairGuessedParams(params), h.AppendUpdateNotice(Version))
 
 	// Guided workflows, surfaced by clients as user commands.
 	registerPrompts(server)

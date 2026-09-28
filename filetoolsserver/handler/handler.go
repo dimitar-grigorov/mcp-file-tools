@@ -34,6 +34,7 @@ type Handler struct {
 	plainUTF8Count atomic.Int64
 
 	updateNotice atomic.Pointer[string] // nil: none yet; &noticeDelivered: already given
+	updateCheck  sync.Once
 }
 
 // plainUTF8HintCap bounds the seen-set: a session past this has had the hint.
