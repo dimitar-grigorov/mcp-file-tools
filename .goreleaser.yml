@@ -10,8 +10,10 @@ builds:
     binary: mcp-file-tools
     env:
       - CGO_ENABLED=0
-    # Reproducible builds: same tag, same bytes.
+    # Reproducible builds: same tag, same bytes, whatever the checkout path.
     mod_timestamp: '{{ .CommitTimestamp }}'
+    flags:
+      - -trimpath
     goos:
       - linux
       - windows

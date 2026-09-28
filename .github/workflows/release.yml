@@ -32,6 +32,11 @@ jobs:
       - name: Run go vet
         run: go vet ./...
 
+      # A tag cut between weekly scans must not ship a known vulnerability.
+      - name: Run govulncheck
+        if: matrix.os == 'ubuntu-latest'
+        run: go tool -modfile=tools/go.mod govulncheck ./...
+
       - name: Test release scripts
         run: node --test scripts/generate-server-json.test.js scripts/verify-release-version.test.js
 
