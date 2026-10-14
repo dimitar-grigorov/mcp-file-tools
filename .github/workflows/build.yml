@@ -1,15 +1,15 @@
 name: Build
 
+# A dry run of the release, so a broken .goreleaser.yml shows up here rather than on a tag.
 on:
   workflow_dispatch:
   push:
-    branches: [main, master]
+    branches: [main]
     paths-ignore:
       - '**.md'
       - 'LICENSE'
       - '.gitignore'
   pull_request:
-    branches: [main, master]
     paths-ignore:
       - '**.md'
       - 'LICENSE'
@@ -23,33 +23,32 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  snapshot:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
 
-      - name: Verify dependencies
-        run: go mod tidy && git diff --exit-code go.mod go.sum
-
-      - name: Build
-        run: go build -v ./cmd/mcp-file-tools
-
-      - name: Build cross-platform
-        run: |
-          mkdir -p dist
-          GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o dist/mcp-file-tools-windows-amd64.exe ./cmd/mcp-file-tools
-          GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/mcp-file-tools-linux-amd64 ./cmd/mcp-file-tools
-          GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o dist/mcp-file-tools-darwin-amd64 ./cmd/mcp-file-tools
-          GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o dist/mcp-file-tools-darwin-arm64 ./cmd/mcp-file-tools
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      - name: Install GoReleaser
+        uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
         with:
-          name: binaries
-          path: dist/
+          distribution: goreleaser
+          version: 'v2.18.3'
+          install-only: true
+
+      - name: Check the config
+        run: goreleaser check
+
+      - name: Snapshot release
+        run: goreleaser release --snapshot --clean
+
+      - name: List the artifacts
+        run: ls -l dist/*.tar.gz dist/*.zip dist/checksums.txt
