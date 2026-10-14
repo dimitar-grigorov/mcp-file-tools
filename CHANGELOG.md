@@ -6,6 +6,10 @@ versions see the [GitHub releases](https://github.com/dimitar-grigorov/mcp-file-
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+- Releases ship one archive per platform: `.zip` for Windows, `.tar.gz` elsewhere.
+
 ## [4.5.0] - 2026-09-28
 
 - **45 encodings**, 20 new: UTF-32, Big5, Shift_JIS, EUC-JP/KR, ISO-2022-JP, MacRoman, DOS
