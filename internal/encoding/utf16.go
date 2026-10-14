@@ -97,21 +97,25 @@ func (a *utf16Analyzer) Write(data []byte) {
 func (a *utf16Analyzer) consumePair(first, second byte) {
 	a.evidence.unitCount++
 
-	pair := [2]byte{first, second}
-	if pair[a.spec.expectedZeroByte] == 0 {
+	// Byte arithmetic rather than the ByteOrder interface: a slice through an interface allocates on every pair.
+	high, low := first, second // high byte first as in big endian
+	if a.spec.expectedZeroByte == 1 {
+		high, low = second, first
+	}
+	if high == 0 {
 		a.evidence.expectedZeros++
 	}
-	if pair[1-a.spec.expectedZeroByte] == 0 {
+	if low == 0 {
 		a.evidence.unexpectedZeros++
 	}
-	if pair[a.spec.expectedZeroByte] <= utf16PageByte {
+	if high <= utf16PageByte {
 		a.evidence.expectedPage++
 	}
-	if pair[1-a.spec.expectedZeroByte] <= utf16PageByte {
+	if low <= utf16PageByte {
 		a.evidence.unexpectedPage++
 	}
 
-	unit := a.spec.order.Uint16(pair[:])
+	unit := uint16(high)<<8 | uint16(low)
 
 	if a.hasPendingHigh {
 		if unit >= 0xDC00 && unit <= 0xDFFF {

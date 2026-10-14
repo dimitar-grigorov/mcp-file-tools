@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 - Releases ship one archive per platform: `.zip` for Windows, `.tar.gz` elsewhere.
+- Detection no longer allocates per UTF-16 code unit; reading a multi-megabyte legacy file
+  makes a few thousand allocations instead of millions.
 
 ## [4.5.0] - 2026-09-28
 
