@@ -6,6 +6,10 @@ on:
     - cron: '19 4 * * 1'
   push:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+      - '.gitignore'
   workflow_dispatch:
 
 permissions: read-all

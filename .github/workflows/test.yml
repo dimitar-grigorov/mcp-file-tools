@@ -37,9 +37,9 @@ jobs:
         with:
           go-version-file: go.mod
 
-      # -race on Linux and Windows; on macOS it would only add minutes.
+      # -race on Linux only; the concurrent code is not platform specific and it slows Windows most.
       - name: Run tests
-        run: go test ${{ matrix.os != 'macos-latest' && '-race' || '' }} ./...
+        run: go test ${{ matrix.os == 'ubuntu-latest' && '-race' || '' }} ./...
 
       - name: Verify go.mod and go.sum are tidy
         if: matrix.os == 'ubuntu-latest'
