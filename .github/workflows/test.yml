@@ -75,7 +75,7 @@ jobs:
         run: bash scripts/validate-workflows.sh
 
       - name: Test release scripts
-        run: node --test scripts/generate-server-json.test.js scripts/verify-release-version.test.js
+        run: node --test scripts/generate-server-json.test.js scripts/verify-release-version.test.js scripts/check-pinned-tools.test.js
 
       - name: Test all server operations
         run: go run test_server.go
