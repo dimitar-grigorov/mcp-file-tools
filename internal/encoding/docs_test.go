@@ -15,7 +15,7 @@ import (
 
 // TOOLS.md's encoding table is hand-maintained; MacCyrillic shipped missing from it in 3.4.0.
 func TestToolsDocListsEveryEncoding(t *testing.T) {
-	path := filepath.Join("..", "..", "TOOLS.md")
+	path := filepath.Join("..", "..", "docs", "TOOLS.md")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read %s: %v", path, err)

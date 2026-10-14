@@ -7,7 +7,7 @@ const { spawnSync } = require('node:child_process');
 
 const root = path.resolve(__dirname, '..');
 const generator = path.join(root, 'scripts', 'generate-server-json.js');
-const templatePath = path.join(root, 'server.template.json');
+const templatePath = path.join(__dirname, 'server.template.json');
 
 const binaries = [
   'mcp-file-tools_windows_amd64.exe',

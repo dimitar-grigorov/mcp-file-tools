@@ -29,7 +29,7 @@ if (version === templateVersion) {
 }
 
 const root = path.resolve(__dirname, '..');
-const templatePath = path.join(root, 'server.template.json');
+const templatePath = path.join(__dirname, 'server.template.json');
 const checksumsPath = path.resolve(process.cwd(), process.argv[3] || 'checksums.txt');
 const outputPath = path.resolve(process.cwd(), process.argv[4] || 'server.json');
 

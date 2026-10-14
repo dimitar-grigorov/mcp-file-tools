@@ -26,7 +26,7 @@ or with each other. Adding an encoding means a `TOOLS.md` row and those three.
 | `internal/filesystem/` | `Walk` — the one containment-checked traversal behind tree, grep, search_files |
 | `internal/config/`, `internal/updater/` | Startup allowed-dir baseline, env config, update check |
 | `internal/errkind/`, `internal/workpool/`, `internal/install/` | Error categories, ordered bounded concurrency, install/client detection |
-| `TOOLS.md` | Per-tool parameter reference, kept in sync with registrations |
+| `docs/TOOLS.md` | Per-tool parameter reference, kept in sync with registrations |
 | `tools/` | staticcheck, govulncheck, actionlint, pinned in their own module |
 
 ## Commands

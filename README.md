@@ -261,33 +261,33 @@ rejected rather than followed.
 ## Tools
 
 20 tools — every one that touches text content is encoding-aware:
-- [`read_text_file`](TOOLS.md#read_text_file) - Read files with encoding auto-detection and conversion
-- [`read_multiple_files`](TOOLS.md#read_multiple_files) - Read multiple files concurrently with encoding support
-- [`write_file`](TOOLS.md#write_file) - Write files in specific encodings
-- [`edit_file`](TOOLS.md#edit_file) - Line-based edits with diff preview and whitespace-flexible matching
-- [`copy_file`](TOOLS.md#copy_file) - Copy a file to a new location
-- [`delete_file`](TOOLS.md#delete_file) - Delete a file
-- [`list_directory`](TOOLS.md#list_directory) - Browse directories with pattern filtering
-- [`tree`](TOOLS.md#tree) - Compact indented tree view, optionally annotated with each file's encoding
-- [`search_files`](TOOLS.md#search_files) - Recursively search for files matching glob patterns
-- [`grep_text_files`](TOOLS.md#grep_text_files) - Regex search in file contents with encoding support
-- [`detect_encoding`](TOOLS.md#detect_encoding) - Auto-detect file encoding with confidence score
-- [`convert_encoding`](TOOLS.md#convert_encoding) - Convert file between encodings
-- [`manage_line_endings`](TOOLS.md#manage_line_endings) - Detect or convert line endings (CRLF/LF/mixed)
-- [`manage_bom`](TOOLS.md#manage_bom) - Detect, strip, or add Unicode BOM
-- [`list_encodings`](TOOLS.md#list_encodings) - Show all supported encodings
-- [`get_file_info`](TOOLS.md#get_file_info) - Get file/directory metadata
-- [`create_directory`](TOOLS.md#create_directory) - Create directories recursively (mkdir -p)
-- [`move_file`](TOOLS.md#move_file) - Move or rename files and directories
-- [`list_allowed_directories`](TOOLS.md#list_allowed_directories) - Show accessible directories
-- [`check_for_updates`](TOOLS.md#check_for_updates) - Check whether a newer release is available
+- [`read_text_file`](docs/TOOLS.md#read_text_file) - Read files with encoding auto-detection and conversion
+- [`read_multiple_files`](docs/TOOLS.md#read_multiple_files) - Read multiple files concurrently with encoding support
+- [`write_file`](docs/TOOLS.md#write_file) - Write files in specific encodings
+- [`edit_file`](docs/TOOLS.md#edit_file) - Line-based edits with diff preview and whitespace-flexible matching
+- [`copy_file`](docs/TOOLS.md#copy_file) - Copy a file to a new location
+- [`delete_file`](docs/TOOLS.md#delete_file) - Delete a file
+- [`list_directory`](docs/TOOLS.md#list_directory) - Browse directories with pattern filtering
+- [`tree`](docs/TOOLS.md#tree) - Compact indented tree view, optionally annotated with each file's encoding
+- [`search_files`](docs/TOOLS.md#search_files) - Recursively search for files matching glob patterns
+- [`grep_text_files`](docs/TOOLS.md#grep_text_files) - Regex search in file contents with encoding support
+- [`detect_encoding`](docs/TOOLS.md#detect_encoding) - Auto-detect file encoding with confidence score
+- [`convert_encoding`](docs/TOOLS.md#convert_encoding) - Convert file between encodings
+- [`manage_line_endings`](docs/TOOLS.md#manage_line_endings) - Detect or convert line endings (CRLF/LF/mixed)
+- [`manage_bom`](docs/TOOLS.md#manage_bom) - Detect, strip, or add Unicode BOM
+- [`list_encodings`](docs/TOOLS.md#list_encodings) - Show all supported encodings
+- [`get_file_info`](docs/TOOLS.md#get_file_info) - Get file/directory metadata
+- [`create_directory`](docs/TOOLS.md#create_directory) - Create directories recursively (mkdir -p)
+- [`move_file`](docs/TOOLS.md#move_file) - Move or rename files and directories
+- [`list_allowed_directories`](docs/TOOLS.md#list_allowed_directories) - Show accessible directories
+- [`check_for_updates`](docs/TOOLS.md#check_for_updates) - Check whether a newer release is available
 
-Plus three [prompts](TOOLS.md#prompts) — `audit_encodings`, `fix_mojibake`,
+Plus three [prompts](docs/TOOLS.md#prompts) — `audit_encodings`, `fix_mojibake`,
 `migrate_to_utf8` — surfaced by clients as user commands.
 
-See [TOOLS.md](TOOLS.md) for detailed parameters and examples. Calls shaped like
+See [TOOLS.md](docs/TOOLS.md) for detailed parameters and examples. Calls shaped like
 Claude Code's built-in Read/Write/Edit/Grep are accepted too — the
-[alias layer](TOOLS.md#built-in-name-aliases) translates them where the semantics
+[alias layer](docs/TOOLS.md#built-in-name-aliases) translates them where the semantics
 match exactly, so a model's habits don't fail the call.
 
 **Out of scope:** binary/media reading (`read_media_file`). This is a *text*
@@ -314,7 +314,7 @@ leave it to auto-detection.
 | Japanese and Korean | Shift_JIS, EUC-JP, ISO-2022-JP, EUC-KR |
 
 Common aliases are accepted (`cp1251`, `latin1`, `gb2312`, `tis-620`, …) —
-[`list_encodings`](TOOLS.md#list_encodings) prints the whole table with aliases.
+[`list_encodings`](docs/TOOLS.md#list_encodings) prints the whole table with aliases.
 
 Auto-detection never guesses MacRoman, the DOS pages or the rarer ISO tables; name them
 explicitly. UTF-32 is found only by its BOM.
@@ -395,10 +395,10 @@ make lint    # go vet, go fmt, staticcheck (same pinned version as CI)
 make build
 ```
 
-`test_server.go` is an end-to-end smoke test over every tool, run by CI on each push:
+`scripts/smoke-test` is an end-to-end smoke test over every tool, run by CI on each push:
 
 ```bash
-go run test_server.go
+go run ./scripts/smoke-test
 ```
 
 ### Debugging

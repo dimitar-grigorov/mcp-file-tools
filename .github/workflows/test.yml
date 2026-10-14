@@ -78,4 +78,4 @@ jobs:
         run: node --test scripts/generate-server-json.test.js scripts/verify-release-version.test.js scripts/check-pinned-tools.test.js
 
       - name: Test all server operations
-        run: go run test_server.go
+        run: go run ./scripts/smoke-test

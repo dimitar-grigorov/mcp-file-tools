@@ -614,7 +614,7 @@ With no answer the call fails with `could not detect encoding` and lists what to
 the error when it refuses an untrusted guess.
 
 Setting `MCP_DETECTION_CANDIDATES` pins the answer to a known list and filters `candidates`
-to it — see [Pinning the encodings](README.md#pinning-the-encodings).
+to it — see [Pinning the encodings](../README.md#pinning-the-encodings).
 
 ### convert_encoding
 

@@ -12,7 +12,7 @@ Don't reintroduce a `release: published` trigger — GoReleaser creates the rele
 workflow's `GITHUB_TOKEN`, whose events suppress triggers. That silently published nothing
 in 2.0.1 and 3.0.0.
 
-`server.json` is not committed. `server.template.json` holds the metadata with a `0.0.0`
+`server.json` is not committed. `scripts/server.template.json` holds the metadata with a `0.0.0`
 version and zero checksums; `scripts/generate-server-json.js` fills in the real values in
 CI, and `scripts/verify-release-version.js` rejects a tag disagreeing with
 plugin.json/marketplace.json.
