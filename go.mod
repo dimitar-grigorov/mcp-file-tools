@@ -1,13 +1,13 @@
 module github.com/dimitar-grigorov/mcp-file-tools/v4
 
-go 1.27.1
+go 1.27.2
 
 require (
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/pmezard/go-difflib v1.0.0
 	github.com/wlynxg/chardet v1.0.5
 	golang.org/x/sys v0.49.0
-	golang.org/x/text v0.42.0
+	golang.org/x/text v0.43.0
 )
 
 require (
@@ -15,7 +15,7 @@ require (
 	github.com/segmentio/asm v1.2.1 // indirect
 	github.com/segmentio/encoding v0.5.4 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
-	golang.org/x/oauth2 v0.36.0 // indirect
-	golang.org/x/sync v0.23.0 // indirect
-	golang.org/x/time v0.15.0 // indirect
+	golang.org/x/oauth2 v0.37.0 // indirect
+	golang.org/x/sync v0.24.0 // indirect
+	golang.org/x/time v0.16.0 // indirect
 )

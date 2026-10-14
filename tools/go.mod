@@ -1,7 +1,7 @@
 // Own module so the linters' dependencies stay out of the main module's graph.
 module github.com/dimitar-grigorov/mcp-file-tools/tools
 
-go 1.27.1
+go 1.27.2
 
 tool (
 	github.com/rhysd/actionlint/cmd/actionlint
@@ -22,11 +22,11 @@ require (
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.3 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20231108232855-2478ac86f678 // indirect
-	golang.org/x/mod v0.41.0 // indirect
-	golang.org/x/sync v0.23.0 // indirect
-	golang.org/x/sys v0.48.0 // indirect
-	golang.org/x/telemetry v0.0.0-20260908163034-4bcc4b2ee518 // indirect
-	golang.org/x/tools v0.50.0 // indirect
-	golang.org/x/vuln v1.8.0 // indirect
-	honnef.co/go/tools v0.8.1 // indirect
+	golang.org/x/mod v0.42.0 // indirect
+	golang.org/x/sync v0.24.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
+	golang.org/x/telemetry v0.0.0-20261010193011-f71dc92da45e // indirect
+	golang.org/x/tools v0.52.0 // indirect
+	golang.org/x/vuln v1.9.0 // indirect
+	honnef.co/go/tools v0.8.2 // indirect
 )

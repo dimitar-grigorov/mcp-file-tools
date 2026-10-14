@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Built with Go 1.27.2, which fixes eight standard-library vulnerabilities in net/http and crypto/tls.
 - Releases ship one archive per platform: `.zip` for Windows, `.tar.gz` elsewhere.
 - Detection no longer allocates per UTF-16 code unit; reading a multi-megabyte legacy file
   makes a few thousand allocations instead of millions.
