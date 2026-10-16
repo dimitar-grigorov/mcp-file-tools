@@ -1,9 +1,6 @@
 name: Publish to MCP Registry
 
-# No `release: published` trigger: GoReleaser creates the release with the
-# workflow's GITHUB_TOKEN, and GitHub suppresses workflow triggers from
-# GITHUB_TOKEN events - so that trigger never fired (v2.0.1 and v3.0.0 were
-# silently never published). Release.yml calls this workflow directly instead.
+# Called from release.yml: GITHUB_TOKEN events never fire a `release: published` trigger.
 on:
   workflow_call:         # chained from release.yml after GoReleaser
     inputs:
@@ -33,8 +30,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # A manual dispatch can outrun GoReleaser, which uploads the release assets
-      # minutes after the tag lands. Wait for them rather than 404 on the race.
+      # A manual dispatch can start before GoReleaser has uploaded the assets.
       - name: Download checksums
         run: |
           set -euo pipefail

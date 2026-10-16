@@ -25,6 +25,9 @@ jobs:
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
+          cache-dependency-path: |
+            go.sum
+            tools/go.sum
 
       - name: Run tests
         run: go test -race ./...
@@ -32,7 +35,6 @@ jobs:
       - name: Run go vet
         run: go vet ./...
 
-      # A tag cut between weekly scans must not ship a known vulnerability.
       - name: Run govulncheck
         if: matrix.os == 'ubuntu-latest'
         run: go tool -modfile=tools/go.mod govulncheck ./...
@@ -84,8 +86,6 @@ jobs:
           cp "$BUNDLE" mcp-file-tools.intoto.jsonl
           gh release upload "$TAG" mcp-file-tools.intoto.jsonl --clobber
 
-  # Chained call rather than a `release: published` trigger: GoReleaser creates
-  # the release with GITHUB_TOKEN, whose events never trigger other workflows.
   publish-registry:
     needs: release
     uses: ./.github/workflows/publish-registry.yml

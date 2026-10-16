@@ -1,7 +1,6 @@
 name: Test
 
 on:
-  # main only: a PR branch is covered by pull_request, a tag by release.yml.
   push:
     branches: [main]
     paths-ignore:
@@ -36,6 +35,9 @@ jobs:
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
+          cache-dependency-path: |
+            go.sum
+            tools/go.sum
 
       # -race on Linux only; the concurrent code is not platform specific and it slows Windows most.
       - name: Run tests
@@ -51,7 +53,6 @@ jobs:
       - name: Run go vet
         run: go vet ./...
 
-      # go vet and staticcheck ignore formatting, and `make lint` rewrites rather than reports.
       - name: Check gofmt
         if: matrix.os == 'ubuntu-latest'
         run: |
