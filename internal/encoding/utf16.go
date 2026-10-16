@@ -5,6 +5,7 @@ package encoding
 
 import (
 	"encoding/binary"
+	"sync"
 	"unicode"
 	"unicode/utf16"
 	"unicode/utf8"
@@ -63,6 +64,7 @@ type utf16Evidence struct {
 type utf16Analyzer struct {
 	spec     utf16Spec
 	evidence utf16Evidence
+	classes  *[1 << 16]runeClass
 
 	pendingByte    byte
 	hasPendingByte bool
@@ -72,7 +74,8 @@ type utf16Analyzer struct {
 
 func newUTF16Analyzer(spec utf16Spec) *utf16Analyzer {
 	return &utf16Analyzer{
-		spec: spec,
+		spec:    spec,
+		classes: bmpRuneClasses(),
 		evidence: utf16Evidence{
 			charset:         spec.charset,
 			structuralValid: true,
@@ -152,21 +155,64 @@ func (a *utf16Analyzer) consumePair(first, second byte) {
 func (a *utf16Analyzer) observeRune(value rune) {
 	a.evidence.runeCount++
 
-	switch {
-	case value == utf8.RuneError:
+	var class runeClass
+	if uint32(value) < uint32(len(a.classes)) {
+		class = a.classes[value]
+	} else {
+		class = classifyRune(value)
+	}
+	switch class {
+	case runeReplacement:
 		a.evidence.replacementRunes++
-	case value == 0:
+	case runeNUL:
 		a.evidence.nulCount++
-	case isUnicodeNoncharacter(value):
+	case runeNoncharacter:
 		a.evidence.noncharacters++
-	case value == '\n' || value == '\r' || value == '\t' || unicode.IsSpace(value):
+	case runeGood:
 		a.evidence.goodRuneCount++
-	case unicode.IsPrint(value):
-		a.evidence.goodRuneCount++
-	case unicode.IsControl(value):
+	case runeControl:
 		a.evidence.controlCount++
 	}
 }
+
+type runeClass uint8
+
+const (
+	runeOther runeClass = iota
+	runeGood
+	runeControl
+	runeNUL
+	runeReplacement
+	runeNoncharacter
+)
+
+func classifyRune(value rune) runeClass {
+	switch {
+	case value == utf8.RuneError:
+		return runeReplacement
+	case value == 0:
+		return runeNUL
+	case isUnicodeNoncharacter(value):
+		return runeNoncharacter
+	case value == '\n' || value == '\r' || value == '\t' || unicode.IsSpace(value):
+		return runeGood
+	case unicode.IsPrint(value):
+		return runeGood
+	case unicode.IsControl(value):
+		return runeControl
+	}
+	return runeOther
+}
+
+// bmpRuneClasses caches classifyRune for the BMP: the unicode range-table lookups took
+// about half of detecting a legacy file. Built on first use, not at startup.
+var bmpRuneClasses = sync.OnceValue(func() *[1 << 16]runeClass {
+	table := new([1 << 16]runeClass)
+	for r := range rune(len(table)) {
+		table[r] = classifyRune(r)
+	}
+	return table
+})
 
 func (a *utf16Analyzer) Finish() utf16Evidence {
 	if a.hasPendingByte {

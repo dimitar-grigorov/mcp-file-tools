@@ -248,3 +248,22 @@ func FuzzDetectUTF16Validation(f *testing.F) {
 		}
 	})
 }
+
+func TestBMPRuneClassesMatchClassifyRune(t *testing.T) {
+	table := bmpRuneClasses()
+	for r := range rune(len(table)) {
+		if got, want := table[r], classifyRune(r); got != want {
+			t.Fatalf("U+%04X: table %d, classifyRune %d", r, got, want)
+		}
+	}
+	for r, want := range map[rune]runeClass{
+		'a': runeGood, 'Ж': runeGood, ' ': runeGood, '\n': runeGood, 0x3000: runeGood,
+		0: runeNUL, 0x01: runeControl, 0x7F: runeControl,
+		0xFFFD: runeReplacement, 0xFFFE: runeNoncharacter, 0xFDD0: runeNoncharacter,
+		0x0378: runeOther, 0x1F600: runeGood, 0x10FFFF: runeNoncharacter,
+	} {
+		if got := classifyRune(r); got != want {
+			t.Errorf("classifyRune(U+%04X) = %d, want %d", r, got, want)
+		}
+	}
+}

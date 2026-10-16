@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Reading a legacy file is about a third faster: detection caches the Unicode class of each BMP character.
 - Fixed: `manage_bom` with `action: "detect"` failed on an empty file.
 
 ## [4.5.1] - 2026-10-14
