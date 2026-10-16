@@ -370,8 +370,7 @@ func TestEditFile_CP1251Encoding(t *testing.T) {
 	}
 }
 
-// Regression: a pure-ASCII file gives no signal about its real legacy encoding,
-// so edit_file must fall back to MCP_DEFAULT_ENCODING instead of hardcoding utf-8.
+// A pure-ASCII file says nothing about its legacy encoding, so edit_file falls back to MCP_DEFAULT_ENCODING.
 func TestEditFile_InconclusiveDetection_UsesConfiguredDefault(t *testing.T) {
 	t.Setenv("MCP_DEFAULT_ENCODING", "cp1251")
 

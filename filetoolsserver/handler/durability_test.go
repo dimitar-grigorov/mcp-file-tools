@@ -12,8 +12,7 @@ import (
 	"testing"
 )
 
-// The backup must be a copy: if the original is renamed away instead, the target
-// is briefly absent and a crash in that window loses the file.
+// The backup must be a copy: renaming the original away leaves a window where a crash loses the file.
 func TestAtomicWriteWithBackup_KeepsTargetInPlace(t *testing.T) {
 	dir := t.TempDir()
 	target := filepath.Join(dir, "file.txt")
@@ -24,8 +23,7 @@ func TestAtomicWriteWithBackup_KeepsTargetInPlace(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// A hard link keeps a handle on the original file object, so os.SameFile can
-	// tell a copied backup from the original renamed away.
+	// A hard link keeps the original file object, so os.SameFile tells a copy from a rename.
 	probe := filepath.Join(dir, "probe.link")
 	if err := os.Link(target, probe); err != nil {
 		t.Skipf("hard links unsupported here: %v", err)

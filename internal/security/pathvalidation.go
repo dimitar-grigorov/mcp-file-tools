@@ -34,8 +34,7 @@ func ValidatePath(requestedPath string, allowedDirs []string) (string, error) {
 	normalized := normalizePath(absolute)
 
 	if !isPathWithinAllowedDirectories(normalized, allowedDirs) {
-		// Retry with 8.3 names expanded: the forms may differ only in short/long naming.
-		// Expanded once here, never inside the per-allowed-dir loop — it hits the disk.
+		// Retry with 8.3 names expanded, once here rather than per allowed dir, since it hits the disk.
 		if expanded := expandShortPath(absolute); expanded != absolute {
 			absolute = expanded
 			normalized = normalizePath(absolute)
@@ -135,8 +134,7 @@ func NormalizeAllowedDir(dir string) (string, error) {
 	return normalizePath(expandShortPath(filepath.Clean(resolved))), nil
 }
 
-// isPathWithinAllowedDirectories is the lexical containment test only — it does not
-// resolve links, so callers must pair it with a resolved check as ValidatePath does.
+// isPathWithinAllowedDirectories is lexical only; pair it with a resolved check as ValidatePath does.
 func isPathWithinAllowedDirectories(absolutePath string, allowedDirs []string) bool {
 	if absolutePath == "" || len(allowedDirs) == 0 {
 		return false
@@ -174,10 +172,8 @@ func isPathWithinAllowedDirectories(absolutePath string, allowedDirs []string) b
 	return false
 }
 
-// resolvesInside is the lexical gate's last resort: allowed dirs are stored resolved,
-// so a platform alias spelling (macOS /var for /private/var) only matches once resolved.
-// Safe because it can only reach content that is genuinely inside an allowed dir —
-// the resolved check below stays authoritative. Errors mean "not inside".
+// resolvesInside matches an alias spelling (macOS /var for /private/var) once resolved; errors mean not inside.
+// Safe: it only reaches what is really inside an allowed dir, and the resolved check stays authoritative.
 func resolvesInside(absolute string, allowedDirs []string) bool {
 	resolved, _, err := resolvePathAllowMissing(absolute)
 	if err != nil {
@@ -186,8 +182,7 @@ func resolvesInside(absolute string, allowedDirs []string) bool {
 	return isPathWithinAllowedDirectories(normalizePath(resolved), allowedDirs)
 }
 
-// resolvePathAllowMissing resolves the nearest existing ancestor and re-projects the
-// missing suffix onto it. Existing but unresolvable paths fail closed.
+// resolvePathAllowMissing resolves the nearest existing ancestor and re-attaches the rest; an unresolvable existing path fails closed.
 func resolvePathAllowMissing(path string) (resolved string, exists bool, err error) {
 	current := filepath.Clean(path)
 	var missing []string

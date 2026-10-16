@@ -159,8 +159,7 @@ func createUnifiedDiff(original, modified, filepath string) string {
 	return text
 }
 
-// atomicWriteFileWithEncoding encodes UTF-8 content to the target encoding, writes atomically and returns the bytes written.
-// mode is passed in because the caller reads it before clearing any read-only flag.
+// atomicWriteFileWithEncoding encodes, writes atomically and returns the bytes; mode is read before any read-only flag is cleared.
 func atomicWriteFileWithEncoding(path, content, encodingName, lineEndingStyle string, mode os.FileMode) ([]byte, error) {
 	content = ConvertLineEndings(content, lineEndingStyle)
 

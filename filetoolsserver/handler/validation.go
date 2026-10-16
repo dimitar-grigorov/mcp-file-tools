@@ -10,8 +10,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// cancelled reports an error result if the caller gave up. Check it immediately
-// before a mutating syscall so a cancelled request leaves the file untouched.
+// cancelled returns an error result once the caller gave up; check it right before a mutating syscall.
 func cancelled(ctx context.Context) *mcp.CallToolResult {
 	select {
 	case <-ctx.Done():
@@ -21,8 +20,7 @@ func cancelled(ctx context.Context) *mcp.CallToolResult {
 	}
 }
 
-// shouldLoadEntireFile reports whether path is small enough to load into memory,
-// and its size. Defaults to true on stat error.
+// shouldLoadEntireFile reports whether path fits under the memory threshold, and its size; true on a stat error.
 func (h *Handler) shouldLoadEntireFile(path string) (bool, int64) {
 	info, err := os.Stat(path)
 	if err != nil {

@@ -441,8 +441,7 @@ func TestValidatePath_AllowsMissingPathThroughSafeSymlink(t *testing.T) {
 	}
 }
 
-// An allowed dir given as an alias (macOS /var for /private/var) is stored resolved,
-// so requests spelled with the alias must still validate.
+// An allowed dir given as an alias (macOS /var) is stored resolved, so alias spellings must still validate.
 func TestValidatePath_AllowsAliasSpellingOfAllowedDir(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("skipping symlink tests on Windows - see pathvalidation_windows_test.go")

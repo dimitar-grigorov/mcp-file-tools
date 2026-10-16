@@ -45,8 +45,7 @@ type Visitor func(Entry) (Action, error)
 
 var errStopped = errors.New("walk stopped")
 
-// Walk traverses root in lexical order without following directory links.
-// Regular files inherit their parent's containment, so they cost no syscall.
+// Walk traverses root in lexical order without following directory links; regular files cost no syscall.
 func Walk(ctx context.Context, root string, opts Options, visit Visitor) error {
 	if visit == nil {
 		return errors.New("walk: visitor is required")

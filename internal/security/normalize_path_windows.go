@@ -34,8 +34,7 @@ func expandShortPath(path string) string {
 			return path
 		}
 
-		// GetLongPathName only works on existing paths: expand the nearest
-		// existing ancestor and re-project the missing suffix onto it.
+		// GetLongPathName needs an existing path: expand the nearest existing ancestor, re-attach the rest.
 		parent := filepath.Dir(current)
 		if parent == current {
 			return path

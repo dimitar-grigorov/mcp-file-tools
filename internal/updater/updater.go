@@ -34,8 +34,7 @@ type cache struct {
 	LatestVersion string    `json:"latestVersion"`
 }
 
-// Check returns "" if: no update, disabled via MCP_NO_UPDATE_CHECK=1, dev version, or error.
-// force bypasses the cache. env selects the update steps; a zero Env yields client-neutral ones.
+// Check returns "" with no update, MCP_NO_UPDATE_CHECK=1, a dev build or an error; force skips the cache.
 func Check(ctx context.Context, currentVersion string, force bool, env install.Env) string {
 	if os.Getenv("MCP_NO_UPDATE_CHECK") == "1" || currentVersion == "dev" || currentVersion == "" {
 		return ""
@@ -54,8 +53,7 @@ func Check(ctx context.Context, currentVersion string, force bool, env install.E
 		var err error
 		latestVersion, err = fetchLatestVersion(ctx)
 		if err != nil {
-			// Cache the failure so we don't hammer GitHub when offline.
-			// The empty version means "unknown" — next check after CheckInterval.
+			// Cache the failure too, so an offline machine asks GitHub once per CheckInterval.
 			writeCache(cacheFile, "")
 			return ""
 		}
@@ -69,8 +67,7 @@ func Check(ctx context.Context, currentVersion string, force bool, env install.E
 	return ""
 }
 
-// updateSteps returns only the steps that work for this install: the plugin
-// ignores a re-downloaded binary, and a manual install ignores plugin commands.
+// updateSteps lists only steps that work here: a plugin ignores a re-downloaded binary, a manual install plugin commands.
 func updateSteps(env install.Env) string {
 	if env.Method == install.Plugin {
 		return "Update the plugin:\n" +
@@ -181,8 +178,7 @@ func isNewerVersion(latest, current string) bool {
 	return false
 }
 
-// parseVersion extracts [major, minor, patch] from "1.2.3", "v1.2.3",
-// "1.2.3-beta", "1.2" or "1"; missing or unparsable parts are 0.
+// parseVersion reads [major, minor, patch] from "1.2.3", "v1.2.3", "1.2.3-beta", "1.2" or "1"; missing parts are 0.
 func parseVersion(v string) [3]int {
 	v = strings.TrimPrefix(v, "v")
 	parts := strings.Split(v, ".")

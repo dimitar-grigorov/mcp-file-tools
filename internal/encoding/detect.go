@@ -280,8 +280,7 @@ func bestCyrillicTable(data []byte) (string, plausibility) {
 	return name, best
 }
 
-// DetectSample samples beginning, middle and end; reports whether to trust it.
-// TODO: make private once grep and convert_encoding stream instead of buffering.
+// DetectSample samples start, middle and end and says whether to trust it. TODO: unexport once grep and convert stream.
 func DetectSample(data []byte) (DetectionResult, bool) {
 	result := detectSampleFromData(data)
 	return result, result.Confidence >= MinConfidenceThreshold

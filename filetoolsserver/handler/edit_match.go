@@ -12,8 +12,7 @@ import (
 	"strings"
 )
 
-// applyEdits applies edits in order and returns how many places changed. Several
-// matches need replaceAll, since picking one silently edits the wrong copy half the time.
+// applyEdits applies edits in order and counts the places changed; several matches need replaceAll.
 func applyEdits(content string, edits []EditOperation) (string, int, error) {
 	modifiedContent := content
 	replacements := 0

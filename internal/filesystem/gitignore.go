@@ -61,8 +61,7 @@ func parseGitignore(data []byte) []ignorePattern {
 	return out
 }
 
-// Ignored reports whether relPath (slash-relative to the walk root) is ignored.
-// Deeper .gitignore files take precedence; within a file the last match wins.
+// Ignored reports whether relPath (slash-relative to the walk root) is ignored; deeper files and later lines win.
 func (s ignoreStack) Ignored(relPath string, isDir bool) bool {
 	ignored := false
 	for _, scope := range s {

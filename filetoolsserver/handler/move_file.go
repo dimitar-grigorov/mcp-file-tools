@@ -25,8 +25,7 @@ func (h *Handler) HandleMoveFile(ctx context.Context, req *mcp.CallToolRequest, 
 		return errorResult(fmt.Sprintf("source does not exist: %s", input.Source)), MoveFileOutput{}, nil
 	}
 
-	// Lstat, so a dangling symlink counts as present. A destination created
-	// between here and the rename is still clobbered.
+	// Lstat counts a dangling symlink as present; a destination created after this check is still clobbered.
 	if _, err := os.Lstat(dst.Path); err == nil {
 		return errorResult(fmt.Sprintf("destination already exists: %s", input.Destination)), MoveFileOutput{}, nil
 	} else if !os.IsNotExist(err) {
