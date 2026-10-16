@@ -100,6 +100,18 @@ func TestDetectSample_EdgesKeepUTF8Whole(t *testing.T) {
 	}
 }
 
+// A chunk edge inside the file's only non-ASCII rune left each chunk with a broken sequence, and the votes said windows-1252.
+func TestDetectChunked_EdgeKeepsUTF8Whole(t *testing.T) {
+	data := strings.Repeat("a", ChunkSize-1) + "Ж" + strings.Repeat("b", 2*ChunkSize)
+	result, err := DetectFromFile(writeTempFile(t, []byte(data)), "chunked")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Charset != "utf-8" {
+		t.Errorf("got %s (%d%%), want utf-8", result.Charset, result.Confidence)
+	}
+}
+
 // A file with nothing but ASCII in it must still say so rather than reach for a table at random.
 func TestDetectFromFile_AllASCIIStaysASCII(t *testing.T) {
 	path := writeTempFile(t, []byte(asciiFiller(5*ChunkSize)))

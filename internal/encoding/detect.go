@@ -464,6 +464,7 @@ func (s *chunkScan) run() {
 	le := newUTF16Analyzer(utf16LESpec)
 	be := newUTF16Analyzer(utf16BESpec)
 	chunk := make([]byte, ChunkSize)
+	var carry []byte
 	for offset := int64(0); offset < s.size; {
 		n, err := s.r.ReadAt(chunk, offset)
 		if err != nil && err != io.EOF {
@@ -473,9 +474,16 @@ func (s *chunkScan) run() {
 		if n == 0 {
 			break
 		}
+		le.Write(chunk[:n])
+		be.Write(chunk[:n])
+		// The analyzers carry state across chunks; the detector does not, so a rune cut by the edge moves to the next chunk.
 		data := chunk[:n]
-		le.Write(data)
-		be.Write(data)
+		if len(carry) > 0 {
+			data = append(carry, data...)
+		}
+		whole := utf8Whole(data, false, offset+int64(n) < s.size)
+		carry = append([]byte(nil), data[len(whole):]...)
+		data = whole
 		if detected := detectLegacy(data); detected.Charset != "" {
 			// The detector can pass on plain ASCII, and the UTF-8 fallback must not make that evidence.
 			if detected.Charset == "utf-8" && !slices.ContainsFunc(data, func(b byte) bool { return b >= utf8.RuneSelf }) {
