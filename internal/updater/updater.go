@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -26,6 +27,9 @@ const (
 	CheckInterval = 30 * time.Minute
 
 	httpTimeout = 10 * time.Second
+
+	// A release is a few KB of JSON; the cap keeps a misbehaving proxy from filling memory.
+	maxReleaseBytes = 1 << 20
 )
 
 // cache stores the last check result to avoid excessive API calls
@@ -118,7 +122,7 @@ func fetchLatestVersion(ctx context.Context) (string, error) {
 	var release struct {
 		TagName string `json:"tag_name"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxReleaseBytes)).Decode(&release); err != nil {
 		return "", err
 	}
 	return strings.TrimPrefix(release.TagName, "v"), nil
