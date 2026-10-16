@@ -111,37 +111,51 @@ func TestHandleEditFile_ExpectedHashCurrentEditsAndReturnsNewHash(t *testing.T) 
 }
 
 // A rejected edit must not leave the read-only flag cleared behind it.
-func TestHandleEditFile_ExpectedHashCheckedBeforeReadOnlyIsCleared(t *testing.T) {
-	tempDir := t.TempDir()
-	h := NewHandler([]string{tempDir})
+func TestHandleEditFile_RejectedEditKeepsReadOnly(t *testing.T) {
+	tests := []struct {
+		name  string
+		input EditFileInput
+	}{
+		{"stale expectedHash", EditFileInput{
+			Edits:        []EditOperation{{OldText: "World", NewText: "Go"}},
+			ExpectedHash: contentHash([]byte("stale")),
+		}},
+		{"oldText not found", EditFileInput{
+			Edits: []EditOperation{{OldText: "Mars", NewText: "Go"}},
+		}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tempDir := t.TempDir()
+			h := NewHandler([]string{tempDir})
 
-	testFile := filepath.Join(tempDir, "test.txt")
-	os.WriteFile(testFile, []byte("Hello World"), 0644)
-	if err := os.Chmod(testFile, 0444); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { os.Chmod(testFile, 0644) })
+			testFile := filepath.Join(tempDir, "test.txt")
+			os.WriteFile(testFile, []byte("Hello World"), 0644)
+			if err := os.Chmod(testFile, 0444); err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { os.Chmod(testFile, 0644) })
 
-	force := true
-	result, _, err := h.HandleEditFile(context.Background(), nil, EditFileInput{
-		Path:          testFile,
-		Edits:         []EditOperation{{OldText: "World", NewText: "Go"}},
-		ExpectedHash:  contentHash([]byte("stale")),
-		ForceWritable: &force,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !result.IsError {
-		t.Fatal("expected an error on a stale expectedHash")
-	}
+			force := true
+			input := tc.input
+			input.Path = testFile
+			input.ForceWritable = &force
+			result, _, err := h.HandleEditFile(context.Background(), nil, input)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !result.IsError {
+				t.Fatal("expected the edit to be rejected")
+			}
 
-	info, err := os.Stat(testFile)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !isReadOnly(info.Mode()) {
-		t.Error("read-only flag must survive a rejected edit")
+			info, err := os.Stat(testFile)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !isReadOnly(info.Mode()) {
+				t.Error("read-only flag must survive a rejected edit")
+			}
+		})
 	}
 }
 

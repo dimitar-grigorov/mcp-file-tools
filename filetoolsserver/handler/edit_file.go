@@ -46,20 +46,11 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 		return errorResult(err.Error()), EditFileOutput{}, nil
 	}
 
-	readOnlyCleared := false
-	forceWritable := input.ForceWritable != nil && *input.ForceWritable // default: false
-	if isReadOnly(originalMode) {
-		if !forceWritable {
-			return errorResult("file is read-only — STOP, do NOT retry and do NOT attempt to change file attributes. Ask the user whether to proceed with forceWritable: true, or skip this file"), EditFileOutput{}, nil
-		}
-		if !input.DryRun {
-			if err := clearReadOnly(v.Path, originalMode); err != nil {
-				return errorResult(fmt.Sprintf("failed to clear read-only flag: %v", err)), EditFileOutput{}, nil
-			}
-			readOnlyCleared = true
-			slog.Info("cleared read-only flag", "path", input.Path)
-		}
+	readOnly := isReadOnly(originalMode)
+	if readOnly && (input.ForceWritable == nil || !*input.ForceWritable) {
+		return errorResult("file is read-only — STOP, do NOT retry and do NOT attempt to change file attributes. Ask the user whether to proceed with forceWritable: true, or skip this file"), EditFileOutput{}, nil
 	}
+	readOnlyCleared := false
 
 	encodingName, err := h.resolveEncodingFromData(input.Encoding, data, input.Path)
 	if err != nil {
@@ -109,8 +100,19 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 		if r := cancelled(ctx); r != nil {
 			return r, EditFileOutput{}, nil
 		}
+		// Cleared only now, so an edit that fails to match leaves the file read-only.
+		if readOnly {
+			if err := clearReadOnly(v.Path, originalMode); err != nil {
+				return errorResult(fmt.Sprintf("failed to clear read-only flag: %v", err)), EditFileOutput{}, nil
+			}
+			readOnlyCleared = true
+			slog.Info("cleared read-only flag", "path", input.Path)
+		}
 		written, err := atomicWriteFileWithEncoding(v.Path, modifiedContent, encodingName, eolStyle, originalMode)
 		if err != nil {
+			if readOnlyCleared {
+				_ = os.Chmod(v.Path, originalMode)
+			}
 			return errorResult(fmt.Sprintf("failed to write file: %v", err)), EditFileOutput{}, nil
 		}
 		if input.ExpectedHash != "" {

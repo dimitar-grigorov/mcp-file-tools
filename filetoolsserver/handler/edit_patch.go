@@ -31,7 +31,7 @@ func applyPatch(content, patch string) (string, error) {
 		if len(hunk.oldLines) == 0 {
 			modified, err = insertPatchLines(modified, newText, hunk.oldStart+lineOffset)
 		} else {
-			modified, _, err = applyEdits(modified, []EditOperation{{OldText: oldText, NewText: newText}})
+			modified, _, err = applyEditsMatching(modified, []EditOperation{{OldText: oldText, NewText: newText}}, true)
 		}
 		if err != nil {
 			return "", fmt.Errorf("patch hunk %d failed: %w", i+1, err)

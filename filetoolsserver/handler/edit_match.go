@@ -14,6 +14,11 @@ import (
 
 // applyEdits applies edits in order and counts the places changed; several matches need replaceAll.
 func applyEdits(content string, edits []EditOperation) (string, int, error) {
+	return applyEditsMatching(content, edits, false)
+}
+
+// applyEditsMatching with wholeLines matches only complete lines, as a patch hunk means them.
+func applyEditsMatching(content string, edits []EditOperation, wholeLines bool) (string, int, error) {
 	modifiedContent := content
 	replacements := 0
 
@@ -29,12 +34,12 @@ func applyEdits(content string, edits []EditOperation) (string, int, error) {
 		normalizedNew := ConvertLineEndings(edit.NewText, LineEndingLF)
 
 		// Try exact match first
-		if lines := exactMatchLines(modifiedContent, normalizedOld); len(lines) > 0 {
-			if len(lines) > 1 && !edit.ReplaceAll {
-				return "", 0, ambiguousError(edit.OldText, lines)
+		if starts := exactMatchStarts(modifiedContent, normalizedOld, wholeLines); len(starts) > 0 {
+			if len(starts) > 1 && !edit.ReplaceAll {
+				return "", 0, ambiguousError(edit.OldText, lineNumbers(modifiedContent, starts))
 			}
-			modifiedContent = strings.ReplaceAll(modifiedContent, normalizedOld, normalizedNew)
-			replacements += len(lines)
+			modifiedContent = replaceAt(modifiedContent, starts, len(normalizedOld), normalizedNew)
+			replacements += len(starts)
 			continue
 		}
 
@@ -52,34 +57,59 @@ func applyEdits(content string, edits []EditOperation) (string, int, error) {
 			continue
 		}
 
-		if edit.Similarity != nil {
-			candidate := closestCandidate(modifiedContent, normalizedOld)
-			if candidate.start >= 0 && candidate.score >= *edit.Similarity {
-				modifiedContent = replaceLineBlock(modifiedContent, normalizedOld, normalizedNew, candidate.start, candidate.lines)
-				replacements++
-				continue
-			}
-			return "", 0, noMatchError(modifiedContent, normalizedOld, edit.OldText, edit.Similarity)
+		candidate := closestCandidate(modifiedContent, normalizedOld)
+		if edit.Similarity != nil && candidate.start >= 0 && candidate.score >= *edit.Similarity {
+			modifiedContent = replaceLineBlock(modifiedContent, normalizedOld, normalizedNew, candidate.start, candidate.lines)
+			replacements++
+			continue
 		}
-
-		return "", 0, noMatchError(modifiedContent, normalizedOld, edit.OldText, nil)
+		return "", 0, noMatchError(modifiedContent, candidate, edit.OldText, edit.Similarity)
 	}
 
 	return modifiedContent, replacements, nil
 }
 
-// exactMatchLines returns the 1-based line of every non-overlapping exact match.
-func exactMatchLines(content, needle string) []int {
-	var lines []int
+// exactMatchStarts returns the offset of every non-overlapping exact match; wholeLines drops those inside a line.
+func exactMatchStarts(content, needle string, wholeLines bool) []int {
+	var starts []int
 	for offset := 0; ; {
 		i := strings.Index(content[offset:], needle)
 		if i < 0 {
-			return lines
+			return starts
 		}
-		at := offset + i
-		lines = append(lines, strings.Count(content[:at], "\n")+1)
-		offset = at + len(needle)
+		at, end := offset+i, offset+i+len(needle)
+		if wholeLines && ((at > 0 && content[at-1] != '\n') || (end < len(content) && content[end] != '\n')) {
+			offset = at + 1
+			continue
+		}
+		starts = append(starts, at)
+		offset = end
 	}
+}
+
+// lineNumbers turns ascending byte offsets into 1-based line numbers in one pass.
+func lineNumbers(content string, starts []int) []int {
+	lines := make([]int, len(starts))
+	line, prev := 1, 0
+	for i, at := range starts {
+		line += strings.Count(content[prev:at], "\n")
+		lines[i], prev = line, at
+	}
+	return lines
+}
+
+// replaceAt splices newText over each match of oldLen bytes at the ascending starts.
+func replaceAt(content string, starts []int, oldLen int, newText string) string {
+	var b strings.Builder
+	b.Grow(len(content) + len(starts)*(len(newText)-oldLen))
+	prev := 0
+	for _, at := range starts {
+		b.WriteString(content[prev:at])
+		b.WriteString(newText)
+		prev = at + oldLen
+	}
+	b.WriteString(content[prev:])
+	return b.String()
 }
 
 // flexibleMatchStarts returns each non-overlapping block matching oldText, ignoring per-line whitespace.
@@ -192,8 +222,7 @@ func ambiguousError(rawOld string, lines []int) error {
 }
 
 // noMatchError wraps ErrEditNoMatch, appending the closest matching block if found.
-func noMatchError(content, normalizedOld, rawOld string, threshold *float64) error {
-	candidate := closestCandidate(content, normalizedOld)
+func noMatchError(content string, candidate matchCandidate, rawOld string, threshold *float64) error {
 	if candidate.start < 0 || candidate.score == 0 {
 		if threshold != nil {
 			return fmt.Errorf("%w:\n%s\n\nBest candidate scored %.2f, threshold %g",

@@ -536,6 +536,18 @@ func TestApplyPatch_WhitespaceFlexible(t *testing.T) {
 	}
 }
 
+// A hunk is whole lines: "-x = 1" used to match inside "x = 10" and turn it into "x = 20".
+func TestApplyPatch_HunkMatchesWholeLines(t *testing.T) {
+	patch := "--- a.txt\n+++ a.txt\n@@ -2 +2 @@\n-x = 1\n+x = 2\n"
+	got, err := applyPatch("x = 10\nx = 1\n", patch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "x = 10\nx = 2\n" {
+		t.Fatalf("got %q, want %q", got, "x = 10\nx = 2\n")
+	}
+}
+
 func TestApplyPatch_FailingHunkHasHint(t *testing.T) {
 	patch := "--- test.txt\n+++ test.txt\n@@ -1,2 +1,2 @@\n func run() {\n-old\n+new\n"
 	_, err := applyPatch("func main() {\nold\n", patch)
