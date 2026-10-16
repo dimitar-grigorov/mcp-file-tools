@@ -24,7 +24,6 @@ builds:
     ldflags:
       - -s -w
       - -X main.version={{.Version}}
-      - -X github.com/dimitar-grigorov/mcp-file-tools/v4/filetoolsserver.Version={{.Version}}
 
 archives:
   - id: default
