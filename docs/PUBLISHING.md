@@ -4,9 +4,15 @@ How this server is distributed — maintainer reference, not user documentation.
 
 ## Releasing
 
-`git tag vX.Y.Z && git push` → release.yml (version check, then GoReleaser) →
-publish-registry.yml, which release.yml calls as a `workflow_call`. Checklist:
-`.claude/RELEASING.md`; workflow_dispatch re-publishes a tag by hand.
+```bash
+node scripts/bump-version.js X.Y.Z   # plugin.json + marketplace.json
+git commit -am "chore: release X.Y.Z (bump plugin.json, marketplace.json)"
+node scripts/verify-release-version.js vX.Y.Z
+git tag vX.Y.Z && git push origin main vX.Y.Z
+```
+
+release.yml checks the version, runs GoReleaser, then calls publish-registry.yml;
+workflow_dispatch on the latter re-publishes a tag by hand.
 
 Don't reintroduce a `release: published` trigger — GoReleaser creates the release with the
 workflow's `GITHUB_TOKEN`, whose events suppress triggers. That silently published nothing
@@ -19,7 +25,7 @@ plugin.json/marketplace.json.
 
 A **major** bump also moves the module path (`/v4` → `/v5`), or the proxy ignores every new
 tag. `go run github.com/icholy/gomajor@latest path -next` rewrites go.mod and the imports;
-the `-X` ldflag in `.goreleaser.yml` and the `go install` lines in the two READMEs are by hand.
+the `go install` lines in the two READMEs are by hand.
 
 "Auto-registered" only means the registry entry updates on release — clients still install
 via .mcp.json, the plugin, or a .mcpb bundle.
@@ -49,8 +55,7 @@ itself has no runtime dependency.
 
 internal/updater/updater.go only *notifies* — it checks GitHub once and appends a
 message to the next tool result, gated by MCP_NO_UPDATE_CHECK=1 and skipped on dev
-builds. Its "re-download the binary" advice is wrong for registry/Smithery/package
-installs. Don't build real auto-update for a filesystem server.
+builds. Don't build real auto-update for a filesystem server.
 
 ## TODO
 

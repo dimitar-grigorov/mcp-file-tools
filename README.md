@@ -161,7 +161,7 @@ If you already ran `claude mcp add --scope user` from the installation steps abo
 
 To configure separately for VSCode only:
 ```powershell
-claude mcp add --scope user file-tools -- "%LOCALAPPDATA%\Programs\mcp-file-tools\mcp-file-tools.exe" "C:\Projects"
+claude mcp add --scope user file-tools -- "$env:LOCALAPPDATA\Programs\mcp-file-tools\mcp-file-tools.exe" "C:\Projects"
 ```
 
 Alternatively, create a **per-project config** by adding `.mcp.json` to your project root:
@@ -395,7 +395,7 @@ make lint    # go vet, go fmt, staticcheck (same pinned version as CI)
 make build
 ```
 
-`scripts/smoke-test` is an end-to-end smoke test over every tool, run by CI on each push:
+`scripts/smoke-test` starts the server over stdio and calls the read-only tools, run by CI on each push:
 
 ```bash
 go run ./scripts/smoke-test

@@ -12,7 +12,7 @@ upgrade instead.
 
 ## Verifying a release
 
-Every release since 4.3.0 carries build provenance. `checksums.txt` covers all the
+Every release since 4.2.1 carries build provenance. `checksums.txt` covers all the
 artifacts, so verifying it once covers whatever you downloaded:
 
 ```bash

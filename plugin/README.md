@@ -33,8 +33,8 @@ then. Not needed for ordinary UTF-8 work.
 pinned release binary for your OS/arch, verifies its SHA-256 against the release
 `checksums.txt`, caches it, then hands stdio to it. Later launches reuse the cache.
 
-No directory configuration is needed: Claude Code sends the workspace folder via the
-MCP roots protocol and the server allows it automatically.
+No directory configuration is needed: the server allows the folder Claude Code was
+started in. `MCP_FILE_TOOLS_ALLOWED_DIRS` replaces it with the folders you list.
 
 ## Requirements
 
