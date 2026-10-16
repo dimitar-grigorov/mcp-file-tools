@@ -6,10 +6,15 @@ versions see the [GitHub releases](https://github.com/dimitar-grigorov/mcp-file-
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [4.5.2] - 2026-10-16
 
-- Reading a legacy file is about a third faster: detection caches the Unicode class of each BMP character.
-- Fixed: `manage_bom` with `action: "detect"` failed on an empty file.
+- **Security:** a sibling of an allowed directory passed as it when its name differed only by
+  a trailing quote or a letter Windows folds differently (Kelvin sign).
+- `delete_file` and `move_file` act on a symlink, not its target; `edit_file` patch hunks match
+  whole lines; a failed `forceWritable` edit leaves the file read-only.
+- Reading a legacy file is about a third faster.
+- Fixed: `manage_bom` detect on an empty file, `manage_line_endings` `changed` on a file without
+  line breaks, chunked detection of UTF-8 cut at a chunk edge, `.gitignore` `[!x]`.
 
 ## [4.5.1] - 2026-10-14
 
