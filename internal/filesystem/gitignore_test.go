@@ -22,6 +22,7 @@ obj/**
 !keep.dcu
 docs/*.tmp
 **/generated
+*.~[!0-9]*
 `
 	stack := ignoreStack{{relDir: "", patterns: parseGitignore([]byte(gi))}}
 
@@ -45,6 +46,8 @@ docs/*.tmp
 		{"a/b/generated", true, true},      // leading ** crosses dirs
 		{"generated", true, true},          // leading ** matches zero dirs
 		{"main.pas", false, false},         // untouched
+		{"main.~pas", false, true},         // [!x] negates a class, as in git
+		{"main.~1~", false, false},         // [!0-9] excludes digits
 	}
 	for _, tc := range tests {
 		if got := stack.Ignored(tc.rel, tc.isDir); got != tc.want {

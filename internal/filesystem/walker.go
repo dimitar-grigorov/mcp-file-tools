@@ -74,10 +74,8 @@ func walkDir(ctx context.Context, dir, relDir string, depth int, opts Options, i
 		return handleError(opts, dir, depth-1, err)
 	}
 	if opts.RespectGitignore {
-		if data, err := os.ReadFile(filepath.Join(dir, ".gitignore")); err == nil {
-			if patterns := parseGitignore(data); len(patterns) > 0 {
-				ignores = append(ignores, ignoreScope{relDir: relDir, patterns: patterns})
-			}
+		if patterns := parseGitignore(readGitignore(dir)); len(patterns) > 0 {
+			ignores = append(ignores, ignoreScope{relDir: relDir, patterns: patterns})
 		}
 	}
 	for _, dirEntry := range entries {
@@ -116,6 +114,19 @@ func walkDir(ctx context.Context, dir, relDir string, depth int, opts Options, i
 		}
 	}
 	return nil
+}
+
+// maxGitignoreBytes is far past any real .gitignore; a bigger file is not one.
+const maxGitignoreBytes = 1 << 20
+
+// readGitignore reads only a regular file, since a FIFO named .gitignore would block the walk.
+func readGitignore(dir string) []byte {
+	path := filepath.Join(dir, ".gitignore")
+	if info, err := os.Stat(path); err != nil || !info.Mode().IsRegular() || info.Size() > maxGitignoreBytes {
+		return nil
+	}
+	data, _ := os.ReadFile(path)
+	return data
 }
 
 // needsCheck reports whether an entry can point outside its parent directory.

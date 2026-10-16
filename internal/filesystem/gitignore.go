@@ -55,7 +55,8 @@ func parseGitignore(data []byte) []ignorePattern {
 		if line == "" {
 			continue
 		}
-		p.segs = strings.Split(line, "/")
+		// Git negates a class with "[!x]", path.Match only with "[^x]".
+		p.segs = strings.Split(strings.ReplaceAll(line, "[!", "[^"), "/")
 		out = append(out, p)
 	}
 	return out
