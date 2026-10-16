@@ -42,7 +42,7 @@ func (h *Handler) HandleManageLineEndings(ctx context.Context, req *mcp.CallTool
 			OriginalStyle: out.OriginalStyle,
 			LinesChanged:  out.LinesChanged,
 			Message:       out.Message,
-			Changed:       out.OriginalStyle != out.NewStyle,
+			Changed:       out.LinesChanged > 0, // a file with no line breaks differs in style but is never rewritten
 		}, nil
 	}
 

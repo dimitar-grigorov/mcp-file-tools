@@ -55,14 +55,16 @@ func TestManageLineEndings_Convert(t *testing.T) {
 	}
 }
 
-// action="convert" is a no-op when the file already matches.
+// action="convert" is a no-op when the file already matches or has no line breaks at all.
 func TestManageLineEndings_ConvertNoOp(t *testing.T) {
-	p, h := newLineEndingsFixture(t, "a\nb\n")
-	_, out, _ := h.HandleManageLineEndings(context.Background(), nil, ManageLineEndingsInput{
-		Path: p, Action: "convert", Style: "lf",
-	})
-	if out.Changed {
-		t.Error("expected changed=false when the style already matches")
+	for _, body := range []string{"a\nb\n", "no line breaks"} {
+		p, h := newLineEndingsFixture(t, body)
+		_, out, _ := h.HandleManageLineEndings(context.Background(), nil, ManageLineEndingsInput{
+			Path: p, Action: "convert", Style: "lf",
+		})
+		if out.Changed {
+			t.Errorf("%q: expected changed=false", body)
+		}
 	}
 }
 
