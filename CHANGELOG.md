@@ -6,6 +6,10 @@ versions see the [GitHub releases](https://github.com/dimitar-grigorov/mcp-file-
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+- Fixed: `manage_bom` with `action: "detect"` failed on an empty file.
+
 ## [4.5.1] - 2026-10-14
 
 - Built with Go 1.27.2, which fixes eight standard-library vulnerabilities in net/http and crypto/tls.

@@ -6,6 +6,7 @@ package handler
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -141,8 +142,9 @@ func readFileHead(path string, n int) ([]byte, error) {
 	defer f.Close()
 
 	buf := make([]byte, n)
-	read, err := f.Read(buf)
-	if err != nil && read == 0 {
+	read, err := io.ReadFull(f, buf)
+	// A file shorter than n, empty included, is not an error.
+	if err != nil && err != io.EOF && err != io.ErrUnexpectedEOF {
 		return nil, err
 	}
 	return buf[:read], nil

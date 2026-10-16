@@ -148,10 +148,13 @@ func TestHandleManageBom_DetectEmptyFile(t *testing.T) {
 	}
 
 	input := ManageBomInput{Path: testFile, Action: "detect"}
-	_, output, _ := h.HandleManageBom(context.Background(), nil, input)
+	result, output, _ := h.HandleManageBom(context.Background(), nil, input)
 
-	if output.HasBOM {
-		t.Error("expected HasBOM=false for empty file")
+	if result.IsError {
+		t.Fatalf("detect on an empty file failed: %v", result.Content)
+	}
+	if output.HasBOM || output.Message != "No BOM detected" {
+		t.Errorf("expected no BOM for empty file, got %+v", output)
 	}
 }
 
