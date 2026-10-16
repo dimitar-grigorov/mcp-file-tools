@@ -13,7 +13,7 @@ import (
 
 // HandleMoveFile moves or renames a file or directory.
 func (h *Handler) HandleMoveFile(ctx context.Context, req *mcp.CallToolRequest, input MoveFileInput) (*mcp.CallToolResult, MoveFileOutput, error) {
-	src, dst := h.ValidateSourceDest(input.Source, input.Destination)
+	src, dst := h.ValidateMoveSourceDest(input.Source, input.Destination)
 	if !src.Ok() {
 		return src.Result, MoveFileOutput{}, nil
 	}
@@ -21,7 +21,7 @@ func (h *Handler) HandleMoveFile(ctx context.Context, req *mcp.CallToolRequest, 
 		return dst.Result, MoveFileOutput{}, nil
 	}
 
-	if _, err := os.Stat(src.Path); os.IsNotExist(err) {
+	if _, err := os.Lstat(src.Path); os.IsNotExist(err) {
 		return errorResult(fmt.Sprintf("source does not exist: %s", input.Source)), MoveFileOutput{}, nil
 	}
 

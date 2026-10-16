@@ -150,3 +150,26 @@ func createDirLink(t *testing.T, target, link string) {
 		t.Skipf("directory junctions are not supported in this environment: %v (%s)", err, output)
 	}
 }
+
+// A move resolved the source first, so moving a directory link renamed the directory it points at.
+func TestHandleMoveFile_MovesLinkNotTarget(t *testing.T) {
+	dir := t.TempDir()
+	h := NewHandler([]string{dir})
+	target := filepath.Join(dir, "target")
+	if err := os.Mkdir(target, 0755); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(dir, "link")
+	createDirLink(t, target, link)
+
+	moved := filepath.Join(dir, "moved")
+	if result, _, _ := h.HandleMoveFile(context.Background(), nil, MoveFileInput{Source: link, Destination: moved}); result.IsError {
+		t.Fatalf("move failed: %v", result.Content)
+	}
+	if info, err := os.Stat(target); err != nil || !info.IsDir() {
+		t.Errorf("target directory should stay in place: %v", err)
+	}
+	if _, err := os.Lstat(link); !os.IsNotExist(err) {
+		t.Errorf("link should be gone from its old name, err = %v", err)
+	}
+}

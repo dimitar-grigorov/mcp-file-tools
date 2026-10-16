@@ -18,17 +18,9 @@ func ValidatePath(requestedPath string, allowedDirs []string) (string, error) {
 		return "", ErrNoAllowedDirs
 	}
 
-	expanded := expandHome(requestedPath)
-
-	var absolute string
-	if filepath.IsAbs(expanded) {
-		absolute = filepath.Clean(expanded)
-	} else {
-		cwd, err := os.Getwd()
-		if err != nil {
-			return "", fmt.Errorf("failed to get current directory: %w", err)
-		}
-		absolute = filepath.Clean(filepath.Join(cwd, expanded))
+	absolute, err := absolutePath(requestedPath)
+	if err != nil {
+		return "", err
 	}
 
 	normalized := normalizePath(absolute)
@@ -65,6 +57,38 @@ func ValidatePath(requestedPath string, allowedDirs []string) (string, error) {
 		return absolute, nil
 	}
 	return resolvedPath, nil
+}
+
+// ValidateEntryPath is ValidatePath for deleting or renaming the entry itself, so a symlink is not followed to its target.
+func ValidateEntryPath(requestedPath string, allowedDirs []string) (string, error) {
+	resolved, err := ValidatePath(requestedPath, allowedDirs)
+	if err != nil {
+		return "", err
+	}
+	absolute, err := absolutePath(requestedPath)
+	if err != nil {
+		return "", err
+	}
+	if filepath.Dir(absolute) == absolute {
+		return resolved, nil
+	}
+	parent, err := ValidatePath(filepath.Dir(absolute), allowedDirs)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(parent, filepath.Base(absolute)), nil
+}
+
+func absolutePath(requestedPath string) (string, error) {
+	expanded := expandHome(unquote(requestedPath))
+	if filepath.IsAbs(expanded) {
+		return filepath.Clean(expanded), nil
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("failed to get current directory: %w", err)
+	}
+	return filepath.Clean(filepath.Join(cwd, expanded)), nil
 }
 
 // IsPathSafeResolved checks if a path (after resolving links) is within pre-resolved allowed dirs.
@@ -108,7 +132,8 @@ func NormalizeAllowedDirs(dirs []string) ([]string, error) {
 
 // NormalizeAllowedDir canonicalizes one dir — home, absolute, symlinks, 8.3 — so checks compare like with like.
 func NormalizeAllowedDir(dir string) (string, error) {
-	expanded := expandHome(dir)
+	// The user's own config, so any stray quote goes: Windows argv turns "C:\dir\" into C:\dir".
+	expanded := expandHome(strings.Trim(dir, "\"' \t\n"))
 
 	absolute, err := filepath.Abs(expanded)
 	if err != nil {
@@ -229,26 +254,20 @@ func expandHome(path string) string {
 	return path
 }
 
+// unquote strips a model's wrapping quotes on input only; trimming resolved paths let "work'" pass as "work".
+func unquote(p string) string {
+	p = strings.TrimSpace(p)
+	if len(p) >= 2 && (p[0] == '"' || p[0] == '\'') && p[len(p)-1] == p[0] {
+		p = strings.TrimSpace(p[1 : len(p)-1])
+	}
+	return p
+}
+
 func normalizePath(p string) string {
-	p = strings.Trim(p, "\"' \t\n")
 	p = filepath.Clean(p)
 	if runtime.GOOS == "windows" && len(p) >= 2 && p[1] == ':' {
 		p = strings.ToUpper(p[:1]) + p[1:]
 	}
 
 	return p
-}
-
-func pathsEqual(first, second string) bool {
-	if runtime.GOOS == "windows" {
-		return strings.EqualFold(first, second)
-	}
-	return first == second
-}
-
-func pathHasPrefix(path, prefix string) bool {
-	if runtime.GOOS == "windows" {
-		return len(path) >= len(prefix) && strings.EqualFold(path[:len(prefix)], prefix)
-	}
-	return strings.HasPrefix(path, prefix)
 }

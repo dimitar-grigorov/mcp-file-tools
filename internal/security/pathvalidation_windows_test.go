@@ -158,3 +158,44 @@ func createJunctionForTest(t *testing.T, target, link string) {
 		t.Skipf("directory junctions are not supported in this environment: %v (%s)", err, output)
 	}
 }
+
+// strings.EqualFold folds the Kelvin sign, long s and micro sign onto ASCII; NTFS keeps them apart, so these are other directories.
+func TestValidatePath_RejectsFoldOnlySiblings(t *testing.T) {
+	root := t.TempDir()
+	for _, tc := range []struct{ allowed, sibling string }{
+		{"work", "wor\u212a"},   // Kelvin sign
+		{"tests", "te\u017fts"}, // long s
+		{"\u039cy", "\u00b5y"},  // Greek capital mu, micro sign
+	} {
+		allowed := filepath.Join(root, tc.allowed)
+		sibling := filepath.Join(root, tc.sibling)
+		for _, dir := range []string{allowed, sibling} {
+			if err := os.Mkdir(dir, 0o755); err != nil {
+				t.Fatal(err)
+			}
+		}
+		dirs, err := NormalizeAllowedDirs([]string{allowed})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got, err := ValidatePath(sibling, dirs); err == nil {
+			t.Errorf("%q validated as %q under %q", tc.sibling, got, tc.allowed)
+		}
+	}
+}
+
+// NTFS is case-insensitive beyond ASCII, so another case of a Cyrillic name is the same directory.
+func TestValidatePath_CyrillicCaseIsSameDir(t *testing.T) {
+	allowed := filepath.Join(t.TempDir(), "Проекти")
+	if err := os.Mkdir(allowed, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	dirs, err := NormalizeAllowedDirs([]string{allowed})
+	if err != nil {
+		t.Fatal(err)
+	}
+	other := filepath.Join(filepath.Dir(allowed), "ПРОЕКТИ", "нов.txt")
+	if _, err := ValidatePath(other, dirs); err != nil {
+		t.Errorf("%q: %v", other, err)
+	}
+}

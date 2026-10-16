@@ -61,23 +61,40 @@ func (h *Handler) ValidatePath(path string) PathValidationResult {
 	return PathValidationResult{Path: validatedPath}
 }
 
+// ValidateEntryPath is ValidatePath for delete and move: a symlink names itself, not its target.
+func (h *Handler) ValidateEntryPath(path string) PathValidationResult {
+	return h.validateNamedPath(path, "path", h.validateEntryPath)
+}
+
 // ValidateSourceDest leaves destination zero when source already failed.
 func (h *Handler) ValidateSourceDest(source, destination string) (PathValidationResult, PathValidationResult) {
-	srcResult := h.validateNamedPath(source, "source")
+	return h.validateSourceDest(source, destination, h.validatePath)
+}
+
+// ValidateMoveSourceDest is ValidateSourceDest with the source taken as the entry itself, so a move renames a symlink.
+func (h *Handler) ValidateMoveSourceDest(source, destination string) (PathValidationResult, PathValidationResult) {
+	return h.validateSourceDest(source, destination, h.validateEntryPath)
+}
+
+func (h *Handler) validateSourceDest(source, destination string, validateSource func(string) (string, error)) (PathValidationResult, PathValidationResult) {
+	srcResult := h.validateNamedPath(source, "source", validateSource)
 	if !srcResult.Ok() {
 		return srcResult, PathValidationResult{}
 	}
-	return srcResult, h.validateNamedPath(destination, "destination")
+	return srcResult, h.validateNamedPath(destination, "destination", h.validatePath)
 }
 
-// validateNamedPath is ValidatePath with the parameter's name in the empty-path
-// message, so a two-path tool says which of the two was missing.
-func (h *Handler) validateNamedPath(path, param string) PathValidationResult {
+// validateNamedPath names the parameter in the empty-path message, so a two-path tool says which one was missing.
+func (h *Handler) validateNamedPath(path, param string, validate func(string) (string, error)) PathValidationResult {
 	if path == "" {
 		return PathValidationResult{
 			Result: errorResult(param + " is required and must be a non-empty string"),
 			Err:    ErrPathRequired,
 		}
 	}
-	return h.ValidatePath(path)
+	validated, err := validate(path)
+	if err != nil {
+		return PathValidationResult{Result: errorResult(err.Error()), Err: err}
+	}
+	return PathValidationResult{Path: validated}
 }

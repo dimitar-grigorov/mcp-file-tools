@@ -13,7 +13,7 @@ import (
 
 // HandleDeleteFile deletes a file.
 func (h *Handler) HandleDeleteFile(ctx context.Context, req *mcp.CallToolRequest, input DeleteFileInput) (*mcp.CallToolResult, DeleteFileOutput, error) {
-	v := h.ValidatePath(input.Path)
+	v := h.ValidateEntryPath(input.Path)
 	if !v.Ok() {
 		return v.Result, DeleteFileOutput{}, nil
 	}

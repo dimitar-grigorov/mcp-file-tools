@@ -669,3 +669,39 @@ func TestNormalizeAllowedDirs(t *testing.T) {
 		})
 	}
 }
+
+// Quotes and spaces were trimmed after resolution too, so a sibling "work'" passed as the allowed "work".
+func TestValidatePath_RejectsSiblingThatTrimsToAllowedDir(t *testing.T) {
+	root := t.TempDir()
+	allowed := filepath.Join(root, "work")
+	if err := os.Mkdir(allowed, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	sibling := filepath.Join(root, "work'")
+	if err := os.WriteFile(sibling, []byte("outside"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dirs, err := NormalizeAllowedDirs([]string{allowed})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, err := ValidatePath(sibling, dirs); err == nil {
+		t.Errorf("sibling %q validated as %q", sibling, got)
+	}
+	// A path the model wrapped in quotes still resolves to what it names.
+	if got, err := ValidatePath(`"`+filepath.Join(allowed, "a.txt")+`"`, dirs); err != nil || filepath.Base(got) != "a.txt" {
+		t.Errorf("quoted path: got %q, %v", got, err)
+	}
+}
+
+// Windows argv turns "C:\dir\" into C:\dir", so a stray quote on a configured dir must not cost access.
+func TestNormalizeAllowedDir_StrayQuote(t *testing.T) {
+	dir := t.TempDir()
+	want, err := NormalizeAllowedDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, err := NormalizeAllowedDir(dir + `"`); err != nil || got != want {
+		t.Errorf("got %q, %v; want %q", got, err, want)
+	}
+}

@@ -362,3 +362,35 @@ func TestHandleManageBom_CancelledLeavesFileUnchanged(t *testing.T) {
 		t.Error("cancelled BOM operation changed the file")
 	}
 }
+
+// Paths were resolved before acting, so deleting or moving a symlink hit the file it points at.
+func TestHandleDeleteAndMove_ActOnSymlinkNotTarget(t *testing.T) {
+	dir := t.TempDir()
+	h := NewHandler([]string{dir})
+	target := filepath.Join(dir, "target.txt")
+	if err := os.WriteFile(target, []byte("target"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(dir, "link.txt")
+	if err := os.Symlink(target, link); err != nil {
+		t.Skipf("symlinks unsupported here: %v", err)
+	}
+
+	moved := filepath.Join(dir, "moved.txt")
+	if result, _, _ := h.HandleMoveFile(context.Background(), nil, MoveFileInput{Source: link, Destination: moved}); result.IsError {
+		t.Fatalf("move failed: %v", result.Content)
+	}
+	if info, err := os.Lstat(moved); err != nil || info.Mode()&os.ModeSymlink == 0 {
+		t.Errorf("moved entry should be the symlink: info=%v err=%v", info, err)
+	}
+
+	if result, _, _ := h.HandleDeleteFile(context.Background(), nil, DeleteFileInput{Path: moved}); result.IsError {
+		t.Fatalf("delete failed: %v", result.Content)
+	}
+	if _, err := os.Lstat(moved); !os.IsNotExist(err) {
+		t.Errorf("symlink should be gone, err = %v", err)
+	}
+	if data, err := os.ReadFile(target); err != nil || string(data) != "target" {
+		t.Errorf("target = %q, err = %v; want it untouched", data, err)
+	}
+}

@@ -10,14 +10,44 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"unicode/utf16"
+	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
 
 const maxLongPathUTF16Units = 1 << 16
 
-// expandShortPath expands 8.3 components ("PROGRA~1") to long form so the lexical
-// containment gate compares like with like. Falls back to the input on any failure.
+// NTFS folds case like CompareStringOrdinal; EqualFold and ToUpper differ on hundreds of runes (Kelvin sign, long s).
+var procCompareStringOrdinal = windows.NewLazySystemDLL("kernel32.dll").NewProc("CompareStringOrdinal")
+
+const cstrEqual = 2
+
+func equalFoldUTF16(a, b []uint16) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	if len(a) == 0 {
+		return true
+	}
+	ret, _, _ := procCompareStringOrdinal.Call(
+		uintptr(unsafe.Pointer(&a[0])), uintptr(len(a)),
+		uintptr(unsafe.Pointer(&b[0])), uintptr(len(b)),
+		1, // bIgnoreCase
+	)
+	return ret == cstrEqual
+}
+
+func pathsEqual(first, second string) bool {
+	return equalFoldUTF16(utf16.Encode([]rune(first)), utf16.Encode([]rune(second)))
+}
+
+func pathHasPrefix(path, prefix string) bool {
+	p, pre := utf16.Encode([]rune(path)), utf16.Encode([]rune(prefix))
+	return len(p) >= len(pre) && equalFoldUTF16(p[:len(pre)], pre)
+}
+
+// expandShortPath expands 8.3 components ("PROGRA~1") so the lexical gate compares like with like; input on failure.
 func expandShortPath(path string) string {
 	current := filepath.Clean(path)
 	var missing []string

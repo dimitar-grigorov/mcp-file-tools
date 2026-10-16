@@ -185,6 +185,12 @@ func (h *Handler) validatePath(path string) (string, error) {
 	return security.ValidatePath(path, h.allowedDirs)
 }
 
+func (h *Handler) validateEntryPath(path string) (string, error) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return security.ValidateEntryPath(path, h.allowedDirs)
+}
+
 // getFileMode returns the file's current permissions, or DefaultFileMode if file doesn't exist.
 func getFileMode(path string) os.FileMode {
 	info, err := os.Stat(path)
