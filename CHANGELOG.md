@@ -6,6 +6,10 @@ versions see the [GitHub releases](https://github.com/dimitar-grigorov/mcp-file-
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.6.2] - 2026-10-31
+
+- `edit_file` refuses a file with bytes that do not decode (such as an odd UTF-16 tail) instead of writing them back as U+FFFD.
+
 ## [4.6.1] - 2026-10-31
 
 - `edit_file` and `write_file` no longer add utf-8 text to a short legacy file whose encoding was not detected.
