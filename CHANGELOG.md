@@ -6,7 +6,7 @@ versions see the [GitHub releases](https://github.com/dimitar-grigorov/mcp-file-
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [4.6.0] - 2026-10-31
 
 - **Security:** built with Go 1.27.3 (GO-2026-6809).
 - Plugin: a hook sends built-in Read/Edit/Write on a non-UTF-8 file to this server's tools.
