@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/encoding"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -81,6 +82,10 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 	}
 
 	drift := reencodeDrifts(data, content, encodingName)
+	// Bytes that did not decode would be written back as U+FFFD.
+	if drift && strings.ContainsRune(content, utf8.RuneError) {
+		return errorResult(fmt.Sprintf("%s has bytes that are not valid %s; nothing written. Fix the file or pass the right encoding", input.Path, encodingName)), EditFileOutput{}, nil
+	}
 	content = ConvertLineEndings(content, LineEndingLF)
 	var modifiedContent string
 	var replacements int
