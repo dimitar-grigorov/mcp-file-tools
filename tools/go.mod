@@ -1,7 +1,7 @@
 // Own module so the linters' dependencies stay out of the main module's graph.
 module github.com/dimitar-grigorov/mcp-file-tools/tools
 
-go 1.27.2
+go 1.27.3
 
 tool (
 	github.com/rhysd/actionlint/cmd/actionlint

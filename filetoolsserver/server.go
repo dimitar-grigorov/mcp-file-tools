@@ -4,6 +4,7 @@
 package filetoolsserver
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
@@ -15,6 +16,9 @@ import (
 
 // Version is set at build time via ldflags
 var Version = "dev"
+
+// listTTLMs is the cache hint on tools/list and prompts/list results (SEP-2549).
+const listTTLMs = 60 * 60 * 1000
 
 // Server instructions for AI assistants
 var serverInstructions = fmt.Sprintf(`MCP filesystem server with non-UTF-8 encoding support (%d encodings: CP1251, KOI8-R, ISO-8859-x, GBK/GB18030, etc).
@@ -66,6 +70,8 @@ func NewServer(allowedDirs []string, logger *slog.Logger, cfg *config.Config, op
 		InitializedHandler: createInitializedHandler(h),
 		//lint:ignore SA1019 roots deprecated in 2026-07-28, kept for older clients
 		RootsListChangedHandler: createRootsListChangedHandler(h),
+		// Tools and prompts never change while the process runs, so clients may skip re-listing.
+		SetCacheable: func(_ context.Context, _ mcp.Request, c *mcp.Cacheable) { c.TTLMs = listTTLMs },
 		// Explicit: unset, the SDK also advertises logging and listChanged.
 		Capabilities: &mcp.ServerCapabilities{
 			Tools:   &mcp.ToolCapabilities{},
