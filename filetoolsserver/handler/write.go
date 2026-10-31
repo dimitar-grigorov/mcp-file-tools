@@ -6,6 +6,7 @@ package handler
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/encoding"
@@ -36,6 +37,12 @@ func (h *Handler) HandleWriteFile(ctx context.Context, req *mcp.CallToolRequest,
 	}
 
 	enc, _ := encoding.Get(encodingName) // Already validated by resolveWriteEncoding
+
+	if encodingFrom == encodingFromFallback {
+		if old, err := os.ReadFile(v.Path); err == nil && mixesEncodings(encodingName, old, "", input.Content) {
+			return errorResult(mixedEncodingError(input.Path).Error()), WriteFileOutput{}, nil
+		}
+	}
 
 	// A BOM in content is transport (read_text_file hands it back as text), not text to encode.
 	content, contentHadBOM := trimContentBOM(input.Content)

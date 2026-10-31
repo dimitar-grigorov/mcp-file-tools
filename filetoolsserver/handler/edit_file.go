@@ -93,6 +93,10 @@ func (h *Handler) HandleEditFile(ctx context.Context, req *mcp.CallToolRequest, 
 		return errorResult(err.Error()), EditFileOutput{}, nil
 	}
 
+	if input.Encoding == "" && mixesEncodings(encodingName, data, content, modifiedContent) {
+		return errorResult(mixedEncodingError(input.Path).Error()), EditFileOutput{}, nil
+	}
+
 	diff := createUnifiedDiff(content, modifiedContent, input.Path)
 
 	newHash := ""

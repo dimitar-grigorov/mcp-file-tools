@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/config"
 	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/encoding"
@@ -170,6 +171,31 @@ func (h *Handler) resolveEncoding(inputEncoding string, filePath string) (encodi
 	}
 
 	return result, nil
+}
+
+const undetectedLegacyHint = "Not utf-8 and the encoding was not detected; retry with an explicit encoding (shift_jis, gbk, windows-1251...)."
+
+// mixesEncodings: new utf-8 text would land in a file that is not utf-8.
+func mixesEncodings(name string, original []byte, oldText, newText string) bool {
+	return encoding.IsUTF8(name) && !utf8.Valid(original) && validMultibyte(newText) > validMultibyte(oldText)
+}
+
+// validMultibyte counts valid non-ASCII runes; raw legacy bytes don't count.
+func validMultibyte(s string) int {
+	n := 0
+	for i := 0; i < len(s); {
+		r, size := utf8.DecodeRuneInString(s[i:])
+		if size > 1 && r != utf8.RuneError {
+			n++
+		}
+		i += size
+	}
+	return n
+}
+
+func mixedEncodingError(path string) error {
+	return fmt.Errorf("%s is not utf-8 and its encoding was not detected; nothing written. "+
+		"Retry with an explicit encoding (shift_jis, gbk, windows-1251...)", path)
 }
 
 // alternativeEncodings ranks what to retry with; empty when nothing to suggest.

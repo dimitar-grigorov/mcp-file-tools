@@ -11,6 +11,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/encoding"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -106,6 +107,8 @@ func (h *Handler) HandleReadTextFile(ctx context.Context, req *mcp.CallToolReque
 	}
 	if encResult.fallbackHint != "" {
 		hints = append(hints, encResult.fallbackHint)
+	} else if encResult.fromFallback && encoding.IsUTF8(encResult.name) && !utf8.Valid(data) {
+		hints = append(hints, undetectedLegacyHint)
 	}
 	output.Hint = strings.Join(hints, " ")
 
