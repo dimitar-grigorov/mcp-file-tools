@@ -5,12 +5,14 @@ package filetoolsserver
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/url"
 	"os"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/dimitar-grigorov/mcp-file-tools/v4/filetoolsserver/handler"
 	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/config"
@@ -18,8 +20,18 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+const rootsTimeout = 5 * time.Second
+
 // listRootURIs isolates the deprecated roots API to one deletable function.
 func listRootURIs(ctx context.Context, session *mcp.ServerSession) ([]string, error) {
+	// A client that never answers would otherwise hold this handler forever.
+	p := session.InitializeParams()
+	//lint:ignore SA1019 roots kept for pre-2026-07-28 clients
+	if p == nil || p.Capabilities == nil || p.Capabilities.RootsV2 == nil {
+		return nil, errors.New("client does not support roots")
+	}
+	ctx, cancel := context.WithTimeout(ctx, rootsTimeout)
+	defer cancel()
 	//lint:ignore SA1019 roots kept for pre-2026-07-28 clients
 	result, err := session.ListRoots(ctx, &mcp.ListRootsParams{})
 	if err != nil {
