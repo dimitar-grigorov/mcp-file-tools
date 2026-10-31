@@ -8,7 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-- **Security:** built with Go 1.27.3, which fixes GO-2026-6809 in `crypto/x509`.
+- **Security:** built with Go 1.27.3 (GO-2026-6809).
+- Plugin: a hook sends built-in Read/Edit/Write on a non-UTF-8 file to this server's tools.
+  `MCP_FILE_TOOLS_GUARD=off` disables it.
 
 ## [4.5.2] - 2026-10-16
 

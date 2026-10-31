@@ -26,6 +26,12 @@ manual `claude mcp add` install, remove that entry first — see
 legacy codebase. Claude loads it on demand when a task matches; it costs nothing until
 then. Not needed for ordinary UTF-8 work.
 
+## Encoding guard
+
+`hooks/hooks.json` stops built-in Read, Edit and Write on a workspace file that is not
+UTF-8 and names the matching tool here. UTF-8 and binary files pass untouched.
+`MCP_FILE_TOOLS_GUARD=off` disables it.
+
 ## How it works
 
 `.mcp.json` declares one MCP server (`file-tools`) launched as
