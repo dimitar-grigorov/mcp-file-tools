@@ -6,6 +6,10 @@ versions see the [GitHub releases](https://github.com/dimitar-grigorov/mcp-file-
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+- **Security:** built with Go 1.27.3, which fixes GO-2026-6809 in `crypto/x509`.
+
 ## [4.5.2] - 2026-10-16
 
 - **Security:** a sibling of an allowed directory passed as it when its name differed only by
