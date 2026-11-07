@@ -66,4 +66,4 @@ Attribute the commit to the user. One change per PR — don't bundle unrelated r
 
 ## Forking
 
-See [Forking](README.md#forking) in the README: what GPL-3.0 requires if you distribute your fork, keeping the credit, and not shipping it under this project's name.
+See [Forking](README.md#forking) in the README: what GPL-3.0 requires if you distribute your fork, keeping the credit, and giving it its own name.

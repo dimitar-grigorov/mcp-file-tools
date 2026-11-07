@@ -57,11 +57,7 @@ internal/updater/updater.go only *notifies* — it checks GitHub once and append
 message to the next tool result, gated by MCP_NO_UPDATE_CHECK=1 and skipped on dev
 builds. Don't build real auto-update for a filesystem server.
 
-## TODO
-
-1. Run `/plugin marketplace add` + `/plugin install` end to end on macOS/Linux.
-2. Make the update check opt-in.
-3. Optional: ship a .mcpb bundle for one-click Claude Desktop installs.
+## Registry
 
 The GoReleaser `mcp:` block in .goreleaser.yml stays disabled — it can't emit fileSha256 for
 the mcpb type (goreleaser#6251). publish-registry.yml is the workaround.

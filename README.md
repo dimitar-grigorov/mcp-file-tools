@@ -430,31 +430,21 @@ directory? That one goes to [SECURITY.md](SECURITY.md), privately, not to an iss
 
 ## Forking
 
-Forking is fine. That's what GPL-3.0 is for. Taking the project over is not.
+Forks are welcome; that is what GPL-3.0 is for. If you distribute one (a public repo, a
+release binary, a registry listing, a product), the license asks you to:
 
-**GPL-3.0 is a license, not a preference.** Distribute your fork in any form (public repo,
-release binary, registry listing, product you ship to customers) and you must:
+- **Keep GPL-3.0**, [LICENSE](LICENSE) and the copyright notices (§4, §5c)
+- **Say what you changed** and when (§5a)
+- **Give the source** to everyone who gets the binary (§6)
 
-- **Keep GPL-3.0** and [LICENSE](LICENSE), copyright notice intact (§4, §5c)
-- **Say what you changed** and when, prominently (§5a)
-- **Give the source** to everyone you gave the binary to (§6)
+Removing the license or the notice, relicensing, or shipping only a binary breaks the
+license and ends the rights it grants (§8). Unsure whether what you ship complies?
+[Ask in an issue](https://github.com/dimitar-grigorov/mcp-file-tools/issues).
 
-> [!WARNING]
-> Deleting the license or the notice, relicensing as MIT or proprietary, or shipping
-> only a binary is a **license violation**, and §8 ends your rights the moment you do it.
-
-**It will be enforced,** in this order: a request to comply, then a DMCA takedown plus
-delisting from whichever registry or marketplace carries it, then legal action. Complying
-costs one license file, one notice and one source link.
-[Ask in an issue](https://github.com/dimitar-grigorov/mcp-file-tools/issues) if you are
-unsure whether what you ship complies.
-
-**Asked, not enforced:** leave the credit in — the copyright notice is the legal minimum,
-one line saying *"Fork of [mcp-file-tools](https://github.com/dimitar-grigorov/mcp-file-tools)"*
-is what tells a reader where it came from. Give your fork its own name, so a registry
-listing under this one with the author swapped doesn't read as if the project moved and
-send its bugs here. And try upstream first: a PR beats carrying merge conflicts forever,
-and puts your name on the commit rather than in a credits list.
+Beyond that, please keep a line such as *"Fork of
+[mcp-file-tools](https://github.com/dimitar-grigorov/mcp-file-tools)"* so readers know where
+it came from, and give your fork its own name, so its bugs don't land here. Fixed something?
+A PR saves you the merge conflicts and puts your name on the commit.
 
 ## Credits
 
