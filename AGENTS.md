@@ -13,22 +13,6 @@ tool descriptions, so no source hardcodes the number. `README.md` and the two pl
 do state it, and `internal/encoding/docs_test.go` fails when they disagree with the registry
 or with each other. Adding an encoding means a `TOOLS.md` row and those three.
 
-## Layout
-
-| Path | Contents |
-|---|---|
-| `cmd/mcp-file-tools/` | Entry point, stdio transport, allowed dirs from CLI args |
-| `cmd/mcp-file-tools-launcher/` | Node-free launcher that downloads and verifies the binary |
-| `filetoolsserver/server.go` | Tool registration, annotations, server `instructions` |
-| `filetoolsserver/handler/` | One file per tool, plus `middleware.go`, `validation.go`, `errors.go` |
-| `internal/encoding/` | Detection and conversion |
-| `internal/security/` | Allowed-directory containment — every path goes through here |
-| `internal/filesystem/` | `Walk` — the one containment-checked traversal behind tree, grep, search_files |
-| `internal/config/`, `internal/updater/` | Startup allowed-dir baseline, env config, update check |
-| `internal/errkind/`, `internal/workpool/`, `internal/install/` | Error categories, ordered bounded concurrency, install/client detection |
-| `docs/TOOLS.md` | Per-tool parameter reference, kept in sync with registrations |
-| `tools/` | staticcheck, govulncheck, actionlint, pinned in their own module |
-
 ## Commands
 
 ```bash
@@ -56,7 +40,8 @@ MCP_FILE_TOOLS_CORPUS=/path/to/sources go test -tags corpus ./internal/encoding/
 - **Tool descriptions are prompts.** The `Description` strings in `server.go` are what client
   models read to pick a tool. Wording changes there are behaviour changes — mirror in `TOOLS.md`.
 - **Every path is validated** through `internal/security`, never `os` directly. Symlink and
-  junction escapes are in scope.
+  junction escapes are in scope. Tree, grep and search_files traverse only through
+  `internal/filesystem.Walk`.
 - **Adding a tool:** handler in `filetoolsserver/handler/`, registration with annotations in
   `server.go`, entry in `TOOLS.md`, line in the README tool list. Ship a test with it.
 

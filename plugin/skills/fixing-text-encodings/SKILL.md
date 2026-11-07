@@ -1,6 +1,6 @@
 ---
 name: fixing-text-encodings
-description: Diagnoses garbled text and audits or bulk-converts non-UTF-8 files using the file-tools MCP server. Use when text looks like mojibake (Cyrillic rendering as Íàñòðîéêè, Ð/Ñ sequences, ????, or � characters), when surveying or migrating a legacy codebase's encodings (Delphi/Pascal, VB6, legacy PHP/HTML, CP1251, CP1252, KOI8-R, GBK), when converting more than one file between encodings, or when a BOM or mixed CRLF/LF line endings break a build or a diff. Do NOT use for ordinary UTF-8 files — the built-in file tools already handle those correctly.
+description: Diagnoses mojibake and audits or bulk-converts non-UTF-8 files with the file-tools MCP server. Use when text looks garbled (Cyrillic as Íàñòðîéêè, Ð/Ñ sequences, ????, �), when surveying or migrating a legacy codebase (Delphi/Pascal, VB6, legacy PHP/HTML; CP1251, CP1252, KOI8-R, GBK), when converting several files between encodings, or when a BOM or mixed CRLF/LF breaks a build or diff. Not for ordinary UTF-8 files; the built-in tools handle those.
 ---
 
 # Fixing text encodings
@@ -44,7 +44,7 @@ Converting is irreversible for characters the target lacks. Work through this li
 - [ ] 1. Survey with file-tools:tree, showEncoding=true
 - [ ] 2. Convert ONE representative file, backup=true
 - [ ] 3. Read it back and confirm the text is correct
-- [ ] 4. Convert the rest, backup=true
+- [ ] 4. Convert the rest in one call with `paths`, dryRun=true first, then backup=true
 - [ ] 5. Re-run the survey to confirm nothing was missed
 ```
 
@@ -54,15 +54,17 @@ Converting is irreversible for characters the target lacks. Work through this li
 file-tools:convert_encoding  { "path": "D:/proj/src/unit1.pas", "to": "utf-8", "backup": true }
 ```
 
-Omit `from`; it is auto-detected. Pass it only to override a detection you have
-established is wrong. A narrowing conversion (for example UTF-8 to CP1251) **fails
-rather than corrupting text** when the target lacks a character — so a failure here
-is information, not a setback. Report which files failed and why.
+Omit `from`; it is auto-detected. Below 50% confidence the tool refuses and names its
+guess: read the file with that encoding, then confirm it with `from`. A narrowing
+conversion (for example UTF-8 to CP1251) **fails rather than corrupting text** when the
+target lacks a character, so a failure here is information, not a setback. Report which
+files failed and why.
 
 **Step 3 — verify before scaling up.** Read the converted file and check the
 non-ASCII text actually reads correctly. Detection confidence is not proof.
 
-Keep `backup=true` for every step. The `.bak` files are the only undo.
+Keep `backup=true` for every step. The `.bak` files are the only undo; an existing one
+is never overwritten, so the tool refuses that file instead.
 
 ## Line endings and BOM
 
