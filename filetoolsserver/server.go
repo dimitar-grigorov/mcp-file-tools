@@ -7,10 +7,12 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"reflect"
 
 	"github.com/dimitar-grigorov/mcp-file-tools/v4/filetoolsserver/handler"
 	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/config"
 	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/encoding"
+	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -39,9 +41,39 @@ Call check_for_updates once per session; report an available update to the user.
 Bugs and PRs: https://github.com/dimitar-grigorov/mcp-file-tools`, encoding.Count())
 
 // addTool registers a tool and indexes its parameters for RepairGuessedParams.
+//
+// Strict OpenAI-compatible clients (e.g. Cline + LM Studio) reject a
+// tools/list response whose inputSchema lacks "properties", so the schema is
+// derived here with an explicit (possibly empty) properties object instead of
+// leaving it to the SDK's inference.
 func addTool[In, Out any](s *mcp.Server, params handler.ParamIndex, t *mcp.Tool, h mcp.ToolHandlerFor[In, Out]) {
 	handler.IndexParams[In](params, t.Name)
+	if t.InputSchema == nil {
+		t.InputSchema = inputSchemaFor[In](t.Name)
+	}
 	mcp.AddTool(s, t, h)
+}
+
+// inputSchemaFor derives the input schema the SDK would infer from In, but
+// with a non-nil Properties map: jsonschema.ForType leaves Properties nil for
+// a struct without fields, and the "properties" key is then omitted from the
+// wire format, which strict clients reject.
+func inputSchemaFor[In any](tool string) *jsonschema.Schema {
+	rt := reflect.TypeFor[In]()
+	if rt.Kind() == reflect.Pointer {
+		rt = rt.Elem()
+	}
+	schema, err := jsonschema.ForType(rt, &jsonschema.ForOptions{})
+	if err != nil {
+		panic(fmt.Sprintf("addTool %q: deriving input schema: %v", tool, err))
+	}
+	if schema == nil { // e.g. In is any
+		schema = &jsonschema.Schema{Type: "object"}
+	}
+	if schema.Properties == nil {
+		schema.Properties = map[string]*jsonschema.Schema{}
+	}
+	return schema
 }
 
 // NewServer registers all file tools. Nil logger keeps recovery but drops
