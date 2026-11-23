@@ -6,6 +6,11 @@ versions see the [GitHub releases](https://github.com/dimitar-grigorov/mcp-file-
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.6.3] - 2026-11-23
+
+- **Security:** built with Go 1.27.4 (GO-2026-6859).
+- Tools without parameters send `"properties": {}`, so strict clients such as Cline with LM Studio accept the tool list.
+
 ## [4.6.2] - 2026-10-31
 
 - `edit_file` refuses a file with bytes that do not decode (such as an odd UTF-16 tail) instead of writing them back as U+FFFD.
