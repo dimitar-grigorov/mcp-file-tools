@@ -448,13 +448,14 @@ A PR saves you the merge conflicts and puts your name on the commit.
 
 ## Credits
 
-Ideas that started in someone else's fork and were reimplemented here:
+Ideas that started in someone else's fork or PR and were reimplemented here:
 
 - [@skyispainted](https://github.com/skyispainted) - GBK/GB18030, JSON-string array args, `edit_file` retry hint
 - [@haobiao](https://github.com/haobiao) - GBK/GB18030, independently
 - [Hugo Rosário](https://github.com/WTC-ZoneSoft) - merging MCP roots with CLI allowed dirs
 - [@zoster81](https://github.com/zoster81) - UTF-16 line endings and grep, path containment fixes, write durability, BOM policy, ordered concurrency
 - [Mario Rial](https://github.com/seguridadea1) - pinning detection to known encodings, multi-pattern grep
+- [@Ivan-DM](https://github.com/Ivan-DM)
 
 A PR gets your name on the commit instead of this list.
 
