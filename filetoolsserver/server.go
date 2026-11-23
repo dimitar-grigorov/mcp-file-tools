@@ -7,10 +7,12 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"reflect"
 
 	"github.com/dimitar-grigorov/mcp-file-tools/v4/filetoolsserver/handler"
 	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/config"
 	"github.com/dimitar-grigorov/mcp-file-tools/v4/internal/encoding"
+	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -41,6 +43,16 @@ Bugs and PRs: https://github.com/dimitar-grigorov/mcp-file-tools`, encoding.Coun
 // addTool registers a tool and indexes its parameters for RepairGuessedParams.
 func addTool[In, Out any](s *mcp.Server, params handler.ParamIndex, t *mcp.Tool, h mcp.ToolHandlerFor[In, Out]) {
 	handler.IndexParams[In](params, t.Name)
+	// The SDK drops "properties" for a struct without fields, and strict
+	// clients (Cline with LM Studio) then reject the whole tool list.
+	if reflect.TypeFor[In]().NumField() == 0 {
+		schema, err := jsonschema.For[In](nil)
+		if err != nil {
+			panic(fmt.Sprintf("%s: input schema: %v", t.Name, err))
+		}
+		schema.Properties = map[string]*jsonschema.Schema{}
+		t.InputSchema = schema
+	}
 	mcp.AddTool(s, t, h)
 }
 
