@@ -34,11 +34,7 @@ Workflow:
 
 Only when output looks wrong: detect_encoding, manage_line_endings, manage_bom (a UTF-8 BOM breaks PHP/shell scripts). convert_encoding rewrites a whole file — pass backup=true.
 
-"no allowed directories configured" — add paths as args in .mcp.json, or set MCP_FILE_TOOLS_ALLOWED_DIRS.
-
-Call check_for_updates once per session; report an available update to the user.
-
-Bugs and PRs: https://github.com/dimitar-grigorov/mcp-file-tools`, encoding.Count())
+Call check_for_updates once per session; report an available update to the user.`, encoding.Count())
 
 // addTool registers a tool and indexes its parameters for RepairGuessedParams.
 func addTool[In, Out any](s *mcp.Server, params handler.ParamIndex, t *mcp.Tool, h mcp.ToolHandlerFor[In, Out]) {
